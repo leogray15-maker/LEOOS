@@ -9,7 +9,8 @@
 
 import { PW, PH, PX, ROOMS, SPINE_X, corridors } from '../config/facility.js';
 import { paintProp } from './props.js';
-import { drawSprite } from './sprites.js';
+import { drawSprite, facingFor } from './sprites.js';
+import { paintFloorTiles } from './tiles.js';
 
 const ACCENT = {
   arcane: PX.arcane, cyan: PX.cyan, vital: PX.vital,
@@ -58,6 +59,8 @@ export class Factory {
     this.bg.width = this.bgW;
     this.bg.height = this.bgH;
     this.bakeBackground();
+    this.floors = new Map();
+    for (const r of ROOMS) this.bakeFloor(r);
 
     this.beacons = Array.from({ length: 22 }, (_, i) => {
       const r = mulberry(9000 + i * 37);
@@ -91,10 +94,25 @@ export class Factory {
     const clear = (x, y, w, h) =>
       x + w > hx - 10 && x < hx + PW + 10 && y + h > hy - 10 && y < hy + PH + 10;
 
+    // distant glow pools — city light bouncing off the haze
+    for (let i = 0; i < 14; i++) {
+      const gx = rnd() * BW;
+      const gy = rnd() * BH;
+      const gr = 40 + rnd() * 90;
+      const hue = rnd();
+      const col = hue < 0.5 ? 'rgba(60,80,150,' : hue < 0.8 ? 'rgba(120,70,160,' : 'rgba(150,100,50,';
+      const g = b.createRadialGradient(gx, gy, 0, gx, gy, gr);
+      g.addColorStop(0, col + '0.10)');
+      g.addColorStop(1, col + '0)');
+      b.fillStyle = g;
+      b.fillRect(gx - gr, gy - gr, gr * 2, gr * 2);
+    }
+
     const layers = [
-      { n: 150, col: PX.far,  lit: '#141929', win: 0.09, min: 14, max: 46 },
-      { n: 120, col: PX.mid,  lit: '#1a2034', win: 0.15, min: 10, max: 34 },
-      { n: 90,  col: PX.near, lit: '#222940', win: 0.21, min: 8,  max: 24 },
+      { n: 210, col: PX.far,  lit: '#141929', win: 0.10, min: 14, max: 50, warm: 0.12 },
+      { n: 170, col: PX.mid,  lit: '#1a2034', win: 0.16, min: 10, max: 36, warm: 0.18 },
+      { n: 130, col: PX.near, lit: '#222940', win: 0.22, min: 8,  max: 26, warm: 0.24 },
+      { n: 70,  col: '#1a2033', lit: '#2c3450', win: 0.26, min: 6, max: 18, warm: 0.3 },
     ];
 
     for (const L of layers) {
@@ -119,12 +137,24 @@ export class Factory {
             }
           }
         }
-        if (rnd() < 0.2) {
+        // masts, vents and roof clutter
+        if (rnd() < 0.26) {
           const ax = x + 2 + rnd() * (w - 4);
-          fill(b, ax, y - 6 - rnd() * 8, 1, 10 + rnd() * 8, L.lit);
+          const ah = 10 + rnd() * 14;
+          fill(b, ax, y - ah, 1, ah, L.lit);
+          if (rnd() < 0.4) fill(b, ax - 1, y - ah, 3, 1, L.lit);
         }
-        if (rnd() < 0.12) {
-          fill(b, x - 3, y + h * 0.4, w + 6, 2, '#151a28');
+        if (rnd() < 0.3) {
+          const bx = x + 2 + rnd() * (w - 8);
+          fill(b, bx, y - 3, 4 + rnd() * 4, 3, L.col);
+          fill(b, bx, y - 3, 4, 1, L.lit);
+        }
+        if (rnd() < 0.14) fill(b, x - 3, y + h * 0.4, w + 6, 2, '#151a28');
+        // a lit strip up one flank
+        if (rnd() < 0.16) {
+          b.globalAlpha = 0.5;
+          fill(b, x + w - 2, y + 2, 1, h - 4, rnd() < 0.6 ? '#2f4a7a' : '#6a4a3a');
+          b.globalAlpha = 1;
         }
       }
     }
@@ -158,7 +188,23 @@ export class Factory {
       }
     }
 
-    for (let i = 0; i < 700; i++) {
+    // spires punctuating the skyline
+    for (let i = 0; i < 26; i++) {
+      const x = rnd() * BW;
+      const y = rnd() * BH;
+      const sh = 30 + rnd() * 80;
+      const sw = 3 + rnd() * 4;
+      if (clear(x, y, sw, sh)) continue;
+      fill(b, x, y, sw, sh, '#12161f');
+      fill(b, x, y, 1, sh, '#1e2534');
+      for (let k = 4; k < sh; k += 7) {
+        if (rnd() < 0.4) fill(b, x + 1, y + k, sw - 2, 1, '#2c4573');
+      }
+      fill(b, x + sw / 2 - 1, y - 8, 1, 8, '#1e2534');
+      fill(b, x + sw / 2 - 1, y - 9, 2, 2, '#7a3a3a');
+    }
+
+    for (let i = 0; i < 900; i++) {
       const x = rnd() * BW;
       const y = rnd() * BH;
       b.globalAlpha = 0.08 + rnd() * 0.28;
@@ -353,9 +399,10 @@ export class Factory {
     const hov = this.hover === room.id;
     const act = this.sim.activity(room.id);
 
-    // floor
-    fill(b, x1, y1, w, h, PX.floor);
-    this.paintFloor(b, room, x1, y1, w, h, accent);
+    // floor — baked tiles, blitted
+    const floor = this.floors.get(room.id);
+    if (floor) b.drawImage(floor, x1, y1);
+    else fill(b, x1, y1, w, h, PX.floor);
 
     // ambient light from the room's own colour
     b.globalAlpha = 0.05 + act * 0.10 + (sel ? 0.09 : 0);
@@ -376,55 +423,43 @@ export class Factory {
     this.drawWalls(b, room, accent, sel || hov);
   }
 
-  paintFloor(b, room, x1, y1, w, h, accent) {
-    const rnd = mulberry(room.id.length * 7919 + x1 * 31 + y1);
+  /** Tile a room's floor once into its own canvas. */
+  bakeFloor(room) {
+    const [x1, y1, x2, y2] = room.rect;
+    const w = x2 - x1;
+    const h = y2 - y1;
+    const cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = h;
+    const c = cv.getContext('2d');
 
-    if (room.floor === 'grid') {
-      fill(b, x1, y1, w, h, '#12121c');
-      for (let x = 0; x < w; x += 10) fill(b, x1 + x, y1, 1, h, '#181826');
-      for (let y = 0; y < h; y += 10) fill(b, x1, y1 + y, w, 1, '#181826');
-      for (let y = 0; y < h; y += 10) for (let x = 0; x < w; x += 10) {
-        fill(b, x1 + x + 1, y1 + y + 1, 1, 1, '#1f1f30');
-      }
-    } else if (room.floor === 'plate') {
-      fill(b, x1, y1, w, h, '#11111a');
-      for (let y = 0; y < h; y += 8) {
-        for (let x = (y / 8) % 2 ? 0 : 8; x < w; x += 16) {
-          fill(b, x1 + x, y1 + y, 7, 7, '#171722');
-          fill(b, x1 + x, y1 + y, 7, 1, '#1e1e2c');
-          fill(b, x1 + x + 1, y1 + y + 1, 1, 1, '#26263a');
-          fill(b, x1 + x + 5, y1 + y + 5, 1, 1, '#0d0d14');
-        }
-      }
-    } else {
-      fill(b, x1, y1, w, h, '#141420');
-      for (let y = 0; y < h; y += 6) fill(b, x1, y1 + y, w, 1, '#181826');
-      for (let x = 0; x < w; x += 12) fill(b, x1 + x, y1, 1, h, '#171725');
-    }
+    paintFloorTiles(c, room.tiles || 'plate', w, h, room.id.length * 7919 + x1 * 31 + y1);
 
-    // wear: scuffs, stains, a drain
-    for (let i = 0; i < 9; i++) {
-      const sx = 3 + rnd() * (w - 8);
-      const sy = 4 + rnd() * (h - 10);
-      b.globalAlpha = 0.05 + rnd() * 0.07;
-      fill(b, sx, sy, 2 + rnd() * 7, 1 + rnd() * 2, rnd() < 0.5 ? '#000000' : '#4a4a66');
-      b.globalAlpha = 1;
+    // scuffs and a drain, seeded so they never move between loads
+    const rnd = mulberry(x1 * 104729 + y1 * 7919);
+    for (let i = 0; i < 12; i++) {
+      c.globalAlpha = 0.05 + rnd() * 0.08;
+      fill(c, 3 + rnd() * (w - 8), 4 + rnd() * (h - 10),
+        2 + rnd() * 8, 1 + rnd() * 2, rnd() < 0.5 ? '#000000' : '#4a4a66');
     }
-    const dx = x1 + 6 + rnd() * (w - 16);
-    const dy = y1 + h - 8;
-    fill(b, dx, dy, 5, 5, '#0c0c14');
-    for (let i = 1; i < 5; i += 2) fill(b, dx, dy + i, 5, 1, '#1c1c2a');
+    c.globalAlpha = 1;
+    const dx = 6 + rnd() * (w - 16);
+    const dy = h - 9;
+    fill(c, dx, dy, 6, 6, '#0b0b11');
+    for (let i = 1; i < 6; i += 2) fill(c, dx, dy + i, 6, 1, '#1d1d2b');
+    fill(c, dx, dy, 6, 1, '#26263a');
 
-    // edges sit in shadow
-    b.globalAlpha = 0.36;
-    for (let i = 0; i < 5; i++) {
-      b.globalAlpha = 0.1 - i * 0.018;
-      fill(b, x1, y1 + i, w, 1, '#000000');
-      fill(b, x1, y1 + h - 1 - i, w, 1, '#000000');
-      fill(b, x1 + i, y1, 1, h, '#000000');
-      fill(b, x1 + w - 1 - i, y1, 1, h, '#000000');
+    // the walls throw shade inward
+    for (let i = 0; i < 7; i++) {
+      c.globalAlpha = 0.13 - i * 0.018;
+      fill(c, 0, i, w, 1, '#000000');
+      fill(c, 0, h - 1 - i, w, 1, '#000000');
+      fill(c, i, 0, 1, h, '#000000');
+      fill(c, w - 1 - i, 0, 1, h, '#000000');
     }
-    b.globalAlpha = 1;
+    c.globalAlpha = 1;
+
+    this.floors.set(room.id, cv);
   }
 
   /**
@@ -526,15 +561,14 @@ export class Factory {
 
     for (const a of all) {
       const moving = a.state === 'transit';
-      drawSprite(
-        b,
-        a.kind || 'crew',
-        a.colour,
-        a.x,
-        a.y,
-        moving ? this.t * 7 : 0,
-        { glow: a.kind === 'arcane' ? 0.20 : (moving ? 0.10 : 0.06) },
-      );
+      const { facing, mirror } = facingFor(a.hx || 0, a.hy ?? 1);
+      drawSprite(b, a.kind || 'crew', a.colour, a.x, a.y, a.step || 0, {
+        facing,
+        mirror,
+        moving,
+        clock: this.t,
+        glow: a.kind === 'arcane' ? 0.22 : (moving ? 0.11 : 0.07),
+      });
     }
   }
 

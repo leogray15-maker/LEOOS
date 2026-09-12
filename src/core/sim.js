@@ -48,6 +48,8 @@ function makeWalker(def, kind, speed) {
     x: p.x, y: p.y,
     tx: p.x, ty: p.y,
     state: 'work',
+    hx: 0, hy: 1,          // heading, for which way the sprite faces
+    step: 0,               // walk-cycle phase
     timer: rand(3, 14),
     path: null,
     leg: 0,
@@ -142,6 +144,9 @@ export class Sim {
       const v = agent.speed * 0.28 * step;
       agent.x += (dx / dist) * v;
       agent.y += (dy / dist) * v;
+      agent.hx = dx / dist;
+      agent.hy = dy / dist;
+      agent.step += v * 0.42;
     }
 
     const open = this.store.tasks(agent.deck).find((t) => !t.done);
@@ -172,6 +177,9 @@ export class Sim {
     }
     agent.x += (dx / dist) * v;
     agent.y += (dy / dist) * v;
+    agent.hx = dx / dist;
+    agent.hy = dy / dist;
+    agent.step += v * 0.42;
   }
 
   arrive(agent) {

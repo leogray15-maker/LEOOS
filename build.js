@@ -19,6 +19,7 @@ const ORDER = [
   'src/core/store.js',
   'src/core/sim.js',
   'src/render/props.js',
+  'src/render/tiles.js',
   'src/render/sprites.js',
   'src/render/factory.js',
   'src/render/ui.js',

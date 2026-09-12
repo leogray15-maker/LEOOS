@@ -619,7 +619,7 @@ const ROOMS = [
   {
     id: 'bridge', name: 'BRIDGE', sub: 'Command · Targets',
     rect: [130, 10, 250, 54], door: [190, 54], spine: 0,
-    accent: 'arcane', floor: 'plate', venture: null,
+    accent: 'arcane', floor: 'plate', tiles: 'plate', venture: null,
     blurb: 'The whole empire on one screen. Targets are set here and everything downstream obeys them.',
     props: [
       ['viewport', 6, 3, 108, 7],
@@ -638,7 +638,7 @@ const ROOMS = [
   {
     id: 'forge', name: 'FORGE', sub: 'Build · Site · App',
     rect: [20, 64, 172, 118], door: [172, 91], spine: 1,
-    accent: 'cyan', floor: 'grid', venture: 'track',
+    accent: 'cyan', floor: 'plate', tiles: 'grate', venture: 'track',
     blurb: 'Where the site and the ArcaneTrack app get built. Racks on one wall, a bench and an arm on the other.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -663,7 +663,7 @@ const ROOMS = [
   {
     id: 'beacon', name: 'BEACON', sub: 'Signal · Content · Email',
     rect: [208, 64, 360, 118], door: [208, 91], spine: 1,
-    accent: 'flare', floor: 'grid', venture: null,
+    accent: 'flare', floor: 'plate', tiles: 'grate', venture: null,
     blurb: 'The broadcast deck. Everything the outside world hears leaves the building from here.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -684,7 +684,7 @@ const ROOMS = [
   {
     id: 'apothecary', name: 'THE LAB', sub: 'Arcane Peptides · Stock · COA · Dispatch',
     rect: [20, 126, 172, 180], door: [172, 153], spine: 2,
-    accent: 'arcane', floor: 'clean', venture: 'peptides',
+    accent: 'arcane', floor: 'plate', tiles: 'lab', venture: 'peptides',
     blurb: 'Cold storage, vial racks, instruments and the packing bench. Nothing leaves this room without a lab report against its batch.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -711,7 +711,7 @@ const ROOMS = [
   {
     id: 'vitals', name: 'VITALS', sub: 'Arcane Track · Members',
     rect: [208, 126, 360, 180], door: [208, 153], spine: 2,
-    accent: 'vital', floor: 'clean', venture: 'track',
+    accent: 'vital', floor: 'plate', tiles: 'lab', venture: 'track',
     blurb: 'Every dose logged, every day mapped. Member health and churn are watched from here.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -735,7 +735,7 @@ const ROOMS = [
   {
     id: 'vault', name: 'VAULT', sub: 'Treasury · Cash · VAT',
     rect: [20, 188, 172, 242], door: [172, 215], spine: 3,
-    accent: 'gold', floor: 'plate', venture: null,
+    accent: 'gold', floor: 'plate', tiles: 'concrete', venture: null,
     blurb: 'Cash, runway, and the tax set-aside. This room decides what every other room can spend.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -759,7 +759,7 @@ const ROOMS = [
   {
     id: 'archives', name: 'THE LIBRARY', sub: 'Archives · Content · PDF products',
     rect: [208, 188, 360, 242], door: [208, 215], spine: 3,
-    accent: 'cyan', floor: 'grid', venture: 'archives',
+    accent: 'cyan', floor: 'plate', tiles: 'carpet', venture: 'archives',
     blurb: 'Forty-eight courses and thousands of modules on the shelves. Posts get written here and modules get cut into PDFs worth selling.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -781,7 +781,7 @@ const ROOMS = [
   {
     id: 'scriptorium', name: 'SCRIPTORIUM', sub: 'The Codex · Writing',
     rect: [20, 250, 172, 304], door: [172, 277], spine: 4,
-    accent: 'breach', floor: 'plate', venture: 'codex',
+    accent: 'breach', floor: 'plate', tiles: 'wood', venture: 'codex',
     blurb: 'Where the books get written. The Dark Psych Codex, The Quiet Empire, The Arcane Game.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -805,7 +805,7 @@ const ROOMS = [
   {
     id: 'sanctum', name: 'SANCTUM', sub: 'Leo · Body · Focus',
     rect: [208, 250, 360, 304], door: [208, 277], spine: 4,
-    accent: 'vital', floor: 'clean', venture: null,
+    accent: 'vital', floor: 'plate', tiles: 'mat', venture: null,
     blurb: 'Training, sleep, deep work. The operator is a system component and gets maintained like one.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -1560,6 +1560,8 @@ function makeWalker(def, kind, speed) {
     x: p.x, y: p.y,
     tx: p.x, ty: p.y,
     state: 'work',
+    hx: 0, hy: 1,          // heading, for which way the sprite faces
+    step: 0,               // walk-cycle phase
     timer: rand(3, 14),
     path: null,
     leg: 0,
@@ -1654,6 +1656,9 @@ class Sim {
       const v = agent.speed * 0.28 * step;
       agent.x += (dx / dist) * v;
       agent.y += (dy / dist) * v;
+      agent.hx = dx / dist;
+      agent.hy = dy / dist;
+      agent.step += v * 0.42;
     }
 
     const open = this.store.tasks(agent.deck).find((t) => !t.done);
@@ -1684,6 +1689,9 @@ class Sim {
     }
     agent.x += (dx / dist) * v;
     agent.y += (dy / dist) * v;
+    agent.hx = dx / dist;
+    agent.hy = dy / dist;
+    agent.step += v * 0.42;
   }
 
   arrive(agent) {
@@ -2417,92 +2425,469 @@ function paintProp(ctx, type, x, y, w, h, accent, t, opt) {
   else slab(ctx, x, y, w, h, PX.wallTop, PX.wall);
 }
 
+/* ==== src/render/tiles.js ==== */
+/**
+ * Floor tiles — 8x8 pixel motifs, one set per room type.
+ *
+ * Each painter draws a single tile. `v` is a wear variant (0-3) chosen
+ * from seeded noise, so a floor has texture without repeating visibly.
+ * Floors are baked once per room by the renderer and never redrawn.
+ */
+
+const T = 8;
+const px = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x | 0, y | 0, Math.max(1, w | 0), Math.max(1, h | 0)); };
+
+/** Scatter a few darker specks, deterministically per tile. */
+function speck(c, x, y, seed, n, col, alpha) {
+  c.globalAlpha = alpha;
+  for (let i = 0; i < n; i++) {
+    const a = (seed * 9301 + i * 49297) % 233280 / 233280;
+    const b = (seed * 4021 + i * 71993) % 233280 / 233280;
+    px(c, x + a * T, y + b * T, 1, 1, col);
+  }
+  c.globalAlpha = 1;
+}
+
+const TILES = {
+  /** Riveted metal deck plate — the industrial default. */
+  plate(c, x, y, v, seed) {
+    px(c, x, y, T, T, '#171722');
+    px(c, x, y, T, 1, '#1f1f2e');
+    px(c, x, y, 1, T, '#1c1c29');
+    px(c, x, y + T - 1, T, 1, '#0f0f16');
+    px(c, x + T - 1, y, 1, T, '#101018');
+    // corner rivets
+    px(c, x + 1, y + 1, 1, 1, '#2a2a3e');
+    px(c, x + T - 2, y + T - 2, 1, 1, '#0c0c12');
+    if (v === 1) { px(c, x + 2, y + 3, 4, 1, '#1b1b28'); px(c, x + 2, y + 4, 3, 1, '#141420'); }
+    if (v === 2) speck(c, x, y, seed, 5, '#000000', 0.22);
+    if (v === 3) { px(c, x + 3, y + 1, 1, 6, '#131320'); px(c, x + 4, y + 2, 1, 4, '#1d1d2c'); }
+  },
+
+  /** Open walkway grating with dark beneath. */
+  grate(c, x, y, v, seed) {
+    px(c, x, y, T, T, '#101018');
+    for (let i = 0; i < T; i += 2) {
+      px(c, x, y + i, T, 1, '#1e1e2c');
+      px(c, x, y + i, T, 1, i % 4 === 0 ? '#232334' : '#1a1a28');
+    }
+    px(c, x, y, 1, T, '#26263a');
+    px(c, x + T - 1, y, 1, T, '#0b0b12');
+    if (v === 2) speck(c, x, y, seed, 4, '#000000', 0.3);
+    if (v === 3) px(c, x + 2, y, 1, T, '#2c2c42');
+  },
+
+  /** Clean epoxy lab floor — pale, seamed, faintly reflective. */
+  lab(c, x, y, v, seed) {
+    px(c, x, y, T, T, '#1a2028');
+    px(c, x, y, T, 1, '#222a34');
+    px(c, x, y, 1, T, '#1e262e');
+    px(c, x + T - 1, y, 1, T, '#141a20');
+    px(c, x, y + T - 1, T, 1, '#121820');
+    if (v === 0) { c.globalAlpha = 0.16; px(c, x + 1, y + 1, 3, 2, '#4a6070'); c.globalAlpha = 1; }
+    if (v === 1) speck(c, x, y, seed, 3, '#2c3a46', 0.5);
+    if (v === 2) { px(c, x + 4, y + 5, 3, 1, '#16202a'); }
+    if (v === 3) { c.globalAlpha = 0.1; px(c, x + 2, y + 2, 5, 4, '#6a8090'); c.globalAlpha = 1; }
+  },
+
+  /** Woven carpet — the library reading floor. */
+  carpet(c, x, y, v, seed) {
+    px(c, x, y, T, T, '#1c1a26');
+    for (let i = 0; i < T; i += 2) {
+      for (let j = 0; j < T; j += 2) {
+        const on = ((i + j) / 2) % 2 === 0;
+        px(c, x + i, y + j, 2, 2, on ? '#201e2c' : '#191722');
+      }
+    }
+    if (v === 1) speck(c, x, y, seed, 4, '#2a2638', 0.5);
+    if (v === 2) { c.globalAlpha = 0.14; px(c, x, y, T, T, '#000000'); c.globalAlpha = 1; }
+    if (v === 3) px(c, x + 1, y + 3, 6, 1, '#241f30');
+  },
+
+  /** Planked timber — the scriptorium. */
+  wood(c, x, y, v, seed) {
+    const tone = ['#241b16', '#28201a', '#211a14', '#2b221b'][v];
+    px(c, x, y, T, T, tone);
+    px(c, x, y, T, 1, '#31261d');
+    px(c, x, y + T - 1, T, 1, '#160f0b');
+    // grain
+    for (let i = 1; i < T - 1; i += 3) {
+      px(c, x + ((seed + i) % 3), y + i, T - 2, 1, '#1d1610');
+    }
+    if (v === 2) px(c, x + 5, y + 1, 1, 5, '#332920');
+  },
+
+  /** Poured concrete — the vault. */
+  concrete(c, x, y, v, seed) {
+    px(c, x, y, T, T, '#1b1b20');
+    speck(c, x, y, seed, 7, '#232329', 0.6);
+    speck(c, x, y, seed + 11, 4, '#131317', 0.6);
+    if (v === 1) { px(c, x, y + 4, T, 1, '#151519'); }
+    if (v === 2) { px(c, x + 3, y, 1, 4, '#141418'); px(c, x + 4, y + 4, 1, 4, '#141418'); }
+    if (v === 3) px(c, x, y, T, 1, '#242429');
+  },
+
+  /** Rubber matting — the sanctum. */
+  mat(c, x, y, v, seed) {
+    px(c, x, y, T, T, '#16201c');
+    for (let i = 1; i < T; i += 3) {
+      for (let j = 1; j < T; j += 3) px(c, x + i, y + j, 2, 2, '#1b2822');
+    }
+    if (v === 2) { c.globalAlpha = 0.12; px(c, x, y, T, T, '#000000'); c.globalAlpha = 1; }
+    if (v === 3) px(c, x, y, T, 1, '#20302a');
+  },
+};
+
+const TILE_SIZE = T;
+
+/**
+ * Paint a whole floor into `ctx` at 0,0 for a w x h room.
+ * `seedBase` keeps the wear pattern identical on every load.
+ */
+function paintFloorTiles(ctx, set, w, h, seedBase) {
+  const fn = TILES[set] || TILES.plate;
+  for (let ty = 0; ty < h; ty += T) {
+    for (let tx = 0; tx < w; tx += T) {
+      const seed = (seedBase + tx * 73856093 + ty * 19349663) >>> 0;
+      const v = seed % 4;
+      fn(ctx, tx, ty, v, seed % 97);
+    }
+  }
+}
+
 /* ==== src/render/sprites.js ==== */
 /**
- * Pixel sprites. Each is a character matrix baked once into a tiny
- * canvas and then blitted, so a crowded room costs almost nothing.
+ * Pixel sprites.
  *
- *   o outline   c main colour   d shade   l highlight   e visor glow
+ * Each character is a set of matrices: three facings (front, back, side)
+ * and three walk frames (stand, step A, step B). Side-facing left is the
+ * right-facing matrix mirrored at bake time, so nothing is drawn twice.
+ *
+ * Palette slots:
+ *   o outline   c main   d shade   l highlight
+ *   e visor     s skin   k accessory dark   a accessory accent
  *   . transparent
  */
 
-/** Crew: 9 x 14, two-frame walk. */
-const CREW_A = [
-  '...ooo...',
-  '..ooooo..',
-  '..oeeeo..',
-  '..ooooo..',
-  '...ccc...',
-  '..ccccc..',
-  '.lcccccl.',
-  'occccccco',
-  'occccccco',
-  '.dcccccd.',
-  '..ddddd..',
-  '..dd.dd..',
-  '..oo.oo..',
-  '.ooo.ooo.',
+/* ============================================================
+   CREW — 9 wide x 15 tall
+   ============================================================ */
+
+const CREW_FRONT = [
+  [ // stand
+    '..ooooo..',
+    '.ohhhhho.',
+    '.oseseso.',
+    '.ossssso.',
+    '..ooooo..',
+    '..ccccc..',
+    '.dcccccd.',
+    '.doclcod.',
+    '.dolccod.',
+    '..lccdd..',
+    '..ddddd..',
+    '..dd.dd..',
+    '..cc.cc..',
+    '..oo.oo..',
+    '.ooo.ooo.',
+  ],
+  [ // step A — left leg forward, arms swing
+    '..ooooo..',
+    '.ohhhhho.',
+    '.oseseso.',
+    '.ossssso.',
+    '..ooooo..',
+    '..ccccc..',
+    '.ccccccd.',
+    '.coclcod.',
+    '..olccod.',
+    '..lccdd..',
+    '..ddddd..',
+    '..ddddd..',
+    '..ccc.c..',
+    '..oo..o..',
+    '.ooo..oo.',
+  ],
+  [ // step B — right leg forward
+    '..ooooo..',
+    '.ohhhhho.',
+    '.oseseso.',
+    '.ossssso.',
+    '..ooooo..',
+    '..ccccc..',
+    '.dcccccc.',
+    '.doclcoc.',
+    '.dolcco..',
+    '..lccdd..',
+    '..ddddd..',
+    '..ddddd..',
+    '..c.ccc..',
+    '..o..oo..',
+    '.oo..ooo.',
+  ],
 ];
 
-const CREW_B = [
-  '...ooo...',
-  '..ooooo..',
-  '..oeeeo..',
-  '..ooooo..',
-  '...ccc...',
-  '..ccccc..',
-  '.lcccccl.',
-  'occccccco',
-  'occccccco',
-  '.dcccccd.',
-  '..ddddd..',
-  '..ddddd..',
-  '..ooo.o..',
-  '.ooo..oo.',
+const CREW_BACK = [
+  [
+    '..ooooo..',
+    '.ohhhhho.',
+    '.ohhhhho.',
+    '.ohhhhho.',
+    '..ooooo..',
+    '..ccccc..',
+    '.dcccccd.',
+    '.doclcod.',
+    '.dolccod.',
+    '..lccdd..',
+    '..ddddd..',
+    '..dd.dd..',
+    '..cc.cc..',
+    '..oo.oo..',
+    '.ooo.ooo.',
+  ],
+  [
+    '..ooooo..',
+    '.ohhhhho.',
+    '.ohhhhho.',
+    '.ohhhhho.',
+    '..ooooo..',
+    '..ccccc..',
+    '.ccccccd.',
+    '.coclcod.',
+    '..olccod.',
+    '..lccdd..',
+    '..ddddd..',
+    '..ddddd..',
+    '..ccc.c..',
+    '..oo..o..',
+    '.ooo..oo.',
+  ],
+  [
+    '..ooooo..',
+    '.ohhhhho.',
+    '.ohhhhho.',
+    '.ohhhhho.',
+    '..ooooo..',
+    '..ccccc..',
+    '.dcccccc.',
+    '.doclcoc.',
+    '.dolcco..',
+    '..lccdd..',
+    '..ddddd..',
+    '..ddddd..',
+    '..c.ccc..',
+    '..o..oo..',
+    '.oo..ooo.',
+  ],
 ];
 
-/** ARCANE: 12 x 18, cloaked, half again the height of the crew. */
-const ARCANE_A = [
-  '....oooo....',
-  '...ollllo...',
-  '...oeeeeo...',
-  '...ollllo...',
-  '....llll....',
-  '...cccccc...',
-  '..cccccccc..',
-  '.lccccccccl.',
-  'lccccccccccl',
-  'lccccccccccl',
-  '.lccccccccl.',
-  '..dddddddd..',
-  '...dddddd...',
-  '...dd..dd...',
-  '...oo..oo...',
-  '..ooo..ooo..',
-  '..oo....oo..',
-  '.ooo....ooo.',
+/** Side view faces RIGHT; the renderer mirrors it for leftward travel. */
+const CREW_SIDE = [
+  [
+    '..oooo...',
+    '.ohhhho..',
+    '.ohssseo.',
+    '.ohsssso.',
+    '..oooo...',
+    '..cccc...',
+    '..lcccd..',
+    '..lcccdc.',
+    '..lcccdo.',
+    '..lccd...',
+    '..dddd...',
+    '..dd.d...',
+    '..cc.c...',
+    '..oo.o...',
+    '.ooo.oo..',
+  ],
+  [
+    '..oooo...',
+    '.ohhhho..',
+    '.ohssseo.',
+    '.ohsssso.',
+    '..oooo...',
+    '..cccc...',
+    '.clcccd..',
+    '..lcccd..',
+    '..lcccdc.',
+    '..lccd...',
+    '..dddd...',
+    '.ddd.dd..',
+    '.cc...cc.',
+    '.oo...oo.',
+    'ooo...ooo',
+  ],
+  [
+    '..oooo...',
+    '.ohhhho..',
+    '.ohssseo.',
+    '.ohsssso.',
+    '..oooo...',
+    '..cccc...',
+    '..lcccdc.',
+    '.clcccd..',
+    '..lcccdo.',
+    '..lccd...',
+    '..dddd...',
+    '..ddddd..',
+    '..ccccc..',
+    '..oo.oo..',
+    '.ooo.ooo.',
+  ],
 ];
 
-const ARCANE_B = [
-  '....oooo....',
-  '...ollllo...',
-  '...oeeeeo...',
-  '...ollllo...',
-  '....llll....',
-  '...cccccc...',
-  '..cccccccc..',
-  '.lccccccccl.',
-  'lccccccccccl',
-  'lccccccccccl',
-  '.lccccccccl.',
-  '..dddddddd..',
-  '...dddddd...',
-  '...dddddd...',
-  '...ooo.oo...',
-  '..ooo...oo..',
-  '..oo.....o..',
-  '.ooo.....oo.',
+/* ============================================================
+   ARCANE — 12 wide x 19 tall, hooded, half a head taller
+   ============================================================ */
+
+const ARC_FRONT = [
+  [
+    '....oooo....',
+    '..okkkkkko..',
+    '.okkkkkkkko.',
+    '.okseeeesko.',
+    '.okssssssko.',
+    '..okkkkkko..',
+    '...cccccc...',
+    '..alccccda..',
+    '.aklccccdka.',
+    'aklccccccdka',
+    '.klccccccdk.',
+    '.klccccccdk.',
+    '..lccccccd..',
+    '..dddddddd..',
+    '...dddddd...',
+    '...dd..dd...',
+    '...cc..cc...',
+    '...oo..oo...',
+    '..ooo..ooo..',
+  ],
+  [
+    '....oooo....',
+    '..okkkkkko..',
+    '.okkkkkkkko.',
+    '.okseeeesko.',
+    '.okssssssko.',
+    '..okkkkkko..',
+    '...cccccc...',
+    '..alccccda..',
+    '.aklccccdka.',
+    'aklccccccdka',
+    '.klccccccdk.',
+    '.klccccccdk.',
+    '..lccccccd..',
+    '..dddddddd..',
+    '...dddddd...',
+    '...dddddd...',
+    '...ccc.cc...',
+    '...oo..oo...',
+    '..ooo...oo..',
+  ],
+  [
+    '....oooo....',
+    '..okkkkkko..',
+    '.okkkkkkkko.',
+    '.okseeeesko.',
+    '.okssssssko.',
+    '..okkkkkko..',
+    '...cccccc...',
+    '..alccccda..',
+    '.aklccccdka.',
+    'aklccccccdka',
+    '.klccccccdk.',
+    '.klccccccdk.',
+    '..lccccccd..',
+    '..dddddddd..',
+    '...dddddd...',
+    '...dddddd...',
+    '...cc.ccc...',
+    '...oo..oo...',
+    '..oo...ooo..',
+  ],
 ];
+
+const ARC_BACK = ARC_FRONT.map((m) => m.map((row, i) =>
+  (i === 3 || i === 4) ? '.okkkkkkkko.' : row));
+
+const ARC_SIDE = [
+  [
+    '...oooo.....',
+    '..okkkkko...',
+    '.okkkkkkko..',
+    '.okkssseko..',
+    '.okkssskko..',
+    '..okkkkko...',
+    '...ccccc....',
+    '..alccccd...',
+    '.aklccccdk..',
+    '.aklccccdk..',
+    '..klccccd...',
+    '..klccccd...',
+    '..dddddd....',
+    '..dddddd....',
+    '..dd..dd....',
+    '..cc..cc....',
+    '..oo..oo....',
+    '.ooo..ooo...',
+    '.oo....oo...',
+  ],
+  [
+    '...oooo.....',
+    '..okkkkko...',
+    '.okkkkkkko..',
+    '.okkssseko..',
+    '.okkssskko..',
+    '..okkkkko...',
+    '...ccccc....',
+    '..alccccd...',
+    '.aklccccdk..',
+    '.aklccccdk..',
+    '..klccccd...',
+    '..klccccd...',
+    '..dddddd....',
+    '.ddddddd....',
+    '.dd...dd....',
+    '.cc...cc....',
+    '.oo...ooo...',
+    'ooo....oo...',
+    'oo......oo..',
+  ],
+  [
+    '...oooo.....',
+    '..okkkkko...',
+    '.okkkkkkko..',
+    '.okkssseko..',
+    '.okkssskko..',
+    '..okkkkko...',
+    '...ccccc....',
+    '..alccccd...',
+    '.aklccccdk..',
+    '.aklccccdk..',
+    '..klccccd...',
+    '..klccccd...',
+    '..dddddd....',
+    '..ddddddd...',
+    '..dd...dd...',
+    '..cc...cc...',
+    '..ooo..oo...',
+    '.ooo....oo..',
+    '.oo.....oo..',
+  ],
+];
+
+const SETS = {
+  crew: { front: CREW_FRONT, back: CREW_BACK, side: CREW_SIDE, w: 9, h: 15 },
+  arcane: { front: ARC_FRONT, back: ARC_BACK, side: ARC_SIDE, w: 12, h: 19 },
+};
+
+const SPRITE_SIZE = {
+  crew: { w: 9, h: 15 },
+  arcane: { w: 12, h: 19 },
+};
+
+/* ============================================================
+   Baking
+   ============================================================ */
 
 const cache = new Map();
 
@@ -2512,22 +2897,32 @@ function shade(hex, mul) {
   return `rgb(${f((n >> 16) & 255)}, ${f((n >> 8) & 255)}, ${f(n & 255)})`;
 }
 
-function bake(matrix, colour, visor) {
+function bake(matrix, colour, kind, mirror) {
   const w = matrix[0].length;
   const h = matrix.length;
   const cv = document.createElement('canvas');
-  cv.width = w; cv.height = h;
+  cv.width = w;
+  cv.height = h;
   const c = cv.getContext('2d');
+
+  // Strong internal contrast is what makes a 9px figure read as a person.
   const pal = {
-    o: '#07070c',
+    o: '#0b0b14',                      // lifted off pure black so it reads on dark decks
     c: colour,
-    d: shade(colour, 0.62),
-    l: shade(colour, 1.45),
-    e: visor,
+    d: shade(colour, 0.48),            // shaded side
+    l: shade(colour, 1.62),            // lit side
+    e: kind === 'arcane' ? '#ffffff' : '#16121e',  // eyes / visor
+    s: '#e2b696',                      // skin
+    h: shade(colour, 0.3),             // hair or helm
+    k: shade(colour, 0.34),            // cloak fold
+    a: shade(colour, 1.85),            // trim
   };
+
+  if (mirror) { c.translate(w, 0); c.scale(-1, 1); }
   for (let y = 0; y < h; y++) {
+    const row = matrix[y];
     for (let x = 0; x < w; x++) {
-      const ch = matrix[y][x];
+      const ch = row[x];
       if (ch === '.' || !pal[ch]) continue;
       c.fillStyle = pal[ch];
       c.fillRect(x, y, 1, 1);
@@ -2536,49 +2931,57 @@ function bake(matrix, colour, visor) {
   return cv;
 }
 
-/** A baked sprite canvas for this colour + frame. */
-function sprite(kind, colour, frame) {
-  const key = `${kind}|${colour}|${frame}`;
+function spriteCanvas(kind, colour, facing, frame, mirror) {
+  const key = `${kind}|${colour}|${facing}|${frame}|${mirror ? 1 : 0}`;
   let cv = cache.get(key);
   if (cv) return cv;
-  const matrix = kind === 'arcane'
-    ? (frame ? ARCANE_B : ARCANE_A)
-    : (frame ? CREW_B : CREW_A);
-  const visor = kind === 'arcane' ? '#ffffff' : shade(colour, 1.9);
-  cv = bake(matrix, colour, visor);
+  const set = SETS[kind] || SETS.crew;
+  const matrix = (set[facing] || set.front)[frame] || set.front[0];
+  cv = bake(matrix, colour, kind, mirror);
   cache.set(key, cv);
   return cv;
 }
 
-const SPRITE_SIZE = {
-  crew: { w: 9, h: 14 },
-  arcane: { w: 12, h: 18 },
-};
+/** Which way a heading points, and whether the side view needs mirroring. */
+function facingFor(dx, dy) {
+  if (Math.abs(dx) > Math.abs(dy) * 1.2) {
+    return { facing: 'side', mirror: dx < 0 };
+  }
+  return { facing: dy < 0 ? 'back' : 'front', mirror: false };
+}
 
 /**
- * Draw a sprite centred on its feet at (x, y) in pixel space.
- * `phase` drives the two-frame walk; pass 0 to stand still.
+ * Draw a sprite standing on its feet at (x, y) in pixel space.
+ * `phase` advances the walk; `moving` false gives a slow idle bob.
  */
 function drawSprite(ctx, kind, colour, x, y, phase, opts = {}) {
   const size = SPRITE_SIZE[kind] || SPRITE_SIZE.crew;
-  const frame = phase > 0 && Math.floor(phase) % 2 === 1 ? 1 : 0;
-  const cv = sprite(kind, colour, frame);
+  const moving = opts.moving !== false && phase > 0;
+  // stand, step A, stand, step B — a proper four-beat cycle from three cels
+  const cycle = [0, 1, 0, 2];
+  const frame = moving ? cycle[Math.floor(phase) % 4] : 0;
+  const bob = moving ? 0 : (Math.sin((opts.clock || 0) * 1.6 + x) > 0.7 ? 1 : 0);
+
+  const cv = spriteCanvas(kind, colour, opts.facing || 'front', frame, !!opts.mirror);
   const px = Math.round(x - size.w / 2);
-  const py = Math.round(y - size.h);
+  const py = Math.round(y - size.h) + bob;
 
   if (opts.glow) {
     ctx.globalAlpha = opts.glow;
     ctx.fillStyle = colour;
     ctx.beginPath();
-    ctx.ellipse(Math.round(x), Math.round(y) - 1, Math.max(0.1, size.w * 0.9), Math.max(0.1, size.h * 0.42), 0, 0, Math.PI * 2);
+    ctx.ellipse(Math.round(x), Math.round(y) - 1,
+      Math.max(0.1, size.w * 0.85), Math.max(0.1, size.h * 0.3), 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
   }
 
-  // contact shadow keeps the figure on the floor instead of floating
-  ctx.globalAlpha = 0.35;
+  // contact shadow keeps the figure on the deck rather than floating
+  ctx.globalAlpha = 0.42;
   ctx.fillStyle = '#000000';
-  ctx.fillRect(px + 1, Math.round(y) - 1, size.w - 2, 1);
+  ctx.fillRect(px + 2, Math.round(y) - 1, size.w - 4, 1);
+  ctx.globalAlpha = 0.22;
+  ctx.fillRect(px + 1, Math.round(y) - 2, size.w - 2, 1);
   ctx.globalAlpha = 1;
 
   ctx.drawImage(cv, px, py);
@@ -2593,6 +2996,7 @@ function drawSprite(ctx, kind, colour, x, y, phase, opts = {}) {
  * That is what makes the pixels crisp instead of soupy. Text labels are
  * drawn afterwards at display resolution so they stay readable.
  */
+
 
 
 
@@ -2644,6 +3048,8 @@ class Factory {
     this.bg.width = this.bgW;
     this.bg.height = this.bgH;
     this.bakeBackground();
+    this.floors = new Map();
+    for (const r of ROOMS) this.bakeFloor(r);
 
     this.beacons = Array.from({ length: 22 }, (_, i) => {
       const r = mulberry(9000 + i * 37);
@@ -2677,10 +3083,25 @@ class Factory {
     const clear = (x, y, w, h) =>
       x + w > hx - 10 && x < hx + PW + 10 && y + h > hy - 10 && y < hy + PH + 10;
 
+    // distant glow pools — city light bouncing off the haze
+    for (let i = 0; i < 14; i++) {
+      const gx = rnd() * BW;
+      const gy = rnd() * BH;
+      const gr = 40 + rnd() * 90;
+      const hue = rnd();
+      const col = hue < 0.5 ? 'rgba(60,80,150,' : hue < 0.8 ? 'rgba(120,70,160,' : 'rgba(150,100,50,';
+      const g = b.createRadialGradient(gx, gy, 0, gx, gy, gr);
+      g.addColorStop(0, col + '0.10)');
+      g.addColorStop(1, col + '0)');
+      b.fillStyle = g;
+      b.fillRect(gx - gr, gy - gr, gr * 2, gr * 2);
+    }
+
     const layers = [
-      { n: 150, col: PX.far,  lit: '#141929', win: 0.09, min: 14, max: 46 },
-      { n: 120, col: PX.mid,  lit: '#1a2034', win: 0.15, min: 10, max: 34 },
-      { n: 90,  col: PX.near, lit: '#222940', win: 0.21, min: 8,  max: 24 },
+      { n: 210, col: PX.far,  lit: '#141929', win: 0.10, min: 14, max: 50, warm: 0.12 },
+      { n: 170, col: PX.mid,  lit: '#1a2034', win: 0.16, min: 10, max: 36, warm: 0.18 },
+      { n: 130, col: PX.near, lit: '#222940', win: 0.22, min: 8,  max: 26, warm: 0.24 },
+      { n: 70,  col: '#1a2033', lit: '#2c3450', win: 0.26, min: 6, max: 18, warm: 0.3 },
     ];
 
     for (const L of layers) {
@@ -2705,12 +3126,24 @@ class Factory {
             }
           }
         }
-        if (rnd() < 0.2) {
+        // masts, vents and roof clutter
+        if (rnd() < 0.26) {
           const ax = x + 2 + rnd() * (w - 4);
-          fill(b, ax, y - 6 - rnd() * 8, 1, 10 + rnd() * 8, L.lit);
+          const ah = 10 + rnd() * 14;
+          fill(b, ax, y - ah, 1, ah, L.lit);
+          if (rnd() < 0.4) fill(b, ax - 1, y - ah, 3, 1, L.lit);
         }
-        if (rnd() < 0.12) {
-          fill(b, x - 3, y + h * 0.4, w + 6, 2, '#151a28');
+        if (rnd() < 0.3) {
+          const bx = x + 2 + rnd() * (w - 8);
+          fill(b, bx, y - 3, 4 + rnd() * 4, 3, L.col);
+          fill(b, bx, y - 3, 4, 1, L.lit);
+        }
+        if (rnd() < 0.14) fill(b, x - 3, y + h * 0.4, w + 6, 2, '#151a28');
+        // a lit strip up one flank
+        if (rnd() < 0.16) {
+          b.globalAlpha = 0.5;
+          fill(b, x + w - 2, y + 2, 1, h - 4, rnd() < 0.6 ? '#2f4a7a' : '#6a4a3a');
+          b.globalAlpha = 1;
         }
       }
     }
@@ -2744,7 +3177,23 @@ class Factory {
       }
     }
 
-    for (let i = 0; i < 700; i++) {
+    // spires punctuating the skyline
+    for (let i = 0; i < 26; i++) {
+      const x = rnd() * BW;
+      const y = rnd() * BH;
+      const sh = 30 + rnd() * 80;
+      const sw = 3 + rnd() * 4;
+      if (clear(x, y, sw, sh)) continue;
+      fill(b, x, y, sw, sh, '#12161f');
+      fill(b, x, y, 1, sh, '#1e2534');
+      for (let k = 4; k < sh; k += 7) {
+        if (rnd() < 0.4) fill(b, x + 1, y + k, sw - 2, 1, '#2c4573');
+      }
+      fill(b, x + sw / 2 - 1, y - 8, 1, 8, '#1e2534');
+      fill(b, x + sw / 2 - 1, y - 9, 2, 2, '#7a3a3a');
+    }
+
+    for (let i = 0; i < 900; i++) {
       const x = rnd() * BW;
       const y = rnd() * BH;
       b.globalAlpha = 0.08 + rnd() * 0.28;
@@ -2939,9 +3388,10 @@ class Factory {
     const hov = this.hover === room.id;
     const act = this.sim.activity(room.id);
 
-    // floor
-    fill(b, x1, y1, w, h, PX.floor);
-    this.paintFloor(b, room, x1, y1, w, h, accent);
+    // floor — baked tiles, blitted
+    const floor = this.floors.get(room.id);
+    if (floor) b.drawImage(floor, x1, y1);
+    else fill(b, x1, y1, w, h, PX.floor);
 
     // ambient light from the room's own colour
     b.globalAlpha = 0.05 + act * 0.10 + (sel ? 0.09 : 0);
@@ -2962,55 +3412,43 @@ class Factory {
     this.drawWalls(b, room, accent, sel || hov);
   }
 
-  paintFloor(b, room, x1, y1, w, h, accent) {
-    const rnd = mulberry(room.id.length * 7919 + x1 * 31 + y1);
+  /** Tile a room's floor once into its own canvas. */
+  bakeFloor(room) {
+    const [x1, y1, x2, y2] = room.rect;
+    const w = x2 - x1;
+    const h = y2 - y1;
+    const cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = h;
+    const c = cv.getContext('2d');
 
-    if (room.floor === 'grid') {
-      fill(b, x1, y1, w, h, '#12121c');
-      for (let x = 0; x < w; x += 10) fill(b, x1 + x, y1, 1, h, '#181826');
-      for (let y = 0; y < h; y += 10) fill(b, x1, y1 + y, w, 1, '#181826');
-      for (let y = 0; y < h; y += 10) for (let x = 0; x < w; x += 10) {
-        fill(b, x1 + x + 1, y1 + y + 1, 1, 1, '#1f1f30');
-      }
-    } else if (room.floor === 'plate') {
-      fill(b, x1, y1, w, h, '#11111a');
-      for (let y = 0; y < h; y += 8) {
-        for (let x = (y / 8) % 2 ? 0 : 8; x < w; x += 16) {
-          fill(b, x1 + x, y1 + y, 7, 7, '#171722');
-          fill(b, x1 + x, y1 + y, 7, 1, '#1e1e2c');
-          fill(b, x1 + x + 1, y1 + y + 1, 1, 1, '#26263a');
-          fill(b, x1 + x + 5, y1 + y + 5, 1, 1, '#0d0d14');
-        }
-      }
-    } else {
-      fill(b, x1, y1, w, h, '#141420');
-      for (let y = 0; y < h; y += 6) fill(b, x1, y1 + y, w, 1, '#181826');
-      for (let x = 0; x < w; x += 12) fill(b, x1 + x, y1, 1, h, '#171725');
-    }
+    paintFloorTiles(c, room.tiles || 'plate', w, h, room.id.length * 7919 + x1 * 31 + y1);
 
-    // wear: scuffs, stains, a drain
-    for (let i = 0; i < 9; i++) {
-      const sx = 3 + rnd() * (w - 8);
-      const sy = 4 + rnd() * (h - 10);
-      b.globalAlpha = 0.05 + rnd() * 0.07;
-      fill(b, sx, sy, 2 + rnd() * 7, 1 + rnd() * 2, rnd() < 0.5 ? '#000000' : '#4a4a66');
-      b.globalAlpha = 1;
+    // scuffs and a drain, seeded so they never move between loads
+    const rnd = mulberry(x1 * 104729 + y1 * 7919);
+    for (let i = 0; i < 12; i++) {
+      c.globalAlpha = 0.05 + rnd() * 0.08;
+      fill(c, 3 + rnd() * (w - 8), 4 + rnd() * (h - 10),
+        2 + rnd() * 8, 1 + rnd() * 2, rnd() < 0.5 ? '#000000' : '#4a4a66');
     }
-    const dx = x1 + 6 + rnd() * (w - 16);
-    const dy = y1 + h - 8;
-    fill(b, dx, dy, 5, 5, '#0c0c14');
-    for (let i = 1; i < 5; i += 2) fill(b, dx, dy + i, 5, 1, '#1c1c2a');
+    c.globalAlpha = 1;
+    const dx = 6 + rnd() * (w - 16);
+    const dy = h - 9;
+    fill(c, dx, dy, 6, 6, '#0b0b11');
+    for (let i = 1; i < 6; i += 2) fill(c, dx, dy + i, 6, 1, '#1d1d2b');
+    fill(c, dx, dy, 6, 1, '#26263a');
 
-    // edges sit in shadow
-    b.globalAlpha = 0.36;
-    for (let i = 0; i < 5; i++) {
-      b.globalAlpha = 0.1 - i * 0.018;
-      fill(b, x1, y1 + i, w, 1, '#000000');
-      fill(b, x1, y1 + h - 1 - i, w, 1, '#000000');
-      fill(b, x1 + i, y1, 1, h, '#000000');
-      fill(b, x1 + w - 1 - i, y1, 1, h, '#000000');
+    // the walls throw shade inward
+    for (let i = 0; i < 7; i++) {
+      c.globalAlpha = 0.13 - i * 0.018;
+      fill(c, 0, i, w, 1, '#000000');
+      fill(c, 0, h - 1 - i, w, 1, '#000000');
+      fill(c, i, 0, 1, h, '#000000');
+      fill(c, w - 1 - i, 0, 1, h, '#000000');
     }
-    b.globalAlpha = 1;
+    c.globalAlpha = 1;
+
+    this.floors.set(room.id, cv);
   }
 
   /**
@@ -3112,15 +3550,14 @@ class Factory {
 
     for (const a of all) {
       const moving = a.state === 'transit';
-      drawSprite(
-        b,
-        a.kind || 'crew',
-        a.colour,
-        a.x,
-        a.y,
-        moving ? this.t * 7 : 0,
-        { glow: a.kind === 'arcane' ? 0.20 : (moving ? 0.10 : 0.06) },
-      );
+      const { facing, mirror } = facingFor(a.hx || 0, a.hy ?? 1);
+      drawSprite(b, a.kind || 'crew', a.colour, a.x, a.y, a.step || 0, {
+        facing,
+        mirror,
+        moving,
+        clock: this.t,
+        glow: a.kind === 'arcane' ? 0.22 : (moving ? 0.11 : 0.07),
+      });
     }
   }
 

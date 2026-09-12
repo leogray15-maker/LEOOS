@@ -47,7 +47,7 @@ export const ROOMS = [
   {
     id: 'bridge', name: 'BRIDGE', sub: 'Command · Targets',
     rect: [130, 10, 250, 54], door: [190, 54], spine: 0,
-    accent: 'arcane', floor: 'plate', venture: null,
+    accent: 'arcane', floor: 'plate', tiles: 'plate', venture: null,
     blurb: 'The whole empire on one screen. Targets are set here and everything downstream obeys them.',
     props: [
       ['viewport', 6, 3, 108, 7],
@@ -66,7 +66,7 @@ export const ROOMS = [
   {
     id: 'forge', name: 'FORGE', sub: 'Build · Site · App',
     rect: [20, 64, 172, 118], door: [172, 91], spine: 1,
-    accent: 'cyan', floor: 'grid', venture: 'track',
+    accent: 'cyan', floor: 'plate', tiles: 'grate', venture: 'track',
     blurb: 'Where the site and the ArcaneTrack app get built. Racks on one wall, a bench and an arm on the other.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -91,7 +91,7 @@ export const ROOMS = [
   {
     id: 'beacon', name: 'BEACON', sub: 'Signal · Content · Email',
     rect: [208, 64, 360, 118], door: [208, 91], spine: 1,
-    accent: 'flare', floor: 'grid', venture: null,
+    accent: 'flare', floor: 'plate', tiles: 'grate', venture: null,
     blurb: 'The broadcast deck. Everything the outside world hears leaves the building from here.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -112,7 +112,7 @@ export const ROOMS = [
   {
     id: 'apothecary', name: 'THE LAB', sub: 'Arcane Peptides · Stock · COA · Dispatch',
     rect: [20, 126, 172, 180], door: [172, 153], spine: 2,
-    accent: 'arcane', floor: 'clean', venture: 'peptides',
+    accent: 'arcane', floor: 'plate', tiles: 'lab', venture: 'peptides',
     blurb: 'Cold storage, vial racks, instruments and the packing bench. Nothing leaves this room without a lab report against its batch.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -139,7 +139,7 @@ export const ROOMS = [
   {
     id: 'vitals', name: 'VITALS', sub: 'Arcane Track · Members',
     rect: [208, 126, 360, 180], door: [208, 153], spine: 2,
-    accent: 'vital', floor: 'clean', venture: 'track',
+    accent: 'vital', floor: 'plate', tiles: 'lab', venture: 'track',
     blurb: 'Every dose logged, every day mapped. Member health and churn are watched from here.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -163,7 +163,7 @@ export const ROOMS = [
   {
     id: 'vault', name: 'VAULT', sub: 'Treasury · Cash · VAT',
     rect: [20, 188, 172, 242], door: [172, 215], spine: 3,
-    accent: 'gold', floor: 'plate', venture: null,
+    accent: 'gold', floor: 'plate', tiles: 'concrete', venture: null,
     blurb: 'Cash, runway, and the tax set-aside. This room decides what every other room can spend.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -187,7 +187,7 @@ export const ROOMS = [
   {
     id: 'archives', name: 'THE LIBRARY', sub: 'Archives · Content · PDF products',
     rect: [208, 188, 360, 242], door: [208, 215], spine: 3,
-    accent: 'cyan', floor: 'grid', venture: 'archives',
+    accent: 'cyan', floor: 'plate', tiles: 'carpet', venture: 'archives',
     blurb: 'Forty-eight courses and thousands of modules on the shelves. Posts get written here and modules get cut into PDFs worth selling.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -209,7 +209,7 @@ export const ROOMS = [
   {
     id: 'scriptorium', name: 'SCRIPTORIUM', sub: 'The Codex · Writing',
     rect: [20, 250, 172, 304], door: [172, 277], spine: 4,
-    accent: 'breach', floor: 'plate', venture: 'codex',
+    accent: 'breach', floor: 'plate', tiles: 'wood', venture: 'codex',
     blurb: 'Where the books get written. The Dark Psych Codex, The Quiet Empire, The Arcane Game.',
     props: [
       ['pipes', 3, 3, 146, 4],
@@ -233,7 +233,7 @@ export const ROOMS = [
   {
     id: 'sanctum', name: 'SANCTUM', sub: 'Leo · Body · Focus',
     rect: [208, 250, 360, 304], door: [208, 277], spine: 4,
-    accent: 'vital', floor: 'clean', venture: null,
+    accent: 'vital', floor: 'plate', tiles: 'mat', venture: null,
     blurb: 'Training, sleep, deep work. The operator is a system component and gets maintained like one.',
     props: [
       ['pipes', 3, 3, 146, 4],

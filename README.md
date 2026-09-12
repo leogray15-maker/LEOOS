@@ -46,10 +46,30 @@ Walls have real height: an outer cast shadow, a dark body, a lit top lip, with
 the doorway cut out of all three. Floors carry per-room wear — scuffs, stains, a
 drain, and darkened edges — seeded off the room id so it is stable across loads.
 
-Sprites are declared as character matrices (`o` outline, `c` colour, `d` shade,
-`l` highlight, `e` visor). ARCANE is 12x18 and cloaked; the crew are 9x14. Each
-is baked once per colour and frame into a tiny canvas, so a crowded room costs
-nothing.
+### Sprites
+
+Each character is a set of matrices: three facings (front, back, side) and three
+walk cels (stand, step A, step B), played as a four-beat cycle. Side-facing left
+is the right-facing matrix mirrored at bake time, so nothing is drawn twice.
+Standing figures get a slow idle bob.
+
+Palette slots: `o` outline, `c` main, `d` shade, `l` highlight, `e` eyes/visor,
+`s` skin, `h` hair or helm, `k` cloak fold, `a` trim. The outline sits at
+`#0b0b14` rather than pure black so a figure reads against a dark deck, and the
+shade/highlight pair is deliberately wide — strong internal contrast is what
+makes a nine-pixel figure read as a person rather than a blob. Arms are held off
+the torso by an outline column, or they merge into it and the sprite T-poses.
+
+Crew are 9x15, ARCANE is 12x19 and hooded. Every combination is baked once into
+a tiny canvas and blitted, so a crowded room costs nothing.
+
+### Tiles
+
+`src/render/tiles.js` holds seven 8x8 tilesets — plate, grate, lab, carpet,
+wood, concrete, mat — each with four wear variants chosen from seeded hash noise
+so a floor has texture without visibly repeating. Rooms name their set, and each
+floor is baked once into its own canvas with scuffs, a drain and inward wall
+shadow, then blitted. Nothing about a floor is recomputed per frame.
 
 ## Demo data
 
