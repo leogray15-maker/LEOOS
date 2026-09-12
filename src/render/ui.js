@@ -12,6 +12,12 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
 ));
 
+const PLATFORM_CLASS = {
+  TikTok: 'breach', Threads: 'arcane', X: 'ash',
+  Instagram: 'arcane', Email: 'flare', Thread: 'arcane', Short: 'breach',
+};
+const platformClass = (p) => PLATFORM_CLASS[p] || 'ash';
+
 const money = (n) => `£${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
 
 const clockTime = (ts) => new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -164,8 +170,41 @@ export class UI {
 
   /* ---------------- panels ---------------- */
 
+
+  signalPanel(compact) {
+    const drafts = this.store.drafts();
+    const body = drafts.length
+      ? drafts.slice(0, compact ? 3 : 12).map((d) => `
+        <article class="signal-card">
+          <div class="signal-card-top">
+            <span class="chip is-${platformClass(d.platform)}">${esc(d.platform)}</span>
+            <span class="signal-card-src">${esc(d.course)}</span>
+          </div>
+          <p class="signal-card-hook">${esc(d.hook)}</p>
+          <pre class="signal-card-body">${esc(d.post)}</pre>
+          <div class="signal-card-acts">
+            <button class="act is-primary" type="button" data-copy="${d.id}">Copy</button>
+            ${d.sourceUrl ? `<a class="act" href="${esc(d.sourceUrl)}" target="_blank" rel="noopener">Source</a>` : ''}
+            <span class="signal-card-spacer"></span>
+            <button class="act" type="button" data-posted="${d.id}">Posted</button>
+            <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
+          </div>
+        </article>`).join('')
+      : `<p class="counsel-empty">No drafts standing. The Signal Forge writes three every morning from a module in the Archives.</p>`;
+
+    return `
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Signal queue</h2>
+          <span class="chip mono">${drafts.length} draft${drafts.length === 1 ? '' : 's'}</span>
+        </div>
+        ${body}
+      </section>`;
+  }
+
   overviewPanels() {
-    return this.directivesPanel() + this.ledgerPanel() + this.signalsPanel() + this.rosterPanel();
+    return this.signalPanel(true) + this.directivesPanel() + this.ledgerPanel()
+      + this.signalsPanel() + this.rosterPanel();
   }
 
   directivesPanel() {
@@ -290,6 +329,10 @@ export class UI {
       </button>`;
   }
 
+  signalPanelInline() {
+    return `<div class="inline-queue">${this.signalPanel(false)}</div>`;
+  }
+
   deckPanel(id) {
     const deck = deckById[id];
     const tasks = this.store.tasks(id);
@@ -315,6 +358,7 @@ export class UI {
           <span class="chip mono">${crew.length} crew</span>
         </div>
         ${list}
+        ${id === 'beacon' ? this.signalPanelInline() : ''}
         <form class="order-add" data-add="${id}">
           <input type="text" id="add-${id}" placeholder="Issue an order to ${esc(deck.name)}…" autocomplete="off">
           <button type="submit">Issue</button>
@@ -383,6 +427,12 @@ export class UI {
     if (e.target.closest('[data-back]')) { this.clearSelection(); return; }
     const goto = e.target.closest('[data-goto]');
     if (goto) { this.selectDeck(goto.dataset.goto); return; }
+    const copy = e.target.closest('[data-copy]');
+    if (copy) { this.copyPost(copy.dataset.copy, copy); return; }
+    const posted = e.target.closest('[data-posted]');
+    if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
+    const kill = e.target.closest('[data-kill]');
+    if (kill) { this.store.markPost(kill.dataset.kill, 'killed'); return; }
     const agent = e.target.closest('[data-agent]');
     if (agent) { this.selectAgent(agent.dataset.agent); }
   }

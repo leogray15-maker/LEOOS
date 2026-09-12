@@ -72,3 +72,30 @@ panel at the foot of the dashboard always says which one is in force.
 
 The ledger ships **blank on purpose**. No revenue figure appears anywhere until
 you type a real one in.
+
+
+## The Signal Forge
+
+A scheduled agent that reads The Arcane Archives and drafts posts you can paste
+straight into Threads, X, Instagram, TikTok or an email.
+
+**Notion is read-only.** The agent fetches module pages and nothing else — it
+never creates, edits, moves or deletes anything in the workspace. Drafts are
+delivered into this artifact's own database and surface on the BEACON deck,
+where each one has a Copy button.
+
+How it works:
+
+1. It keeps its own map of the Archives in `forge/state` — `{id, title, course}`
+   per module, plus a `covered` list of what it has already used. It walks six
+   new course pages per run, so ~3,300 modules index over about a week without
+   hammering Notion.
+2. Each morning it picks three uncovered modules from three different courses,
+   reads what you actually wrote, and drafts one post per module.
+3. The drafts go to the front of `system/ship.posts`, trimmed to 30.
+
+It writes drafts only. There is no auto-posting step anywhere in the system.
+
+Peptide content is fenced: no claim that a compound treats, cures, prevents or
+diagnoses anything, no dosing, and no named compound paired with a health
+outcome. A module that cannot clear that bar is skipped.

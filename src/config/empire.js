@@ -156,3 +156,83 @@ export const SEED_TASKS = {
     { t: 'Deep work 06:00–09:00, ship before the world wakes', p: 2 },
   ],
 };
+
+/**
+ * Opening batch from the Signal Forge — drafted from three real modules
+ * in The Arcane Archives. The agent replaces these each morning.
+ * Nothing here was invented: every line traces to the source module.
+ */
+export const SEED_POSTS = [
+  {
+    id: 'sf-0912-1',
+    platform: 'TikTok',
+    hook: 'There is never a hater doing better than you.',
+    post: `There is never a hater doing better than you.
+
+Someone leaves something stupid under your video and your first instinct is to reply. Don't.
+
+Look at what actually happened. You posted. You tried to make something of yourself. They were scrolling.
+
+That is envy. They are watching someone move while they consume.
+
+Now — occasionally someone above you hates. More followers, further along, already winning. That one is not envy. That one is fear. They can see you climbing toward them.
+
+Envy below you. Fear above you.
+
+That is the whole map. Neither one was ever about you.`,
+    source: 'Hate Is Either Envy, Or Fear.',
+    course: 'Mindset Mastery',
+    sourceUrl: 'https://app.notion.com/p/26a7f6a404fe80c1a067f7b347f5f83f',
+    angle: 'Universal experience, hard reframe, costs nothing to give away.',
+    status: 'draft',
+    ts: 0,
+  },
+  {
+    id: 'sf-0912-2',
+    platform: 'X',
+    hook: "Everyone can have good marketing. Marketing does nothing when your customers don't stay.",
+    post: `Everyone can have good marketing.
+
+Marketing does nothing when your customers don't stay.
+
+Create, multiply, preserve. Preserve is the hardest part and the one nobody works on.
+
+Most people build the course, then go and live on a beach. One and done.
+
+One new module a day. That's the whole moat.`,
+    source: 'Retention > Acquisition + No Zero Days.',
+    course: 'Entrepreneurship Mastery',
+    sourceUrl: 'https://app.notion.com/p/2757f6a404fe80eeb8e0cc9b92d86061',
+    angle: 'The one claim you can make that your own product already proves.',
+    status: 'draft',
+    ts: 0,
+  },
+  {
+    id: 'sf-0912-3',
+    platform: 'Threads',
+    hook: "Your opening line has one job, and it isn't to get them to act.",
+    post: `Your opening line has one job, and it isn't to get them to act.
+
+The CTA at the end asks for action. The opener asks for something else entirely: a reaction. Reaction is what starts the emotional engine. Without it the rest of the copy is read cold.
+
+The fastest structure for it: "It's a shame you can't [the thing they want] when [someone far behind them] does it so easily."
+
+Why it lands like a gut punch — it makes them accept a limitation, then sets it beside someone who is supposed to be less than them.
+
+Here is the nuance almost everyone misses. There is a line between motivating and demoralising, and the same sentence can sit on either side of it.
+
+External comparison says: they have a system you don't. That motivates.
+
+Internal comparison says: they are more capable than you. That demoralises. You lose the reader there.
+
+Lead with YOU and it punches harder. Lead with THEM and it softens. Pick deliberately.
+
+The goal was never to make them feel bad. It's to make them see that if someone a fifth as capable can do it, so can they.`,
+    source: 'The Shame Opening',
+    course: 'Mind HiJacking',
+    sourceUrl: 'https://app.notion.com/p/2697f6a404fe80e0aeffce146c701ecb',
+    angle: 'Gives away a complete, usable mechanic — makes people ask what else is behind the paywall.',
+    status: 'draft',
+    ts: 0,
+  },
+];

@@ -7,7 +7,7 @@
  * The rest of the app never knows which one it got.
  */
 
-import { DECKS, VENTURES, SEED_TASKS } from '../config/empire.js';
+import { DECKS, VENTURES, SEED_TASKS, SEED_POSTS } from '../config/empire.js';
 
 const LS_KEY = 'leoos.v1';
 
@@ -22,7 +22,7 @@ function seedState() {
   }
   const ledger = {};
   for (const v of VENTURES) ledger[v.id] = { mrr: v.seedMrr, unit: v.seedUnit, calibrated: false };
-  return { decks, ledger, log: [] };
+  return { decks, ledger, log: [], posts: SEED_POSTS.slice() };
 }
 
 export class Store {
@@ -96,6 +96,7 @@ export class Store {
       }
     }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
+    if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
   }
 
   /** Persist — debounced, so a burst of ticks becomes one write. */
@@ -110,6 +111,7 @@ export class Store {
       decks: this.state.decks,
       ledger: this.state.ledger,
       log: this.state.log.slice(0, 50),
+      posts: this.state.posts.slice(0, 60),
     };
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
@@ -169,6 +171,25 @@ export class Store {
 
   monthlyTotal() {
     return VENTURES.reduce((n, v) => n + (Number(this.state.ledger[v.id]?.mrr) || 0), 0);
+  }
+
+  /* ---------- signal queue ---------- */
+
+  /** Drafts the Signal Forge has written, newest first. */
+  drafts() {
+    return (this.state.posts || []).filter((p) => p.status !== 'killed');
+  }
+
+  postCount() { return this.drafts().length; }
+
+  markPost(id, status) {
+    const post = (this.state.posts || []).find((p) => p.id === id);
+    if (!post) return;
+    post.status = status;
+    this.log(status === 'posted'
+      ? `Signal sent — ${post.platform}: ${post.hook}`
+      : `Signal killed — ${post.hook}`);
+    this.save();
   }
 
   /* ---------- log ---------- */
