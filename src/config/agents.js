@@ -54,7 +54,7 @@ const base = { data: 'analyse', analyse: 'analyse', write: 'draft', spend: 'deny
 export const AGENTS = [
   {
     id: 'arcane', call: 'ARCANEBOT', name: 'ARCANE', role: 'Commander',
-    room: 'bridge', deck: 1, colour: '#a98bff', kind: 'arcane',
+    room: 'bridge', colour: '#a98bff', kind: 'arcane',
     domain: 'The whole empire',
     brief: 'Holds the state of everything and decides which specialist works next. Synthesises the Council into one recommendation.',
     tools: ['memory', 'counsel', 'notion'],
@@ -63,7 +63,7 @@ export const AGENTS = [
   },
   {
     id: 'meridian', call: 'ARCA-LAB', name: 'MERIDIAN', role: 'Quartermaster',
-    room: 'apothecary', deck: 1, colour: '#c68bff',
+    room: 'apothecary', colour: '#c68bff',
     domain: 'Arcane Peptides — stock, batches, COA, dispatch',
     brief: 'Watches stock cover, batch records and whether every live compound has a lab report against it. Flags a dispatch cutoff at risk.',
     tools: ['memory', 'commerce', 'notion'],
@@ -72,7 +72,7 @@ export const AGENTS = [
   },
   {
     id: 'tally', call: 'ARCA-TREASURER', name: 'TALLY', role: 'Treasurer',
-    room: 'vault', deck: 1, colour: '#d9a441',
+    room: 'vault', colour: '#d9a441',
     domain: 'Cash, burn, runway, tax reserve, the split',
     brief: 'Answers what you can afford and where the money is leaking. Audits subscriptions and unusual spend. Never moves a penny itself.',
     tools: ['memory'],
@@ -81,7 +81,7 @@ export const AGENTS = [
   },
   {
     id: 'vector', call: 'ARCA-STRATEGIST', name: 'VECTOR', role: 'Strategist',
-    room: 'warroom', deck: 2, colour: '#b79cff',
+    room: 'warroom', colour: '#b79cff',
     domain: 'Which venture gets the next hour, the next pound, the next quarter',
     brief: 'Ranks the ventures by what is actually compounding and names what to stop doing. Produces the top three moves.',
     tools: ['memory', 'counsel'],
@@ -90,7 +90,7 @@ export const AGENTS = [
   },
   {
     id: 'herald', call: 'ARCA-MEDIA', name: 'HERALD', role: 'Signalman',
-    room: 'beacon', deck: 1, colour: '#e8b64c',
+    room: 'beacon', colour: '#e8b64c',
     domain: 'Content, email, launches, the attention funnel',
     brief: 'Turns Archives modules into posts and watches which of them actually produce leads. Drafts only — nothing goes out unapproved.',
     tools: ['memory', 'notion'],
@@ -99,7 +99,7 @@ export const AGENTS = [
   },
   {
     id: 'oracle', call: 'ARCA-SCRIBE', name: 'ORACLE', role: 'Archivist',
-    room: 'archives', deck: 1, colour: '#6bd6ff',
+    room: 'archives', colour: '#6bd6ff',
     domain: 'The Archives, the knowledge base, PDF products',
     brief: 'Keeps the map of 3,300 modules and cuts them into things worth selling. Runs idea → research → draft → review → publish.',
     tools: ['memory', 'notion'],
@@ -108,7 +108,7 @@ export const AGENTS = [
   },
   {
     id: 'lumen', call: 'ARCA-VITALS', name: 'LUMEN', role: 'Physician',
-    room: 'vitals', deck: 1, colour: '#3ecf8e',
+    room: 'vitals', colour: '#3ecf8e',
     domain: 'Arcane Track — members, retention, dose logging',
     brief: 'Watches churn and who has stopped logging. Never gives medical advice, to you or to a member.',
     tools: ['memory'],
@@ -117,7 +117,7 @@ export const AGENTS = [
   },
   {
     id: 'anvil', call: 'ARCA-OPS', name: 'ANVIL', role: 'Engineer',
-    room: 'forge', deck: 1, colour: '#56c9f0',
+    room: 'forge', colour: '#56c9f0',
     domain: 'Site, app, automation, the order pipeline',
     brief: 'Owns the machine that turns an order into a delivered parcel and a reconciled line. Flags where a workflow breaks.',
     tools: ['memory', 'commerce'],
@@ -126,7 +126,7 @@ export const AGENTS = [
   },
   {
     id: 'scribe', call: 'ARCA-CODEX', name: 'SCRIBE', role: 'Scrivener',
-    room: 'scriptorium', deck: 1, colour: '#e5484d',
+    room: 'scriptorium', colour: '#e5484d',
     domain: 'The Codex — books, masterclasses, launches',
     brief: 'Drafts and proofs the long-form work and runs a launch sequence when a title is ready.',
     tools: ['memory', 'notion'],
@@ -135,7 +135,7 @@ export const AGENTS = [
   },
   {
     id: 'keeper', call: 'ARCA-MENTOR', name: 'KEEPER', role: 'Steward',
-    room: 'sanctum', deck: 1, colour: '#7ee0a8',
+    room: 'sanctum', colour: '#7ee0a8',
     domain: 'Sleep, training, focus, the long-term goals',
     brief: 'Answers one question honestly: are you actually moving toward the life you said you wanted, or just busy.',
     tools: ['memory'],
@@ -144,7 +144,7 @@ export const AGENTS = [
   },
   {
     id: 'intel', call: 'ARCA-INTEL', name: 'CIPHER', role: 'Intelligence',
-    room: 'intel', deck: 2, colour: '#8b5cf6',
+    room: 'intel', colour: '#8b5cf6',
     domain: 'Competitors, markets, pricing, suppliers, regulation',
     brief: 'Produces the daily intelligence: opportunity, threat, signal, action. Needs web research wired before it can do its job.',
     tools: ['memory', 'web'],
@@ -153,7 +153,7 @@ export const AGENTS = [
   },
   {
     id: 'ledger', call: 'ARCA-COMMERCE', name: 'ABACUS', role: 'Commerce',
-    room: 'market', deck: 2, colour: '#e0609a',
+    room: 'market', colour: '#e0609a',
     domain: 'Visitors → leads → orders → revenue',
     brief: 'Watches the funnel and names the biggest drop-off. Suggests the one change most likely to move conversion.',
     tools: ['memory', 'commerce'],
@@ -162,7 +162,7 @@ export const AGENTS = [
   },
   {
     id: 'envoy', call: 'ARCA-SALES', name: 'ENVOY', role: 'Deals',
-    room: 'dealroom', deck: 2, colour: '#f0a05a',
+    room: 'dealroom', colour: '#f0a05a',
     domain: 'Leads, prospects, customers, partners, suppliers',
     brief: 'Researches a company, drafts the outreach, prepares the meeting brief. Sends nothing without your word.',
     tools: ['memory', 'crm', 'web'],
@@ -171,7 +171,7 @@ export const AGENTS = [
   },
   {
     id: 'watch', call: 'ARCA-WATCH', name: 'VIGIL', role: 'Observer',
-    room: 'observatory', deck: 2, colour: '#56c9f0',
+    room: 'observatory', colour: '#56c9f0',
     domain: 'Everything that changes while you are not looking',
     brief: 'Does not wait to be asked. Raises a signal when stock, revenue, a competitor or a deadline moves.',
     tools: ['memory', 'web'],
@@ -180,7 +180,7 @@ export const AGENTS = [
   },
   {
     id: 'guard', call: 'ARCA-GUARD', name: 'WARDEN', role: 'Risk & Control',
-    room: 'control', deck: 2, colour: '#e5484d',
+    room: 'control', colour: '#e5484d',
     domain: 'Permissions, approvals, compliance, the audit trail',
     brief: 'Holds the permission grades and says no. Flags regulatory exposure before it becomes a problem, not after.',
     tools: ['memory'],
@@ -189,7 +189,7 @@ export const AGENTS = [
   },
   {
     id: 'venture', call: 'ARCA-VENTURE', name: 'SPARK', role: 'Inventor',
-    room: 'inventor', deck: 2, colour: '#3ecf8e',
+    room: 'inventor', colour: '#3ecf8e',
     domain: 'New ideas, before they get lost',
     brief: 'Takes an idea through market, competition, economics, MVP, cost and risk, then returns BUILD, WATCH or KILL.',
     tools: ['memory', 'counsel', 'web'],
@@ -198,12 +198,30 @@ export const AGENTS = [
   },
   {
     id: 'forge', call: 'ARCA-SMITH', name: 'FOUNDRY', role: 'Agent-wright',
-    room: 'garage', deck: 2, colour: '#a98bff',
+    room: 'garage', colour: '#a98bff',
     domain: 'The agents themselves',
     brief: 'Where an agent is configured: name, role, domain, tools, permissions, and what it must ask before doing.',
     tools: ['memory'],
     caps: { ...base, change: 'approval' },
     council: false, weight: 9,
+  },
+  {
+    id: 'steward', call: 'ARCA-KEEPER', name: 'RELIC', role: 'Records',
+    room: 'records', colour: '#d9a441',
+    domain: 'Contracts, receipts, SOPs, and why a decision was made',
+    brief: 'The institutional memory. Holds the reasoning behind past decisions so no agent starts a task from scratch.',
+    tools: ['memory', 'notion'],
+    caps: { ...base },
+    council: false, weight: 9,
+  },
+  {
+    id: 'host', call: 'ARCA-HOST', name: 'EMBER', role: 'Steward of the Lounge',
+    room: 'lounge', colour: '#7ee0a8',
+    domain: 'Downtime, and noticing when you have not had any',
+    brief: 'Watches how long you have gone without stopping. The only agent whose job is to tell you to leave the building.',
+    tools: ['memory'],
+    caps: { ...base, write: 'recommend' },
+    council: false, weight: 10,
   },
 ];
 

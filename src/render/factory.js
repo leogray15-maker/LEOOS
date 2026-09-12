@@ -7,7 +7,7 @@
  * drawn afterwards at display resolution so they stay readable.
  */
 
-import { PW, PH, PX, ROOMS, SPINE_X, corridors, roomsOn } from '../config/facility.js';
+import { PW, PH, PX, ROOMS, VCORR, HALL_Y, CORR_W, corridors } from '../config/facility.js';
 import { paintProp } from './props.js';
 import { drawSprite, facingFor } from './sprites.js';
 import { paintFloorTiles } from './tiles.js';
@@ -44,7 +44,9 @@ export class Factory {
     this.buf.height = PH;
     this.bctx = this.buf.getContext('2d');
 
-    this.deck = 1;
+    this.zoom = 'fit';
+    this.panX = 0;
+    this.panY = 0;
     this.selected = null;
     this.hover = null;
     this.t = 0;
@@ -224,10 +226,51 @@ export class Factory {
     this.dpr = dpr;
     this.w = w;
     this.h = h;
-    // integer scale keeps every pixel square
-    this.scale = Math.max(1, Math.floor(Math.min((w - 16) / PW, (h - 16) / PH) * dpr) / dpr);
-    this.ox = (w - PW * this.scale) / 2;
-    this.oy = (h - PH * this.scale) / 2;
+
+    // Integer scale only — a fractional one gives uneven pixels and shimmer.
+    this.fitScale = Math.max(1, Math.floor(Math.min((w - 12) / PW, (h - 12) / PH)));
+    this.scale = this.zoom === 'fit' ? this.fitScale : this.zoom;
+    this.clampPan();
+  }
+
+  /** Keep the station on screen: centred when it fits, inside the edges when it does not. */
+  clampPan() {
+    const mw = PW * this.scale;
+    const mh = PH * this.scale;
+    const slackX = Math.max(0, (mw - this.w) / 2);
+    const slackY = Math.max(0, (mh - this.h) / 2);
+    this.panX = Math.max(-slackX, Math.min(slackX, this.panX));
+    this.panY = Math.max(-slackY, Math.min(slackY, this.panY));
+    this.ox = Math.round((this.w - mw) / 2 + this.panX);
+    this.oy = Math.round((this.h - mh) / 2 + this.panY);
+  }
+
+  setZoom(z) {
+    this.zoom = z;
+    if (z === 'fit') { this.panX = 0; this.panY = 0; }
+    this.resize();
+  }
+
+  /** True when the map is larger than its frame and can be dragged. */
+  get pannable() {
+    return PW * this.scale > this.w + 1 || PH * this.scale > this.h + 1;
+  }
+
+  panBy(dx, dy) {
+    this.panX += dx;
+    this.panY += dy;
+    this.clampPan();
+  }
+
+  /** Bring a room into view without moving the map if it is already visible. */
+  focusRoom(room) {
+    if (!this.pannable || !room) return;
+    const [x1, y1, x2, y2] = room.rect;
+    const cx = ((x1 + x2) / 2) * this.scale;
+    const cy = ((y1 + y2) / 2) * this.scale;
+    this.panX = (PW * this.scale) / 2 - cx;
+    this.panY = (PH * this.scale) / 2 - cy;
+    this.clampPan();
   }
 
   /** Display (CSS px, canvas-relative) -> pixel space. */
@@ -236,7 +279,7 @@ export class Factory {
   }
 
   roomAt(x, y) {
-    return roomsOn(this.deck).find((r) => {
+    return ROOMS.find((r) => {
       const [x1, y1, x2, y2] = r.rect;
       return x >= x1 - 2 && x <= x2 + 2 && y >= y1 - 2 && y <= y2 + 2;
     }) || null;
@@ -249,7 +292,7 @@ export class Factory {
     b.clearRect(0, 0, PW, PH);
     this.drawShell(b);
     this.drawCorridors(b);
-    for (const room of roomsOn(this.deck)) this.drawRoom(b, room);
+    for (const room of ROOMS) this.drawRoom(b, room);
     this.drawCrew(b);
 
     // blit
@@ -340,7 +383,7 @@ export class Factory {
   }
 
   drawCorridors(b) {
-    for (const [x1, y1, x2, y2] of corridors(this.deck)) {
+    for (const [x1, y1, x2, y2] of corridors()) {
       const w = x2 - x1;
       const h = y2 - y1;
       fill(b, x1, y1, w, h, PX.floor);
@@ -356,32 +399,44 @@ export class Factory {
       fill(b, x1, y2 - 1, w, 1, '#101018');
     }
 
-    // hazard edging down the spine
-    for (let y = 50; y < 306; y += 6) {
-      fill(b, SPINE_X - 12, y, 1, 3, '#3a3320');
-      fill(b, SPINE_X + 11, y + 3, 1, 3, '#3a3320');
+    // hazard edging down each service corridor
+    for (const vx of VCORR) {
+      for (let y = 16; y < 446; y += 7) {
+        fill(b, vx - CORR_W / 2, y, 1, 3, '#3a3320');
+        fill(b, vx + CORR_W / 2 - 1, y + 3, 1, 3, '#3a3320');
+      }
     }
 
-    // the flow line, pulsing toward the bridge
-    for (let y = 52; y < 304; y += 7) {
-      const p = ((this.t * 20 + y) % 110) / 110;
-      b.globalAlpha = 0.22 + (1 - p) * 0.55;
-      fill(b, SPINE_X - 1, y, 3, 4, PX.arcane);
+    // flow lines, pulsing toward the hall
+    for (const vx of VCORR) {
+      for (let y = 18; y < 444; y += 8) {
+        const p = ((this.t * 22 + y) % 120) / 120;
+        b.globalAlpha = 0.2 + (1 - p) * 0.5;
+        fill(b, vx - 1, y, 3, 4, PX.arcane);
+      }
+    }
+    for (let x = VCORR[0]; x < VCORR[2]; x += 8) {
+      const p = ((this.t * 22 + x) % 120) / 120;
+      b.globalAlpha = 0.2 + (1 - p) * 0.45;
+      fill(b, x, HALL_Y - 1, 4, 3, PX.arcane);
     }
     b.globalAlpha = 1;
 
-    // overhead strip lights along the corridor
-    for (const y of [70, 120, 175, 230, 285]) {
-      fill(b, SPINE_X - 5, y, 10, 1, '#c8cadd');
-      b.globalAlpha = 0.07;
-      fill(b, SPINE_X - 12, y - 4, 24, 10, '#cfd4ff');
-      b.globalAlpha = 1;
+    // overhead strips
+    for (const vx of VCORR) {
+      for (const y of [40, 110, 184, 250, 320, 400]) {
+        fill(b, vx - 6, y, 12, 1, '#c8cadd');
+        b.globalAlpha = 0.07;
+        fill(b, vx - 13, y - 5, 26, 12, '#cfd4ff');
+        b.globalAlpha = 1;
+      }
     }
 
     // lit thresholds at every door
-    for (const r of roomsOn(this.deck)) {
-      if (r.door[0] === SPINE_X) continue;
-      const x = r.door[0] < SPINE_X ? r.door[0] : r.door[0] - 3;
+    for (const r of ROOMS) {
+
+      const vx = VCORR[r.corr];
+      const x = r.door[0] < vx ? r.door[0] : r.door[0] - 3;
       const col = ACCENT[r.accent] || PX.arcane;
       b.globalAlpha = 0.6 + Math.sin(this.t * 2 + r.door[1]) * 0.2;
       fill(b, x, r.door[1] - 8, 3, 16, col);
@@ -547,7 +602,7 @@ export class Factory {
 
   drawCrew(b) {
     // trails first so sprites sit on top
-    for (const a of this.sim.onFloor(this.deck)) {
+    for (const a of this.sim.onFloor()) {
       if (a.state !== 'transit') continue;
       for (let i = 1; i < a.wake.length; i++) {
         b.globalAlpha = (i / a.wake.length) * 0.18;
@@ -556,7 +611,7 @@ export class Factory {
     }
     b.globalAlpha = 1;
 
-    const all = this.sim.onFloor(this.deck).slice().sort((p, q) => p.y - q.y);
+    const all = this.sim.onFloor().slice().sort((p, q) => p.y - q.y);
 
     for (const a of all) {
       const moving = a.state === 'transit';
@@ -573,7 +628,7 @@ export class Factory {
 
   /** Name plates, drawn crisp on top of the blitted pixels. */
   drawLabels(c) {
-    const all = this.sim.onFloor(this.deck);
+    const all = this.sim.onFloor();
 
     c.textAlign = 'center';
     c.textBaseline = 'bottom';
@@ -605,7 +660,7 @@ export class Factory {
     c.textAlign = 'left';
     c.font = `600 ${plate}px 'Chakra Petch', sans-serif`;
     c.letterSpacing = '1px';
-    for (const r of roomsOn(this.deck)) {
+    for (const r of ROOMS) {
       if (r.id === focus) continue;
       const [x1, y1] = r.rect;
       const x = this.ox + (x1 + 3) * this.scale;
@@ -622,7 +677,7 @@ export class Factory {
     c.textAlign = 'center';
 
     // the focused room gets the full plate
-    const room = roomsOn(this.deck).find((r) => r.id === focus);
+    const room = ROOMS.find((r) => r.id === focus);
     if (room) {
       const [x1, y1, x2] = room.rect;
       const x = this.ox + ((x1 + x2) / 2) * this.scale;

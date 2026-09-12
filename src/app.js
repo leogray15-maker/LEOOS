@@ -57,6 +57,17 @@ function atEvent(e) {
 }
 
 canvas.addEventListener('pointermove', (e) => {
+  if (drag) {
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    drag.moved += Math.abs(dx) + Math.abs(dy);
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    factory.panBy(dx, dy);
+    tooltip.hidden = true;
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
   const { x, y } = atEvent(e);
   const agent = sim.agentAt(x, y);
   const room = agent ? null : factory.roomAt(x, y);
@@ -75,7 +86,7 @@ canvas.addEventListener('pointermove', (e) => {
   } else {
     tooltip.hidden = true;
   }
-  canvas.style.cursor = agent || room ? 'pointer' : 'default';
+  canvas.style.cursor = agent || room ? 'pointer' : factory.pannable ? 'grab' : 'default';
 });
 
 canvas.addEventListener('pointerleave', () => {
@@ -83,7 +94,24 @@ canvas.addEventListener('pointerleave', () => {
   tooltip.hidden = true;
 });
 
+/* ---------- drag to pan ---------- */
+
+let drag = null;
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (!factory.pannable) return;
+  drag = { x: e.clientX, y: e.clientY, moved: 0 };
+  canvas.setPointerCapture(e.pointerId);
+});
+
+canvas.addEventListener('pointerup', (e) => {
+  if (drag) canvas.releasePointerCapture(e.pointerId);
+  // a real drag suppresses the click that follows it
+  setTimeout(() => { drag = null; }, 0);
+});
+
 canvas.addEventListener('click', (e) => {
+  if (drag && drag.moved > 5) return;
   const { x, y } = atEvent(e);
   const agent = sim.agentAt(x, y);
   if (agent) { ui.selectAgent(agent.id); return; }
@@ -100,6 +128,18 @@ function showTip(px, py, title, body) {
   tooltip.firstElementChild.textContent = title;
   tooltip.lastElementChild.textContent = body;
 }
+
+/* ---------- zoom ---------- */
+
+document.getElementById('zoom').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-zoom]');
+  if (!btn) return;
+  const v = btn.dataset.zoom;
+  factory.setZoom(v === 'fit' ? 'fit' : Number(v));
+  for (const b of e.currentTarget.querySelectorAll('button')) {
+    b.setAttribute('aria-pressed', String(b === btn));
+  }
+});
 
 /* ---------- transport ---------- */
 

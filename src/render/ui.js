@@ -7,7 +7,7 @@ import {
   DECKS, VENTURES, CREW, ARCANE, CATALOGUE, GOALS, BUDGET, SCREENS, OPERATOR,
   AGENTS, COUNCIL, CAPS, TOOLS, GRADE_TONE,
 } from '../config/empire.js';
-import { ROOM_BY_ID, roomsOn, FLOORS } from '../config/facility.js';
+import { ROOM_BY_ID, WINGS } from '../config/facility.js';
 import {
   INVENTORY, DISPATCH, PDF_PRODUCTS, COHORTS, BUILD_QUEUE,
   MANUSCRIPTS, PROTOCOL, DOCTRINE, ROOM_WIDGET,
@@ -94,17 +94,6 @@ export class UI {
         </button>`).join('')}
 
       <div class="rail-block">
-        <span class="eyebrow">Deck</span>
-        <div class="deck-switch" id="deckSwitch">
-          ${FLOORS.map((d) => `
-            <button type="button" data-deck="${d.id}">
-              <span class="deck-no mono">${d.id}</span>
-              <span class="deck-name">${esc(d.sub)}</span>
-            </button>`).join('')}
-        </div>
-      </div>
-
-      <div class="rail-block">
         <span class="eyebrow">Commander</span>
         <button class="commander" type="button" data-commander="1">
           <span class="commander-mark">◆</span>
@@ -129,13 +118,7 @@ export class UI {
     this.railEl.addEventListener('click', (e) => {
       const nav = e.target.closest('[data-screen]');
       if (nav) { this.setScreen(nav.dataset.screen); return; }
-      const deck = e.target.closest('[data-deck]');
-      if (deck) {
-        this.factory.deck = Number(deck.dataset.deck);
-        this.closeRoom();
-        this.setScreen('factory');
-        return;
-      }
+
       if (e.target.closest('[data-commander]')) this.openRoom(this.sim.arcane.deck);
     });
   }
@@ -159,8 +142,8 @@ export class UI {
     const room = ROOM_BY_ID[id];
     if (!room) return;
     this.room = id;
-    this.factory.deck = room.deck;
     this.factory.selected = id;
+    this.factory.focusRoom(room);
     this.sim.commandTo(id);
     if (this.screen !== 'factory') this.setScreen('factory');
     else this.render();
@@ -212,11 +195,6 @@ export class UI {
     const pct = total ? Math.round((done / total) * 100) : 0;
     $('#integrityFill').style.width = `${pct}%`;
     $('#integrityPct').textContent = `${pct}%`;
-
-    for (const d of FLOORS) {
-      const btn = this.railEl.querySelector(`[data-deck="${d.id}"]`);
-      if (btn) btn.setAttribute('aria-current', String(this.factory.deck === d.id));
-    }
 
     const a = this.sim.arcane;
     $('#arcaneWhere').textContent = a.state === 'transit'
@@ -352,7 +330,7 @@ export class UI {
 
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">The network</h3>
-          <span class="chip">${AGENTS.length} agents · 2 decks</span></div>
+          <span class="chip">${AGENTS.length} agents · ${WINGS.length} wings</span></div>
         <div class="crew-chips">
           ${AGENTS.map((a) => `<button class="crew-chip" type="button" data-agent="${a.id}">
             <span class="dot" style="background:${a.colour}"></span>${esc(a.name)}
@@ -452,7 +430,7 @@ export class UI {
             <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
             <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
             <span class="agent-call mono">${esc(a.call)}</span>
-            <span class="agent-role">${esc(a.role)} · ${esc(room?.name || '')} · Deck ${a.deck}</span>
+            <span class="agent-role">${esc(a.role)} · ${esc(room?.name || '')}</span>
             <span class="agent-brief">${esc(a.domain)}</span>
             <span class="agent-tags">
               ${a.tools.map((t) => `<span class="tag">${esc(TOOLS.find((x) => x.id === t)?.name || t)}</span>`).join('')}
@@ -776,7 +754,7 @@ export class UI {
         <p class="muted-note">${sel.order ? esc(sel.order) : 'Awaiting orders on this deck.'}</p>
         <h3 class="sub-title">Send to</h3>
         <div class="crew-chips">
-          ${roomsOn(sel.floor || 1).map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
+          ${DECKS.map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
              data-send="${sel.id}" data-to="${d.id}">${esc(d.name)}</button>`).join('')}
         </div>`;
     }

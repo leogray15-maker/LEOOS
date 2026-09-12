@@ -629,3 +629,10 @@ button, input, textarea { font: inherit; color: inherit; }
 .grade.is-flare  { color: var(--flare);  background: rgba(232,182,76,.1); }
 .grade.is-arcane { color: var(--arcane-lift); background: var(--arcane-wash); }
 .grade.is-cyan   { color: var(--cyan);   background: rgba(86,201,240,.1); }
+
+/* Belt and braces on top of imageSmoothingEnabled = false + integer scaling. */
+#hull {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+}

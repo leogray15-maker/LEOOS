@@ -635,6 +635,13 @@ button, input, textarea { font: inherit; color: inherit; }
 .grade.is-arcane { color: var(--arcane-lift); background: var(--arcane-wash); }
 .grade.is-cyan   { color: var(--cyan);   background: rgba(86,201,240,.1); }
 
+/* Belt and braces on top of imageSmoothingEnabled = false + integer scaling. */
+#hull {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+}
+
 </style>
 
 <div id="os">
@@ -662,6 +669,12 @@ button, input, textarea { font: inherit; color: inherit; }
     <div class="readout"><span class="readout-label">Drafts</span><span class="readout-value mono" id="roDrafts">--</span></div>
 
     <span class="topbar-spacer"></span>
+
+    <div class="transport" id="zoom" role="group" aria-label="Map zoom">
+      <button type="button" data-zoom="fit" aria-pressed="true">FIT</button>
+      <button type="button" data-zoom="2" aria-pressed="false">2×</button>
+      <button type="button" data-zoom="3" aria-pressed="false">3×</button>
+    </div>
 
     <div class="transport" id="transport" role="group" aria-label="Simulation speed">
       <button type="button" data-speed="0" aria-pressed="false">HOLD</button>
@@ -699,20 +712,28 @@ button, input, textarea { font: inherit; color: inherit; }
 <script type="module">
 /* ==== src/config/facility.js ==== */
 /**
- * THE ARCANE — facility floor plan.
+ * THE ARCANE — one facility, twenty rooms.
  *
- * PIXEL space: 380 x 320, drawn to an offscreen buffer at 1:1 and blitted
- * up at an integer scale with smoothing off. Rooms are 152x54 — big enough
- * to hold real machinery rather than three boxes and a label.
+ * PIXEL space: 640 x 460, drawn to an offscreen buffer at 1:1 and blitted
+ * at an INTEGER scale with smoothing off. Four wings of five rooms around
+ * two service corridors and a central hall.
+ *
+ *   C1 PRODUCTION │ V1 │ C2 COMMAND │ HALL │ C3 KNOWLEDGE │ V3 │ C4 NETWORK
  *
  * Props are [type, x, y, w, h, opt] in room-local pixels.
  */
 
-const PW = 380;
-const PH = 320;
+const PW = 640;
+const PH = 460;
 
-const SPINE_X = 190;
-const SPINE = [54, 91, 153, 215, 277];
+/** Vertical service corridors, by centre line. */
+const VCORR = [156, 316, 476];
+/** Room row centres, top to bottom. */
+const ROWY = [51, 129, 239, 317, 395];
+/** The hall that ties the corridors together. */
+const HALL_Y = 184;
+const CORR_W = 28;
+const HALL_H = 28;
 
 const PX = {
   space:    '#05050a',
@@ -743,428 +764,501 @@ const PX = {
   steel:    '#5a6070',
 };
 
+/** Services every room carries, so the building feels wired throughout. */
+const svc = (label, tone = 'arcane') => ([
+  ['pipes', 3, 2, 118, 4],
+  ['ceilinglight', 22, 7, 16, 2],
+  ['ceilinglight', 86, 7, 16, 2],
+  ['junction', 110, 8, 8, 6],
+  ['sign', 3, 7, Math.min(22, 4 + label.length * 3), 4, label],
+]);
+
 const ROOMS = [
-  {
-    id: 'bridge', name: 'BRIDGE', sub: 'Command · Targets',
-    rect: [130, 10, 250, 54], door: [190, 54], spine: 0, deck: 1,
-    accent: 'arcane', floor: 'plate', tiles: 'plate', venture: null,
-    blurb: 'The whole empire on one screen. Targets are set here and everything downstream obeys them.',
-    props: [
-      ['viewport', 6, 3, 108, 7],
-      ['ceilinglight', 24, 11, 14, 2], ['ceilinglight', 82, 11, 14, 2],
-      ['console', 10, 14, 24, 9], ['console', 48, 14, 24, 9], ['console', 86, 14, 24, 9],
-      ['holotable', 44, 25, 32, 15],
-      ['terminal', 6, 26, 9, 12], ['terminal', 105, 26, 9, 12],
-      ['chair', 56, 34, 8, 6],
-      ['panel', 18, 26, 10, 7], ['panel', 92, 26, 10, 7],
-      ['cablerun', 4, 24, 108, 1],
-      ['hazard', 20, 40, 20, 2], ['hazard', 80, 40, 20, 2],
-      ['bolt', 4, 4, 2, 2], ['bolt', 112, 4, 2, 2],
-      ['vent', 20, 34, 9, 5], ['vent', 90, 34, 9, 5],
-    ],
-  },
-  {
-    id: 'forge', name: 'FORGE', sub: 'Build · Site · App',
-    rect: [20, 64, 172, 118], door: [172, 91], spine: 1, deck: 1,
-    accent: 'cyan', floor: 'plate', tiles: 'grate', venture: 'track',
-    blurb: 'Where the site and the ArcaneTrack app get built. Racks on one wall, a bench and an arm on the other.',
-    props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 30, 8, 16, 2], ['ceilinglight', 100, 8, 16, 2],
-      ['rack', 6, 11, 13, 30], ['rack', 22, 11, 13, 30], ['rack', 38, 11, 13, 30], ['rack', 54, 11, 13, 30],
-      ['cablespool', 6, 43, 10, 7], ['cablespool', 19, 43, 10, 7],
-      ['cablerun', 70, 12, 1, 30],
-      ['bench', 76, 14, 44, 10],
-      ['toolwall', 78, 8, 40, 5],
-      ['screen', 78, 26, 16, 10], ['screen', 97, 26, 16, 10],
-      ['oscilloscope', 122, 14, 14, 12],
-      ['armbot', 124, 29, 16, 16],
-      ['crate', 34, 43, 11, 8], ['crate', 48, 43, 11, 8],
-      ['barrel', 62, 42, 8, 9],
-      ['plant', 138, 38, 10, 13],
-      ['terminal', 138, 12, 9, 12],
-      ['hazard', 76, 44, 40, 3],
-      ['vent', 104, 8, 10, 4],
-      ['sign', 122, 8, 14, 4, 'BUILD'],
-    ],
-  },
-  {
-    id: 'beacon', name: 'BEACON', sub: 'Signal · Content · Email',
-    rect: [208, 64, 360, 118], door: [208, 91], spine: 1, deck: 1,
-    accent: 'flare', floor: 'plate', tiles: 'grate', venture: null,
-    blurb: 'The broadcast deck. Everything the outside world hears leaves the building from here.',
-    props: [
-      ['pipes', 3, 3, 146, 4],
-      ['dish', 100, 10, 36, 36],
-      ['mast', 142, 8, 6, 34],
-      ['ceilinglight', 26, 8, 16, 2], ['ceilinglight', 62, 8, 16, 2],
-      ['screen', 8, 11, 18, 11], ['screen', 29, 11, 18, 11], ['screen', 50, 11, 18, 11],
-      ['screen', 8, 24, 18, 11], ['screen', 29, 24, 18, 11], ['screen', 50, 24, 18, 11],
-      ['mixdesk', 8, 38, 46, 12],
-      ['mic', 60, 38, 7, 11],
-      ['speaker', 72, 12, 10, 16], ['speaker', 72, 32, 10, 16],
-      ['cablerun', 86, 12, 1, 34],
-      ['hazard', 90, 46, 30, 3],
-      ['sign', 88, 8, 14, 4, 'LIVE'],
-      ['vent', 120, 46, 10, 4],
-    ],
-  },
+  /* ============ C1 · PRODUCTION ============ */
   {
     id: 'apothecary', name: 'THE LAB', sub: 'Arcane Peptides · Stock · COA · Dispatch',
-    rect: [20, 126, 172, 180], door: [172, 153], spine: 2, deck: 1,
-    accent: 'arcane', floor: 'plate', tiles: 'lab', venture: 'peptides',
+    rect: [14, 14, 138, 88], door: [138, 51], corr: 0, row: 0,
+    accent: 'arcane', tiles: 'lab', venture: 'peptides',
     blurb: 'Cold storage, vial racks, instruments and the packing bench. Nothing leaves this room without a lab report against its batch.',
     props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 24, 8, 18, 2], ['ceilinglight', 70, 8, 18, 2], ['ceilinglight', 116, 8, 18, 2],
-      ['fridge', 5, 11, 16, 26], ['fridge', 23, 11, 16, 26], ['fridge', 41, 11, 16, 26],
-      ['fumehood', 61, 10, 30, 18],
-      ['vialrack', 63, 14, 26, 11, 'ghk'],
-      ['vialrack', 61, 30, 26, 11, 'clear'],
-      ['microscope', 94, 12, 11, 14],
-      ['scales', 108, 14, 11, 10],
-      ['centrifuge', 122, 11, 15, 13],
-      ['autoclave', 140, 10, 9, 16],
-      ['bench', 94, 28, 44, 10],
-      ['biohazard', 141, 29, 8, 8],
-      ['conveyor', 40, 42, 62, 8, 'items'],
-      ['armbot', 104, 38, 14, 14],
-      ['packstation', 120, 38, 20, 13],
-      ['shipbox', 5, 40, 11, 10], ['shipbox', 18, 40, 11, 10], ['shipbox', 29, 43, 9, 7],
-      ['pallet', 5, 38, 24, 3],
-      ['hazard', 40, 39, 62, 2],
-      ['sign', 61, 6, 16, 4, 'LAB'],
+      ...svc('LAB'),
+      ['fridge', 4, 13, 15, 24], ['fridge', 21, 13, 15, 24],
+      ['fumehood', 40, 12, 30, 17],
+      ['vialrack', 42, 15, 26, 10, 'ghk'],
+      ['vialrack', 40, 31, 26, 10, 'clear'],
+      ['microscope', 74, 13, 11, 14],
+      ['scales', 88, 15, 11, 10],
+      ['centrifuge', 102, 13, 15, 13],
+      ['autoclave', 104, 30, 14, 15],
+      ['bench', 74, 30, 26, 9],
+      ['biohazard', 4, 40, 8, 8],
+      ['conveyor', 22, 48, 58, 8, 'items'],
+      ['armbot', 84, 47, 14, 14],
+      ['packstation', 100, 48, 20, 13],
+      ['shipbox', 4, 52, 11, 10], ['shipbox', 16, 62, 10, 9],
+      ['pallet', 3, 50, 22, 3],
+      ['hazard', 22, 45, 58, 2],
+      ['walllight', 66, 44, 8, 2],
     ],
   },
   {
     id: 'vitals', name: 'VITALS', sub: 'Arcane Track · Members',
-    rect: [208, 126, 360, 180], door: [208, 153], spine: 2, deck: 1,
-    accent: 'vital', floor: 'plate', tiles: 'lab', venture: 'track',
-    blurb: 'Every dose logged, every day mapped. Member health and churn are watched from here.',
+    rect: [14, 92, 138, 166], door: [138, 129], corr: 0, row: 1,
+    accent: 'vital', tiles: 'lab', venture: 'track',
+    blurb: 'Every dose logged, every day mapped. Member health and churn watched from here, and no medical advice given to anyone.',
     props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 30, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
-      ['bed', 6, 12, 30, 14], ['bed', 6, 30, 30, 14],
-      ['monitor', 39, 13, 10, 10], ['monitor', 39, 31, 10, 10],
-      ['ivstand', 52, 12, 5, 14], ['ivstand', 52, 30, 5, 14],
-      ['curtain', 61, 9, 3, 40],
-      ['chart', 68, 11, 34, 18],
-      ['desk', 68, 32, 34, 10],
-      ['cabinet', 106, 11, 14, 20],
-      ['plant', 106, 34, 11, 14],
-      ['bed', 122, 12, 27, 14],
-      ['monitor', 122, 30, 10, 10],
-      ['terminal', 136, 30, 10, 13],
-      ['hazard', 68, 44, 34, 2],
-      ['sign', 106, 6, 16, 4, 'VITALS'],
-      ['vent', 40, 44, 10, 4],
+      ...svc('VITALS', 'vital'),
+      ['bed', 4, 14, 28, 13], ['bed', 4, 30, 28, 13], ['bed', 4, 46, 28, 13],
+      ['monitor', 34, 15, 9, 9], ['monitor', 34, 31, 9, 9], ['monitor', 34, 47, 9, 9],
+      ['ivstand', 46, 14, 5, 13], ['ivstand', 46, 46, 5, 13],
+      ['curtain', 55, 12, 3, 48],
+      ['chart', 62, 13, 30, 16],
+      ['desk', 62, 32, 30, 9],
+      ['cabinet', 96, 13, 14, 19],
+      ['plant', 96, 35, 11, 13],
+      ['terminal', 62, 44, 10, 12],
+      ['bookstack', 78, 46, 12, 8],
+      ['hazard', 62, 58, 30, 2],
+      ['walllight', 110, 36, 8, 2],
     ],
   },
   {
-    id: 'vault', name: 'VAULT', sub: 'Treasury · Cash · VAT',
-    rect: [20, 188, 172, 242], door: [172, 215], spine: 3, deck: 1,
-    accent: 'gold', floor: 'plate', tiles: 'concrete', venture: null,
-    blurb: 'Cash, runway, and the tax set-aside. This room decides what every other room can spend.',
+    id: 'forge', name: 'FORGE', sub: 'Build · Site · App · Ops',
+    rect: [14, 202, 138, 276], door: [138, 239], corr: 0, row: 2,
+    accent: 'cyan', tiles: 'grate', venture: 'track',
+    blurb: 'Where the site, the app and every automation get built. Racks on one wall, a bench and an assembly arm on the other.',
     props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
-      ['safe', 6, 11, 28, 30],
-      ['camera', 40, 8, 8, 6],
-      ['bullion', 42, 14, 10, 6], ['bullion', 42, 22, 10, 6], ['bullion', 42, 30, 10, 6],
-      ['bullion', 55, 18, 10, 6], ['bullion', 55, 26, 10, 6],
-      ['strongbox', 42, 39, 12, 10], ['strongbox', 56, 39, 12, 10],
-      ['ledgerdesk', 74, 12, 30, 17],
-      ['counter', 74, 33, 18, 12],
-      ['terminal', 96, 33, 10, 13],
-      ['pillar', 112, 12, 10, 10], ['pillar', 112, 38, 10, 10],
-      ['bullion', 128, 16, 10, 6], ['bullion', 128, 24, 10, 6],
-      ['crate', 128, 34, 12, 10],
-      ['hazard', 74, 47, 30, 2],
-      ['sign', 6, 6, 18, 4, 'VAULT'],
-      ['vent', 142, 40, 8, 4],
-    ],
-  },
-  {
-    id: 'archives', name: 'THE LIBRARY', sub: 'Archives · Content · PDF products',
-    rect: [208, 188, 360, 242], door: [208, 215], spine: 3, deck: 1,
-    accent: 'cyan', floor: 'plate', tiles: 'carpet', venture: 'archives',
-    blurb: 'Forty-eight courses and thousands of modules on the shelves. Posts get written here and modules get cut into PDFs worth selling.',
-    props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 24, 8, 18, 2], ['ceilinglight', 96, 8, 18, 2],
-      ['tallshelf', 5, 10, 13, 38], ['tallshelf', 20, 10, 13, 38],
-      ['tallshelf', 35, 10, 13, 38], ['tallshelf', 50, 10, 13, 38],
-      ['tallshelf', 65, 10, 13, 38],
-      ['ladder', 81, 12, 6, 32],
-      ['readingdesk', 91, 11, 30, 17],
-      ['bookstack', 92, 32, 12, 8], ['bookstack', 107, 33, 10, 7],
-      ['printer', 126, 10, 20, 17],
-      ['pdfstack', 122, 31, 20, 15],
-      ['catalogue', 91, 42, 26, 7],
-      ['holo', 145, 32, 4, 14],
-      ['hazard', 5, 50, 60, 2],
-      ['sign', 126, 6, 20, 4, 'ARCHIVE'],
-    ],
-  },
-  {
-    id: 'scriptorium', name: 'SCRIPTORIUM', sub: 'The Codex · Writing',
-    rect: [20, 250, 172, 304], door: [172, 277], spine: 4, deck: 1,
-    accent: 'breach', floor: 'plate', tiles: 'wood', venture: 'codex',
-    blurb: 'Where the books get written. The Dark Psych Codex, The Quiet Empire, The Arcane Game.',
-    props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 30, 8, 16, 2], ['ceilinglight', 104, 8, 16, 2],
-      ['readingdesk', 6, 12, 32, 17],
-      ['papers', 10, 8, 24, 4],
-      ['typewriter', 8, 32, 14, 10],
-      ['inkpot', 26, 34, 6, 6],
-      ['tallshelf', 44, 10, 12, 32], ['tallshelf', 58, 10, 12, 32],
-      ['bookstack', 44, 44, 12, 7], ['bookstack', 59, 45, 10, 6],
-      ['press', 78, 11, 24, 28],
-      ['candle', 106, 30, 5, 9],
-      ['terminal', 106, 12, 10, 14],
-      ['bookstack', 120, 14, 12, 8], ['bookstack', 120, 24, 12, 8],
-      ['crate', 120, 36, 12, 10],
-      ['pdfstack', 136, 30, 13, 14],
-      ['hazard', 78, 43, 24, 2],
-      ['sign', 136, 8, 13, 4, 'CODEX'],
-    ],
-  },
-  {
-    id: 'sanctum', name: 'SANCTUM', sub: 'Leo · Body · Focus',
-    rect: [208, 250, 360, 304], door: [208, 277], spine: 4, deck: 1,
-    accent: 'vital', floor: 'plate', tiles: 'mat', venture: null,
-    blurb: 'Training, sleep, deep work. The operator is a system component and gets maintained like one.',
-    props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 30, 8, 16, 2], ['ceilinglight', 104, 8, 16, 2],
-      ['bed', 6, 12, 30, 14],
-      ['desk', 6, 32, 30, 10],
-      ['screen', 10, 28, 16, 10],
-      ['rig', 44, 12, 26, 20],
-      ['mat', 44, 36, 28, 13],
-      ['weights', 76, 40, 14, 8],
-      ['plant', 76, 12, 12, 16],
-      ['plant', 92, 14, 11, 14],
-      ['window', 108, 9, 32, 14],
-      ['shower', 108, 27, 16, 22],
-      ['locker', 128, 27, 10, 20],
-      ['terminal', 140, 30, 9, 13],
-      ['hazard', 44, 50, 28, 2],
-      ['sign', 6, 6, 16, 4, 'SANCTUM'],
-    ],
-  },
-  /* ============================================================
-     DECK 2 — command, intelligence and the agent network
-     ============================================================ */
-  {
-    id: 'council', name: 'THE COUNCIL', sub: 'Deliberation · Verdicts',
-    rect: [130, 10, 250, 54], door: [190, 54], spine: 0, deck: 2,
-    accent: 'arcane', floor: 'plate', tiles: 'plate', venture: null,
-    blurb: 'Put a decision on the table and every relevant agent argues its corner. The Commander returns one recommendation, with conditions.',
-    props: [
-      ['viewport', 6, 3, 108, 7],
-      ['ceilinglight', 24, 11, 14, 2], ['ceilinglight', 82, 11, 14, 2],
-      ['holotable', 38, 16, 44, 20],
-      ['chair', 26, 17, 8, 6], ['chair', 86, 17, 8, 6],
-      ['chair', 26, 28, 8, 6], ['chair', 86, 28, 8, 6],
-      ['chair', 50, 36, 8, 5], ['chair', 62, 36, 8, 5],
-      ['terminal', 6, 22, 9, 12], ['terminal', 105, 22, 9, 12],
-      ['panel', 18, 14, 10, 7], ['panel', 92, 14, 10, 7],
-      ['cablerun', 4, 12, 108, 1],
-      ['bolt', 4, 4, 2, 2], ['bolt', 112, 4, 2, 2],
-    ],
-  },
-  {
-    id: 'warroom', name: 'THE WAR ROOM', sub: 'Strategy · The next move',
-    rect: [20, 64, 172, 118], door: [172, 91], spine: 1, deck: 2,
-    accent: 'breach', floor: 'plate', tiles: 'concrete', venture: null,
-    blurb: 'Every venture as an object on the table. What is compounding, what is bleeding, and the three moves that matter this week.',
-    props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
-      ['holotable', 46, 14, 52, 24],
-      ['screen', 6, 10, 18, 11], ['screen', 26, 10, 18, 11],
-      ['screen', 6, 23, 18, 11], ['screen', 26, 23, 18, 11],
-      ['chair', 56, 41, 9, 7], ['chair', 78, 41, 9, 7],
-      ['terminal', 106, 10, 10, 13], ['terminal', 122, 10, 10, 13],
-      ['chart', 106, 26, 30, 16],
-      ['panel', 138, 10, 10, 8],
-      ['hazard', 46, 41, 8, 2],
-      ['sign', 6, 6, 16, 4, 'WAR'],
-      ['cablerun', 44, 9, 1, 32],
-    ],
-  },
-  {
-    id: 'intel', name: 'INTELLIGENCE', sub: 'Competitors · Markets · Signals',
-    rect: [208, 64, 360, 118], door: [208, 91], spine: 1, deck: 2,
-    accent: 'arcane', floor: 'grid', tiles: 'grate', venture: null,
-    blurb: 'A dark room of screens that watches everything outside the walls: competitors, pricing, suppliers, regulation, demand.',
-    props: [
-      ['pipes', 3, 3, 146, 4],
-      ['screen', 6, 9, 17, 10], ['screen', 25, 9, 17, 10], ['screen', 44, 9, 17, 10],
-      ['screen', 63, 9, 17, 10], ['screen', 82, 9, 17, 10],
-      ['screen', 6, 21, 17, 10], ['screen', 25, 21, 17, 10], ['screen', 44, 21, 17, 10],
-      ['screen', 63, 21, 17, 10], ['screen', 82, 21, 17, 10],
-      ['mixdesk', 20, 36, 56, 12],
-      ['chair', 44, 47, 8, 5],
-      ['rack', 104, 9, 13, 30], ['rack', 120, 9, 13, 30],
-      ['terminal', 136, 9, 10, 13],
-      ['holo', 138, 26, 8, 16],
-      ['cablerun', 102, 10, 1, 34],
-      ['sign', 104, 42, 16, 4, 'INTEL'],
+      ...svc('BUILD', 'cyan'),
+      ['rack', 4, 13, 12, 28], ['rack', 18, 13, 12, 28], ['rack', 32, 13, 12, 28],
+      ['cablerun', 47, 13, 1, 30],
+      ['bench', 53, 14, 38, 9],
+      ['toolwall', 54, 8, 36, 4],
+      ['screen', 54, 26, 14, 9], ['screen', 70, 26, 14, 9],
+      ['oscilloscope', 95, 14, 14, 12],
+      ['armbot', 96, 30, 16, 16],
+      ['cablespool', 4, 44, 10, 7], ['cablespool', 16, 44, 10, 7],
+      ['crate', 30, 44, 11, 8], ['barrel', 44, 43, 8, 9],
+      ['plant', 112, 48, 9, 12],
+      ['terminal', 54, 40, 9, 12],
+      ['hazard', 66, 54, 40, 2],
+      ['junction', 4, 56, 8, 6],
     ],
   },
   {
     id: 'market', name: 'THE MARKET', sub: 'Visitors → Leads → Orders',
-    rect: [20, 126, 172, 180], door: [172, 153], spine: 2, deck: 2,
-    accent: 'rose', floor: 'clean', tiles: 'lab', venture: 'peptides',
+    rect: [14, 280, 138, 354], door: [138, 317], corr: 0, row: 3,
+    accent: 'rose', tiles: 'lab', venture: 'peptides',
     blurb: 'The sales engine. Conversion, average order value, repeat purchase, and the exact step where people fall out.',
     props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 30, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
-      ['chart', 6, 10, 42, 20],
-      ['screen', 52, 10, 18, 11], ['screen', 72, 10, 18, 11],
-      ['counter', 52, 24, 20, 13],
-      ['terminal', 76, 24, 10, 13],
-      ['conveyor', 6, 34, 42, 8, 'items'],
-      ['shipbox', 92, 12, 11, 10], ['shipbox', 105, 12, 11, 10],
-      ['shipbox', 92, 24, 11, 10],
-      ['pallet', 90, 36, 28, 3],
-      ['packstation', 122, 22, 20, 13],
-      ['crate', 122, 8, 12, 10],
-      ['hazard', 6, 44, 42, 2],
-      ['sign', 122, 40, 18, 4, 'ORDERS'],
+      ...svc('ORDERS', 'rose'),
+      ['chart', 4, 13, 40, 20],
+      ['screen', 48, 13, 16, 10], ['screen', 66, 13, 16, 10],
+      ['counter', 48, 26, 18, 12],
+      ['terminal', 70, 26, 10, 12],
+      ['conveyor', 4, 36, 40, 8, 'items'],
+      ['shipbox', 86, 14, 11, 10], ['shipbox', 99, 14, 11, 10],
+      ['shipbox', 86, 26, 11, 10],
+      ['pallet', 84, 38, 26, 3],
+      ['packstation', 86, 42, 20, 13],
+      ['crate', 110, 26, 10, 10],
+      ['hazard', 4, 47, 40, 2],
+      ['armbot', 62, 42, 14, 14],
+      ['walllight', 48, 56, 8, 2],
+    ],
+  },
+  {
+    id: 'beacon', name: 'BEACON', sub: 'Signal · Content · Email',
+    rect: [14, 358, 138, 432], door: [138, 395], corr: 0, row: 4,
+    accent: 'flare', tiles: 'grate', venture: null,
+    blurb: 'The broadcast deck. Everything the outside world hears leaves the building from here, and nothing leaves unapproved.',
+    props: [
+      ...svc('LIVE', 'flare'),
+      ['dish', 82, 13, 30, 30],
+      ['mast', 116, 12, 5, 28],
+      ['screen', 4, 13, 16, 10], ['screen', 22, 13, 16, 10], ['screen', 40, 13, 16, 10],
+      ['screen', 4, 25, 16, 10], ['screen', 22, 25, 16, 10], ['screen', 40, 25, 16, 10],
+      ['mixdesk', 4, 39, 46, 12],
+      ['mic', 56, 40, 6, 10],
+      ['speaker', 66, 14, 10, 15], ['speaker', 66, 32, 10, 15],
+      ['cablerun', 79, 14, 1, 34],
+      ['chair', 22, 54, 8, 6],
+      ['hazard', 84, 48, 28, 2],
+      ['junction', 4, 55, 8, 6],
+    ],
+  },
+
+  /* ============ C2 · COMMAND ============ */
+  {
+    id: 'bridge', name: 'BRIDGE', sub: 'Command · Targets · Doctrine',
+    rect: [174, 14, 298, 88], door: [174, 51], corr: 0, row: 0,
+    accent: 'arcane', tiles: 'plate', venture: null,
+    blurb: 'The whole empire on one screen. Targets are set here and everything downstream obeys them.',
+    props: [
+      ['pipes', 3, 2, 118, 4],
+      ['viewport', 6, 8, 110, 7],
+      ['ceilinglight', 26, 17, 18, 2], ['ceilinglight', 82, 17, 18, 2],
+      ['console', 8, 21, 24, 9], ['console', 50, 21, 24, 9], ['console', 92, 21, 24, 9],
+      ['holotable', 44, 34, 36, 18],
+      ['terminal', 6, 34, 9, 12], ['terminal', 109, 34, 9, 12],
+      ['chair', 58, 55, 9, 6],
+      ['panel', 20, 34, 11, 8], ['panel', 94, 34, 11, 8],
+      ['cablerun', 4, 32, 112, 1],
+      ['hazard', 18, 56, 24, 2], ['hazard', 84, 56, 24, 2],
+      ['vent', 22, 46, 10, 5], ['vent', 92, 46, 10, 5],
+      ['sign', 3, 63, 20, 4, 'BRIDGE'],
+      ['junction', 108, 60, 8, 6],
+    ],
+  },
+  {
+    id: 'warroom', name: 'THE WAR ROOM', sub: 'Strategy · The next move',
+    rect: [174, 92, 298, 166], door: [174, 129], corr: 0, row: 1,
+    accent: 'breach', tiles: 'concrete', venture: null,
+    blurb: 'Every venture as an object on the table. What compounds, what bleeds, and the three moves that matter this week.',
+    props: [
+      ...svc('WAR', 'breach'),
+      ['holotable', 36, 16, 48, 24],
+      ['screen', 4, 13, 16, 10], ['screen', 4, 25, 16, 10],
+      ['screen', 88, 13, 16, 10], ['screen', 88, 25, 16, 10],
+      ['chair', 42, 43, 9, 6], ['chair', 56, 43, 9, 6], ['chair', 70, 43, 9, 6],
+      ['chair', 42, 13, 9, 6], ['chair', 70, 13, 9, 6],
+      ['terminal', 108, 13, 10, 13],
+      ['chart', 88, 39, 30, 16],
+      ['panel', 4, 39, 12, 9],
+      ['hazard', 22, 58, 30, 2],
+      ['cablerun', 32, 13, 1, 30],
+      ['walllight', 60, 58, 8, 2],
+    ],
+  },
+  {
+    id: 'council', name: 'THE COUNCIL', sub: 'Deliberation · Verdicts',
+    rect: [174, 202, 298, 276], door: [174, 239], corr: 0, row: 2,
+    accent: 'arcane', tiles: 'plate', venture: null,
+    blurb: 'Put a decision on the table and every relevant agent argues its corner. The Commander returns one recommendation, with conditions.',
+    props: [
+      ...svc('COUNCIL'),
+      ['holotable', 34, 20, 52, 28],
+      ['chair', 22, 22, 9, 6], ['chair', 22, 34, 9, 6],
+      ['chair', 90, 22, 9, 6], ['chair', 90, 34, 9, 6],
+      ['chair', 42, 13, 9, 6], ['chair', 70, 13, 9, 6],
+      ['chair', 42, 51, 9, 6], ['chair', 70, 51, 9, 6],
+      ['terminal', 4, 20, 9, 12], ['terminal', 108, 20, 9, 12],
+      ['panel', 4, 36, 11, 9], ['panel', 106, 36, 11, 9],
+      ['walllight', 56, 60, 10, 2],
+      ['cablerun', 4, 16, 112, 1],
+      ['vent', 22, 62, 10, 4], ['vent', 88, 62, 10, 4],
+    ],
+  },
+  {
+    id: 'vault', name: 'THE VAULT', sub: 'Treasury · Cash · VAT · The split',
+    rect: [174, 280, 298, 354], door: [174, 317], corr: 0, row: 3,
+    accent: 'gold', tiles: 'concrete', venture: null,
+    blurb: 'Cash, runway, and the tax set-aside. This room decides what every other room can spend, and no agent may spend it.',
+    props: [
+      ...svc('VAULT', 'gold'),
+      ['safe', 4, 13, 26, 28],
+      ['camera', 34, 8, 8, 6],
+      ['bullion', 36, 15, 10, 6], ['bullion', 36, 23, 10, 6], ['bullion', 36, 31, 10, 6],
+      ['bullion', 49, 19, 10, 6], ['bullion', 49, 27, 10, 6],
+      ['strongbox', 36, 42, 12, 10], ['strongbox', 50, 42, 12, 10],
+      ['ledgerdesk', 66, 14, 28, 15],
+      ['counter', 66, 33, 18, 12],
+      ['terminal', 88, 33, 10, 12],
+      ['pillar', 102, 14, 10, 10], ['pillar', 102, 44, 10, 10],
+      ['crate', 100, 28, 12, 10],
+      ['hazard', 66, 50, 28, 2],
+      ['walllight', 16, 58, 8, 2],
+    ],
+  },
+  {
+    id: 'scriptorium', name: 'SCRIPTORIUM', sub: 'The Codex · Writing',
+    rect: [174, 358, 298, 432], door: [174, 395], corr: 0, row: 4,
+    accent: 'breach', tiles: 'wood', venture: 'codex',
+    blurb: 'Where the books get written. The Dark Psych Codex, The Quiet Empire, The Arcane Game.',
+    props: [
+      ...svc('CODEX', 'breach'),
+      ['readingdesk', 4, 14, 30, 16],
+      ['papers', 8, 10, 20, 3],
+      ['typewriter', 6, 34, 14, 10],
+      ['inkpot', 24, 36, 6, 6],
+      ['tallshelf', 38, 13, 11, 30], ['tallshelf', 51, 13, 11, 30],
+      ['bookstack', 38, 46, 12, 7], ['bookstack', 52, 47, 10, 6],
+      ['press', 68, 14, 22, 26],
+      ['candle', 94, 32, 5, 9],
+      ['terminal', 94, 14, 10, 13],
+      ['bookstack', 108, 16, 11, 8], ['bookstack', 108, 26, 11, 8],
+      ['lamp', 94, 44, 8, 10],
+      ['crate', 108, 38, 11, 10],
+      ['hazard', 68, 44, 22, 2],
+    ],
+  },
+
+  /* ============ C3 · KNOWLEDGE ============ */
+  {
+    id: 'intel', name: 'INTELLIGENCE', sub: 'Competitors · Markets · Signals',
+    rect: [334, 14, 458, 88], door: [458, 51], corr: 2, row: 0,
+    accent: 'arcane', tiles: 'grate', venture: null,
+    blurb: 'A dark room of screens watching everything outside the walls: competitors, pricing, suppliers, regulation, demand.',
+    props: [
+      ...svc('INTEL'),
+      ['screen', 4, 13, 16, 10], ['screen', 22, 13, 16, 10], ['screen', 40, 13, 16, 10],
+      ['screen', 58, 13, 16, 10], ['screen', 76, 13, 16, 10],
+      ['screen', 4, 25, 16, 10], ['screen', 22, 25, 16, 10], ['screen', 40, 25, 16, 10],
+      ['screen', 58, 25, 16, 10], ['screen', 76, 25, 16, 10],
+      ['mixdesk', 16, 40, 50, 12],
+      ['chair', 36, 55, 9, 6],
+      ['rack', 96, 13, 12, 28], ['rack', 110, 13, 11, 28],
+      ['holo', 100, 44, 8, 16],
+      ['cablerun', 94, 14, 1, 32],
+      ['walllight', 72, 56, 8, 2],
     ],
   },
   {
     id: 'observatory', name: 'THE OBSERVATORY', sub: 'Continuous watch',
-    rect: [208, 126, 360, 180], door: [208, 153], spine: 2, deck: 2,
-    accent: 'cyan', floor: 'plate', tiles: 'plate', venture: null,
+    rect: [334, 92, 458, 166], door: [458, 129], corr: 2, row: 1,
+    accent: 'cyan', tiles: 'plate', venture: null,
     blurb: 'This room does not wait to be opened. It watches revenue, stock, competitors and deadlines, and raises a signal when one moves.',
     props: [
-      ['pipes', 3, 3, 146, 4],
-      ['dish', 8, 8, 34, 34],
-      ['mast', 46, 6, 6, 34],
-      ['holotable', 58, 14, 36, 22],
-      ['screen', 100, 9, 18, 11], ['screen', 120, 9, 18, 11],
-      ['screen', 100, 22, 18, 11], ['screen', 120, 22, 18, 11],
-      ['chart', 100, 35, 38, 13],
-      ['terminal', 58, 39, 10, 12],
-      ['camera', 140, 6, 8, 6],
-      ['cablerun', 56, 8, 1, 36],
-      ['sign', 72, 39, 18, 4, 'WATCH'],
+      ...svc('WATCH', 'cyan'),
+      ['dish', 6, 13, 32, 32],
+      ['mast', 42, 12, 5, 30],
+      ['holotable', 52, 16, 34, 22],
+      ['screen', 90, 13, 14, 10], ['screen', 106, 13, 14, 10],
+      ['screen', 90, 25, 14, 10], ['screen', 106, 25, 14, 10],
+      ['chart', 90, 38, 30, 14],
+      ['terminal', 52, 42, 10, 12],
+      ['camera', 112, 55, 8, 6],
+      ['cablerun', 50, 14, 1, 34],
+      ['chair', 68, 42, 9, 6],
+      ['hazard', 6, 50, 32, 2],
     ],
   },
   {
     id: 'dealroom', name: 'THE DEAL ROOM', sub: 'People · Pipeline · Outreach',
-    rect: [20, 188, 172, 242], door: [172, 215], spine: 3, deck: 2,
-    accent: 'flare', floor: 'grid', tiles: 'carpet', venture: null,
-    blurb: 'Leads, prospects, customers, partners and suppliers as cards on a table. Research, outreach and meeting briefs prepared, never sent.',
+    rect: [334, 202, 458, 276], door: [458, 239], corr: 2, row: 2,
+    accent: 'flare', tiles: 'carpet', venture: null,
+    blurb: 'Leads, prospects, customers, partners and suppliers as cards on the table. Research and outreach prepared, never sent.',
     props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
-      ['readingdesk', 6, 12, 32, 17],
-      ['chair', 16, 32, 9, 7],
-      ['catalogue', 44, 10, 28, 8],
-      ['screen', 44, 21, 18, 11], ['screen', 64, 21, 18, 11],
-      ['bookstack', 44, 35, 12, 8],
-      ['plant', 78, 10, 11, 14],
-      ['readingdesk', 94, 12, 32, 17],
-      ['chair', 104, 32, 9, 7],
-      ['terminal', 132, 12, 10, 13],
-      ['cabinet', 132, 28, 14, 18],
-      ['sign', 78, 30, 16, 4, 'DEALS'],
+      ...svc('DEALS', 'flare'),
+      ['rug', 30, 26, 60, 26],
+      ['readingdesk', 4, 14, 28, 16],
+      ['chair', 12, 33, 9, 6],
+      ['catalogue', 38, 13, 26, 8],
+      ['screen', 38, 24, 16, 10], ['screen', 56, 24, 16, 10],
+      ['lowtable', 44, 38, 22, 10],
+      ['sofa', 34, 52, 34, 10],
+      ['plant', 72, 13, 10, 13],
+      ['readingdesk', 88, 14, 30, 16],
+      ['chair', 98, 33, 9, 6],
+      ['filecab', 88, 40, 13, 20],
+      ['lamp', 106, 42, 8, 10],
+      ['terminal', 4, 40, 9, 12],
     ],
   },
+  {
+    id: 'archives', name: 'THE LIBRARY', sub: 'Archives · Content · PDF products',
+    rect: [334, 280, 458, 354], door: [458, 317], corr: 2, row: 3,
+    accent: 'cyan', tiles: 'carpet', venture: 'archives',
+    blurb: 'Forty-eight courses and thousands of modules on the shelves. Posts get written here and modules get cut into PDFs worth selling.',
+    props: [
+      ...svc('ARCHIVE', 'cyan'),
+      ['tallshelf', 4, 13, 12, 42], ['tallshelf', 17, 13, 12, 42],
+      ['tallshelf', 30, 13, 12, 42], ['tallshelf', 43, 13, 12, 42],
+      ['ladder', 57, 15, 6, 34],
+      ['readingdesk', 66, 14, 28, 16],
+      ['lamp', 86, 32, 8, 10],
+      ['bookstack', 66, 34, 12, 8], ['bookstack', 80, 44, 10, 7],
+      ['printer', 98, 13, 20, 16],
+      ['pdfstack', 98, 32, 18, 14],
+      ['holo', 114, 48, 5, 12],
+      ['catalogue', 66, 52, 26, 7],
+      ['hazard', 4, 58, 50, 2],
+    ],
+  },
+  {
+    id: 'lounge', name: 'THE LOUNGE', sub: 'Off the clock',
+    rect: [334, 358, 458, 432], door: [458, 395], corr: 2, row: 4,
+    accent: 'vital', tiles: 'carpet', venture: null,
+    blurb: 'A room with no dashboard. Pool table, a bar, somewhere to sit. Every facility needs one or the crew stop thinking straight.',
+    props: [
+      ...svc('LOUNGE', 'vital'),
+      ['pooltable', 8, 14, 56, 32],
+      ['lamp', 30, 8, 10, 8],
+      ['rug', 74, 30, 42, 24],
+      ['sofa', 76, 46, 38, 11],
+      ['lowtable', 84, 32, 22, 10],
+      ['tv', 78, 13, 34, 15],
+      ['bar', 4, 50, 34, 16],
+      ['dartboard', 108, 12, 12, 12],
+      ['plant', 66, 50, 10, 13],
+      ['chair', 44, 50, 9, 6],
+      ['walllight', 66, 14, 8, 2],
+    ],
+  },
+
+  /* ============ C4 · NETWORK & LIFE ============ */
   {
     id: 'garage', name: 'THE AGENT GARAGE', sub: 'Build · Configure · Deploy',
-    rect: [208, 188, 360, 242], door: [208, 215], spine: 3, deck: 2,
-    accent: 'arcane', floor: 'grid', tiles: 'grate', venture: null,
+    rect: [494, 14, 618, 88], door: [494, 51], corr: 2, row: 0,
+    accent: 'arcane', tiles: 'grate', venture: null,
     blurb: 'Where an agent is made: its name, its domain, the tools it may reach, and the things it must ask you before doing.',
     props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 30, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
-      ['locker', 6, 10, 12, 22], ['locker', 20, 10, 12, 22],
-      ['locker', 34, 10, 12, 22], ['locker', 48, 10, 12, 22],
-      ['locker', 62, 10, 12, 22], ['locker', 76, 10, 12, 22],
-      ['cablerun', 6, 34, 84, 1],
-      ['armbot', 96, 10, 18, 18],
-      ['bench', 96, 30, 44, 10],
-      ['toolwall', 96, 5, 44, 4],
-      ['oscilloscope', 120, 12, 16, 14],
-      ['crate', 6, 38, 12, 10], ['crate', 20, 38, 12, 10],
-      ['terminal', 138, 10, 10, 13],
-      ['hazard', 40, 40, 44, 2],
-      ['sign', 40, 44, 18, 4, 'AGENTS'],
-    ],
-  },
-  {
-    id: 'inventor', name: "THE INVENTOR'S ROOM", sub: 'Ideas · Verdicts',
-    rect: [20, 250, 172, 304], door: [172, 277], spine: 4, deck: 2,
-    accent: 'vital', floor: 'plate', tiles: 'wood', venture: null,
-    blurb: 'Throw an idea on the bench. It goes through market, competition, economics, MVP, cost and risk, and comes back BUILD, WATCH or KILL.',
-    props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
-      ['bench', 6, 14, 48, 10],
-      ['toolwall', 6, 8, 48, 5],
-      ['oscilloscope', 60, 12, 16, 14],
-      ['holotable', 82, 12, 34, 20],
-      ['cablespool', 6, 28, 11, 8], ['cablespool', 20, 28, 11, 8],
-      ['crate', 34, 28, 12, 10],
-      ['barrel', 50, 28, 9, 10],
-      ['press', 122, 10, 24, 26],
-      ['terminal', 62, 30, 10, 13],
-      ['papers', 86, 35, 24, 4],
-      ['hazard', 82, 41, 34, 2],
-      ['sign', 6, 40, 18, 4, 'BUILD?'],
+      ...svc('AGENTS'),
+      ['locker', 4, 13, 12, 22], ['locker', 18, 13, 12, 22],
+      ['locker', 32, 13, 12, 22], ['locker', 46, 13, 12, 22],
+      ['locker', 60, 13, 12, 22], ['locker', 74, 13, 12, 22],
+      ['cablerun', 4, 37, 84, 1],
+      ['armbot', 92, 13, 18, 18],
+      ['toolwall', 92, 8, 28, 4],
+      ['bench', 92, 34, 28, 9],
+      ['oscilloscope', 94, 46, 16, 13],
+      ['crate', 4, 42, 12, 10], ['crate', 18, 42, 12, 10],
+      ['cablespool', 34, 44, 10, 7],
+      ['terminal', 48, 42, 10, 12],
+      ['hazard', 62, 46, 26, 2],
+      ['junction', 62, 54, 8, 6],
     ],
   },
   {
     id: 'control', name: 'THE CONTROL ROOM', sub: 'Permissions · Approvals · Audit',
-    rect: [208, 250, 360, 304], door: [208, 277], spine: 4, deck: 2,
-    accent: 'breach', floor: 'plate', tiles: 'concrete', venture: null,
-    blurb: 'Every grade the network runs under, in one place. What each agent may read, draft, recommend, and what it must ask permission for.',
+    rect: [494, 92, 618, 166], door: [494, 129], corr: 2, row: 1,
+    accent: 'breach', tiles: 'concrete', venture: null,
+    blurb: 'Every grade the network runs under, in one place. What each agent may read, draft and recommend, and what it must ask for.',
     props: [
-      ['pipes', 3, 3, 146, 4],
-      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
-      ['console', 6, 12, 26, 10], ['console', 36, 12, 26, 10], ['console', 66, 12, 26, 10],
-      ['panel', 6, 26, 12, 9], ['panel', 22, 26, 12, 9], ['panel', 38, 26, 12, 9],
-      ['panel', 54, 26, 12, 9], ['panel', 70, 26, 12, 9],
-      ['camera', 96, 6, 8, 6],
-      ['screen', 96, 14, 20, 12], ['screen', 120, 14, 20, 12],
-      ['safe', 96, 30, 22, 18],
-      ['terminal', 124, 30, 10, 13],
-      ['chair', 40, 40, 9, 7],
-      ['hazard', 6, 40, 30, 2],
-      ['sign', 120, 44, 20, 4, 'CONTROL'],
+      ...svc('CONTROL', 'breach'),
+      ['console', 4, 13, 24, 9], ['console', 30, 13, 24, 9], ['console', 56, 13, 24, 9],
+      ['panel', 4, 25, 12, 9], ['panel', 18, 25, 12, 9], ['panel', 32, 25, 12, 9],
+      ['panel', 46, 25, 12, 9], ['panel', 60, 25, 12, 9],
+      ['camera', 84, 8, 8, 6],
+      ['screen', 84, 14, 18, 12], ['screen', 104, 14, 16, 12],
+      ['safe', 84, 30, 22, 20],
+      ['terminal', 108, 30, 10, 13],
+      ['chair', 30, 40, 9, 6],
+      ['mixdesk', 4, 38, 22, 11],
+      ['hazard', 4, 54, 30, 2],
+      ['walllight', 50, 52, 8, 2],
+    ],
+  },
+  {
+    id: 'inventor', name: "THE INVENTOR'S ROOM", sub: 'Ideas · Verdicts',
+    rect: [494, 202, 618, 276], door: [494, 239], corr: 2, row: 2,
+    accent: 'vital', tiles: 'wood', venture: null,
+    blurb: 'Throw an idea on the bench. It goes through market, competition, economics, MVP, cost and risk, and comes back BUILD, WATCH or KILL.',
+    props: [
+      ...svc('BUILD?', 'vital'),
+      ['bench', 4, 16, 44, 9],
+      ['toolwall', 4, 10, 44, 5],
+      ['oscilloscope', 52, 14, 15, 13],
+      ['holotable', 72, 14, 34, 20],
+      ['cablespool', 4, 29, 10, 7], ['cablespool', 16, 29, 10, 7],
+      ['crate', 30, 29, 11, 10],
+      ['barrel', 44, 28, 8, 9],
+      ['press', 108, 14, 12, 24],
+      ['terminal', 54, 31, 10, 12],
+      ['papers', 76, 37, 22, 4],
+      ['lamp', 100, 40, 8, 10],
+      ['bookstack', 4, 44, 12, 8],
+      ['hazard', 72, 42, 30, 2],
+      ['walllight', 22, 56, 8, 2],
+    ],
+  },
+  {
+    id: 'records', name: 'THE RECORDS', sub: 'Contracts · SOPs · Memory',
+    rect: [494, 280, 618, 354], door: [494, 317], corr: 2, row: 3,
+    accent: 'gold', tiles: 'concrete', venture: null,
+    blurb: 'The institutional memory. Contracts, receipts, SOPs, and why a decision was made — so no agent starts from scratch.',
+    props: [
+      ...svc('RECORDS', 'gold'),
+      ['filecab', 4, 13, 13, 26], ['filecab', 19, 13, 13, 26],
+      ['filecab', 34, 13, 13, 26], ['filecab', 49, 13, 13, 26],
+      ['archivebox', 4, 42, 13, 10], ['archivebox', 19, 42, 13, 10],
+      ['archivebox', 34, 42, 13, 10], ['archivebox', 4, 54, 13, 10],
+      ['readingdesk', 66, 14, 28, 16],
+      ['lamp', 86, 32, 8, 10],
+      ['terminal', 66, 36, 10, 12],
+      ['tallshelf', 100, 13, 12, 30],
+      ['strongbox', 100, 46, 12, 10],
+      ['camera', 112, 8, 8, 6],
+      ['hazard', 52, 56, 30, 2],
+    ],
+  },
+  {
+    id: 'sanctum', name: 'SANCTUM', sub: 'Leo · Body · Sleep · Focus',
+    rect: [494, 358, 618, 432], door: [494, 395], corr: 2, row: 4,
+    accent: 'vital', tiles: 'mat', venture: null,
+    blurb: 'Training, sleep, deep work. The operator is a system component and gets maintained like one.',
+    props: [
+      ...svc('SANCTUM', 'vital'),
+      ['bed', 4, 14, 28, 13],
+      ['desk', 4, 33, 28, 9],
+      ['screen', 8, 29, 14, 9],
+      ['rig', 38, 14, 24, 18],
+      ['mat', 38, 36, 26, 12],
+      ['weights', 66, 40, 14, 8],
+      ['plant', 66, 14, 11, 14],
+      ['window', 84, 10, 34, 14],
+      ['shower', 84, 27, 16, 22],
+      ['locker', 104, 27, 11, 20],
+      ['terminal', 104, 50, 9, 12],
+      ['lamp', 4, 48, 8, 10],
+      ['hazard', 38, 52, 26, 2],
     ],
   },
 ];
 
 const ROOM_BY_ID = Object.fromEntries(ROOMS.map((r) => [r.id, r]));
 
-/** The two floors of the station. Not to be confused with DECKS in
- *  empire.js, which is the room list. */
-const FLOORS = [
-  { id: 1, name: 'DECK 1', sub: 'Operations' },
-  { id: 2, name: 'DECK 2', sub: 'Command' },
+/** The wings, for grouping in the interface. */
+const WINGS = [
+  { id: 'production', name: 'PRODUCTION', rooms: ['apothecary', 'vitals', 'forge', 'market', 'beacon'] },
+  { id: 'command',    name: 'COMMAND',    rooms: ['bridge', 'warroom', 'council', 'vault', 'scriptorium'] },
+  { id: 'knowledge',  name: 'KNOWLEDGE',  rooms: ['intel', 'observatory', 'dealroom', 'archives', 'lounge'] },
+  { id: 'network',    name: 'NETWORK',    rooms: ['garage', 'control', 'inventor', 'records', 'sanctum'] },
 ];
 
-const roomsOn = (deck) => ROOMS.filter((r) => r.deck === deck);
-
-function corridors(deck = 1) {
-  const segs = [[SPINE_X - 12, 48, SPINE_X + 12, 310]];
-  for (const r of roomsOn(deck)) {
-    if (r.door[0] === SPINE_X) continue;
-    const left = r.door[0] < SPINE_X;
+/** Corridor rectangles, as [x1, y1, x2, y2]. */
+function corridors() {
+  const segs = [];
+  for (const vx of VCORR) segs.push([vx - CORR_W / 2, 10, vx + CORR_W / 2, 450]);
+  segs.push([VCORR[0] - CORR_W / 2, HALL_Y - HALL_H / 2, VCORR[2] + CORR_W / 2, HALL_Y + HALL_H / 2]);
+  for (const r of ROOMS) {
+    const vx = VCORR[r.corr];
+    const left = r.door[0] < vx;
     segs.push(left
-      ? [r.door[0], r.door[1] - 9, SPINE_X - 12, r.door[1] + 9]
-      : [SPINE_X + 12, r.door[1] - 9, r.door[0], r.door[1] + 9]);
+      ? [r.door[0], r.door[1] - 9, vx - CORR_W / 2, r.door[1] + 9]
+      : [vx + CORR_W / 2, r.door[1] - 9, r.door[0], r.door[1] + 9]);
   }
   return segs;
 }
+
+/**
+ * The walkable graph. Nodes sit where corridors meet rows and the hall;
+ * routing is a breadth-first search over this, not a single spine.
+ */
+function buildGraph() {
+  const nodes = [];
+  const index = {};
+  const ys = [...ROWY, HALL_Y].sort((a, b) => a - b);
+  VCORR.forEach((vx, ci) => {
+    ys.forEach((y) => {
+      const id = `v${ci}y${y}`;
+      index[id] = nodes.length;
+      nodes.push({ id, x: vx, y, ci });
+    });
+  });
+
+  const edges = nodes.map(() => []);
+  const link = (a, b) => { edges[index[a]].push(index[b]); edges[index[b]].push(index[a]); };
+
+  VCORR.forEach((_, ci) => {
+    for (let i = 1; i < ys.length; i++) link(`v${ci}y${ys[i - 1]}`, `v${ci}y${ys[i]}`);
+  });
+  for (let ci = 1; ci < VCORR.length; ci++) link(`v${ci - 1}y${HALL_Y}`, `v${ci}y${HALL_Y}`);
+
+  return { nodes, edges, index };
+}
+
+/** The graph node a room's door opens onto. */
+const doorNode = (room) => `v${room.corr}y${ROWY[room.row]}`;
 
 /* ==== src/config/roomdata.js ==== */
 /**
@@ -1353,7 +1447,7 @@ const base = { data: 'analyse', analyse: 'analyse', write: 'draft', spend: 'deny
 const AGENTS = [
   {
     id: 'arcane', call: 'ARCANEBOT', name: 'ARCANE', role: 'Commander',
-    room: 'bridge', deck: 1, colour: '#a98bff', kind: 'arcane',
+    room: 'bridge', colour: '#a98bff', kind: 'arcane',
     domain: 'The whole empire',
     brief: 'Holds the state of everything and decides which specialist works next. Synthesises the Council into one recommendation.',
     tools: ['memory', 'counsel', 'notion'],
@@ -1362,7 +1456,7 @@ const AGENTS = [
   },
   {
     id: 'meridian', call: 'ARCA-LAB', name: 'MERIDIAN', role: 'Quartermaster',
-    room: 'apothecary', deck: 1, colour: '#c68bff',
+    room: 'apothecary', colour: '#c68bff',
     domain: 'Arcane Peptides — stock, batches, COA, dispatch',
     brief: 'Watches stock cover, batch records and whether every live compound has a lab report against it. Flags a dispatch cutoff at risk.',
     tools: ['memory', 'commerce', 'notion'],
@@ -1371,7 +1465,7 @@ const AGENTS = [
   },
   {
     id: 'tally', call: 'ARCA-TREASURER', name: 'TALLY', role: 'Treasurer',
-    room: 'vault', deck: 1, colour: '#d9a441',
+    room: 'vault', colour: '#d9a441',
     domain: 'Cash, burn, runway, tax reserve, the split',
     brief: 'Answers what you can afford and where the money is leaking. Audits subscriptions and unusual spend. Never moves a penny itself.',
     tools: ['memory'],
@@ -1380,7 +1474,7 @@ const AGENTS = [
   },
   {
     id: 'vector', call: 'ARCA-STRATEGIST', name: 'VECTOR', role: 'Strategist',
-    room: 'warroom', deck: 2, colour: '#b79cff',
+    room: 'warroom', colour: '#b79cff',
     domain: 'Which venture gets the next hour, the next pound, the next quarter',
     brief: 'Ranks the ventures by what is actually compounding and names what to stop doing. Produces the top three moves.',
     tools: ['memory', 'counsel'],
@@ -1389,7 +1483,7 @@ const AGENTS = [
   },
   {
     id: 'herald', call: 'ARCA-MEDIA', name: 'HERALD', role: 'Signalman',
-    room: 'beacon', deck: 1, colour: '#e8b64c',
+    room: 'beacon', colour: '#e8b64c',
     domain: 'Content, email, launches, the attention funnel',
     brief: 'Turns Archives modules into posts and watches which of them actually produce leads. Drafts only — nothing goes out unapproved.',
     tools: ['memory', 'notion'],
@@ -1398,7 +1492,7 @@ const AGENTS = [
   },
   {
     id: 'oracle', call: 'ARCA-SCRIBE', name: 'ORACLE', role: 'Archivist',
-    room: 'archives', deck: 1, colour: '#6bd6ff',
+    room: 'archives', colour: '#6bd6ff',
     domain: 'The Archives, the knowledge base, PDF products',
     brief: 'Keeps the map of 3,300 modules and cuts them into things worth selling. Runs idea → research → draft → review → publish.',
     tools: ['memory', 'notion'],
@@ -1407,7 +1501,7 @@ const AGENTS = [
   },
   {
     id: 'lumen', call: 'ARCA-VITALS', name: 'LUMEN', role: 'Physician',
-    room: 'vitals', deck: 1, colour: '#3ecf8e',
+    room: 'vitals', colour: '#3ecf8e',
     domain: 'Arcane Track — members, retention, dose logging',
     brief: 'Watches churn and who has stopped logging. Never gives medical advice, to you or to a member.',
     tools: ['memory'],
@@ -1416,7 +1510,7 @@ const AGENTS = [
   },
   {
     id: 'anvil', call: 'ARCA-OPS', name: 'ANVIL', role: 'Engineer',
-    room: 'forge', deck: 1, colour: '#56c9f0',
+    room: 'forge', colour: '#56c9f0',
     domain: 'Site, app, automation, the order pipeline',
     brief: 'Owns the machine that turns an order into a delivered parcel and a reconciled line. Flags where a workflow breaks.',
     tools: ['memory', 'commerce'],
@@ -1425,7 +1519,7 @@ const AGENTS = [
   },
   {
     id: 'scribe', call: 'ARCA-CODEX', name: 'SCRIBE', role: 'Scrivener',
-    room: 'scriptorium', deck: 1, colour: '#e5484d',
+    room: 'scriptorium', colour: '#e5484d',
     domain: 'The Codex — books, masterclasses, launches',
     brief: 'Drafts and proofs the long-form work and runs a launch sequence when a title is ready.',
     tools: ['memory', 'notion'],
@@ -1434,7 +1528,7 @@ const AGENTS = [
   },
   {
     id: 'keeper', call: 'ARCA-MENTOR', name: 'KEEPER', role: 'Steward',
-    room: 'sanctum', deck: 1, colour: '#7ee0a8',
+    room: 'sanctum', colour: '#7ee0a8',
     domain: 'Sleep, training, focus, the long-term goals',
     brief: 'Answers one question honestly: are you actually moving toward the life you said you wanted, or just busy.',
     tools: ['memory'],
@@ -1443,7 +1537,7 @@ const AGENTS = [
   },
   {
     id: 'intel', call: 'ARCA-INTEL', name: 'CIPHER', role: 'Intelligence',
-    room: 'intel', deck: 2, colour: '#8b5cf6',
+    room: 'intel', colour: '#8b5cf6',
     domain: 'Competitors, markets, pricing, suppliers, regulation',
     brief: 'Produces the daily intelligence: opportunity, threat, signal, action. Needs web research wired before it can do its job.',
     tools: ['memory', 'web'],
@@ -1452,7 +1546,7 @@ const AGENTS = [
   },
   {
     id: 'ledger', call: 'ARCA-COMMERCE', name: 'ABACUS', role: 'Commerce',
-    room: 'market', deck: 2, colour: '#e0609a',
+    room: 'market', colour: '#e0609a',
     domain: 'Visitors → leads → orders → revenue',
     brief: 'Watches the funnel and names the biggest drop-off. Suggests the one change most likely to move conversion.',
     tools: ['memory', 'commerce'],
@@ -1461,7 +1555,7 @@ const AGENTS = [
   },
   {
     id: 'envoy', call: 'ARCA-SALES', name: 'ENVOY', role: 'Deals',
-    room: 'dealroom', deck: 2, colour: '#f0a05a',
+    room: 'dealroom', colour: '#f0a05a',
     domain: 'Leads, prospects, customers, partners, suppliers',
     brief: 'Researches a company, drafts the outreach, prepares the meeting brief. Sends nothing without your word.',
     tools: ['memory', 'crm', 'web'],
@@ -1470,7 +1564,7 @@ const AGENTS = [
   },
   {
     id: 'watch', call: 'ARCA-WATCH', name: 'VIGIL', role: 'Observer',
-    room: 'observatory', deck: 2, colour: '#56c9f0',
+    room: 'observatory', colour: '#56c9f0',
     domain: 'Everything that changes while you are not looking',
     brief: 'Does not wait to be asked. Raises a signal when stock, revenue, a competitor or a deadline moves.',
     tools: ['memory', 'web'],
@@ -1479,7 +1573,7 @@ const AGENTS = [
   },
   {
     id: 'guard', call: 'ARCA-GUARD', name: 'WARDEN', role: 'Risk & Control',
-    room: 'control', deck: 2, colour: '#e5484d',
+    room: 'control', colour: '#e5484d',
     domain: 'Permissions, approvals, compliance, the audit trail',
     brief: 'Holds the permission grades and says no. Flags regulatory exposure before it becomes a problem, not after.',
     tools: ['memory'],
@@ -1488,7 +1582,7 @@ const AGENTS = [
   },
   {
     id: 'venture', call: 'ARCA-VENTURE', name: 'SPARK', role: 'Inventor',
-    room: 'inventor', deck: 2, colour: '#3ecf8e',
+    room: 'inventor', colour: '#3ecf8e',
     domain: 'New ideas, before they get lost',
     brief: 'Takes an idea through market, competition, economics, MVP, cost and risk, then returns BUILD, WATCH or KILL.',
     tools: ['memory', 'counsel', 'web'],
@@ -1497,12 +1591,30 @@ const AGENTS = [
   },
   {
     id: 'forge', call: 'ARCA-SMITH', name: 'FOUNDRY', role: 'Agent-wright',
-    room: 'garage', deck: 2, colour: '#a98bff',
+    room: 'garage', colour: '#a98bff',
     domain: 'The agents themselves',
     brief: 'Where an agent is configured: name, role, domain, tools, permissions, and what it must ask before doing.',
     tools: ['memory'],
     caps: { ...base, change: 'approval' },
     council: false, weight: 9,
+  },
+  {
+    id: 'steward', call: 'ARCA-KEEPER', name: 'RELIC', role: 'Records',
+    room: 'records', colour: '#d9a441',
+    domain: 'Contracts, receipts, SOPs, and why a decision was made',
+    brief: 'The institutional memory. Holds the reasoning behind past decisions so no agent starts a task from scratch.',
+    tools: ['memory', 'notion'],
+    caps: { ...base },
+    council: false, weight: 9,
+  },
+  {
+    id: 'host', call: 'ARCA-HOST', name: 'EMBER', role: 'Steward of the Lounge',
+    room: 'lounge', colour: '#7ee0a8',
+    domain: 'Downtime, and noticing when you have not had any',
+    brief: 'Watches how long you have gone without stopping. The only agent whose job is to tell you to leave the building.',
+    tools: ['memory'],
+    caps: { ...base, write: 'recommend' },
+    council: false, weight: 10,
   },
 ];
 
@@ -2053,25 +2165,49 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 /** Somewhere inside a room, clear of the walls and the door. */
 function interiorPoint(room) {
   const [x1, y1, x2, y2] = room.rect;
-  return { x: rand(x1 + 8, x2 - 8), y: rand(y1 + 14, y2 - 6) };
+  return { x: rand(x1 + 14, x2 - 14), y: rand(y1 + 24, y2 - 8) };
 }
 
-/** Walk one room to another along the spine. */
+const GRAPH = buildGraph();
+
+/** Breadth-first over the corridor graph — the building is a grid, not a spine. */
+function nodePath(fromId, toId) {
+  const a = GRAPH.index[fromId];
+  const b = GRAPH.index[toId];
+  if (a === undefined || b === undefined) return [];
+  if (a === b) return [a];
+  const prev = new Map([[a, -1]]);
+  const q = [a];
+  while (q.length) {
+    const n = q.shift();
+    if (n === b) break;
+    for (const m of GRAPH.edges[n]) {
+      if (prev.has(m)) continue;
+      prev.set(m, n);
+      q.push(m);
+    }
+  }
+  if (!prev.has(b)) return [];
+  const out = [];
+  for (let n = b; n !== -1; n = prev.get(n)) out.push(n);
+  return out.reverse();
+}
+
+/** Walk one room to another: out of the door, along the corridors, in again. */
 function route(fromId, toId) {
   const a = ROOM_BY_ID[fromId];
   const b = ROOM_BY_ID[toId];
-  const pts = [{ x: a.door[0], y: a.door[1] }];
-  if (a.door[0] !== SPINE_X) pts.push({ x: SPINE_X, y: a.door[1] });
+  if (!a || !b) return [];
 
-  const step = a.spine <= b.spine ? 1 : -1;
-  for (let i = a.spine; i !== b.spine + step; i += step) {
-    pts.push({ x: SPINE_X, y: SPINE[i] });
+  const pts = [{ x: a.door[0], y: a.door[1] }];
+  for (const n of nodePath(doorNode(a), doorNode(b))) {
+    pts.push({ x: GRAPH.nodes[n].x, y: GRAPH.nodes[n].y });
   }
-  if (b.door[0] !== SPINE_X) pts.push({ x: SPINE_X, y: b.door[1] });
   pts.push({ x: b.door[0], y: b.door[1] });
   pts.push(interiorPoint(b));
 
-  return pts.filter((p, i) => i === 0 || Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 0.5);
+  return pts.filter((p, i) => i === 0
+    || Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 0.5);
 }
 
 function makeWalker(def, kind, speed) {
@@ -2111,8 +2247,8 @@ class Sim {
 
   everyone() { return [...this.agents, this.arcane]; }
 
-  /** Agents standing on one deck. */
-  onFloor(floor) { return this.everyone().filter((a) => (a.floor || 1) === floor); }
+  /** Everyone on the floor — there is only one now. */
+  onFloor() { return this.everyone(); }
 
   inRoom(id) {
     return this.agents.filter((a) => a.deck === id && a.state === 'work');
@@ -2137,34 +2273,18 @@ class Sim {
     return true;
   }
 
-  /** ARCANE walks to the room you opened, taking the lift between decks. */
+  /** ARCANE walks to the room you opened. */
   commandTo(roomId) {
     const room = ROOM_BY_ID[roomId];
     if (!room) return;
-    const a = this.arcane;
-    if (a.deck === roomId && a.state === 'work') return;
-
-    if ((a.floor || 1) !== room.deck) {
-      // the lift: step out on the new deck at the spine terminus, then walk
-      a.floor = room.deck;
-      a.x = SPINE_X;
-      a.y = SPINE[0] + 6;
-      a.deck = roomId;
-      a.path = [{ x: SPINE_X, y: room.door[1] },
-                { x: room.door[0], y: room.door[1] },
-                { x: (room.rect[0] + room.rect[2]) / 2, y: room.rect[3] - 12 }];
-      a.leg = 0;
-      a.state = 'transit';
-      this.store.trace(`ARCANE rode the lift to DECK ${room.deck} — ${room.name}`);
-      return;
-    }
-    if (this.dispatch(a, roomId)) this.store.trace(`ARCANE → ${room.name}`);
+    if (this.arcane.deck === roomId && this.arcane.state === 'work') return;
+    if (this.dispatch(this.arcane, roomId)) this.store.trace(`ARCANE → ${room.name}`);
   }
 
   /** Where a crew member drifts next: open orders pull, so does the commander. */
   chooseTarget(agent) {
     const bag = [];
-    for (const r of roomsOn(agent.floor || 1)) {
+    for (const r of ROOMS) {
       let w = 1 + this.store.openCount(r.id) * 2.4;
       if (r.id === agent.home) w += 5;
       if (r.id === this.arcane.deck) w += 4;
@@ -2249,10 +2369,10 @@ class Sim {
     }
   }
 
-  agentAt(x, y, radius = 8, floor = null) {
+  agentAt(x, y, radius = 9) {
     let best = null;
     let bestD = radius;
-    for (const a of (floor ? this.onFloor(floor) : this.everyone())) {
+    for (const a of this.everyone()) {
       const d = Math.hypot(a.x - x, a.y - (y + 5));
       if (d < bestD) { bestD = d; best = a; }
     }
@@ -2632,6 +2752,142 @@ const PROPS = {
   },
 
 
+
+  /* ---- the lounge ---- */
+  pooltable(c, x, y, w, h, a, t) {
+    // rails, then baize, then pockets, then balls
+    R(c, x, y, w, h, '#3a2416');
+    R(c, x, y, w, 1, '#5a3a22');
+    R(c, x, y + h - 1, w, 1, '#1e1208');
+    R(c, x + 3, y + 3, w - 6, h - 6, '#14472c');
+    R(c, x + 3, y + 3, w - 6, 1, '#1b5c38');
+    R(c, x + 4, y + 4, w - 8, h - 8, '#176034');
+    // pockets
+    for (const [px2, py2] of [[4, 4], [w / 2 - 1, 3], [w - 6, 4],
+                              [4, h - 6], [w / 2 - 1, h - 5], [w - 6, h - 6]]) {
+      R(c, x + px2, y + py2, 3, 3, '#080c08');
+    }
+    // balls: cue, then a loose spread
+    const balls = [[10, h / 2, '#e8e4d4'], [w * 0.56, h * 0.38, '#d4b03a'],
+                   [w * 0.64, h * 0.6, '#c23a3a'], [w * 0.72, h * 0.44, '#2f4fa8'],
+                   [w * 0.5, h * 0.66, '#1a1a1a'], [w * 0.78, h * 0.58, '#3a8a4a']];
+    for (const [bx, by, col] of balls) {
+      R(c, x + bx, y + by, 2, 2, col);
+      R(c, x + bx, y + by, 1, 1, '#ffffff');
+    }
+    // cue resting across a rail
+    const cue = Math.sin(t * 0.5) * 2;
+    R(c, x + 8, y + h - 4 + cue, w * 0.48, 1, '#b89a68');
+    R(c, x + 8, y + h - 4 + cue, 4, 1, '#6a5432');
+  },
+  sofa(c, x, y, w, h, a, t) {
+    R(c, x, y + 3, w, h - 3, '#2e2438');
+    R(c, x, y, w, 5, '#3a2d46');
+    R(c, x, y, w, 1, '#4a3a58');
+    R(c, x, y + 3, 4, h - 3, '#261e2e');
+    R(c, x + w - 4, y + 3, 4, h - 3, '#261e2e');
+    // cushions
+    for (let i = 5; i < w - 6; i += 9) {
+      R(c, x + i, y + 6, 8, h - 9, '#342842');
+      R(c, x + i, y + 6, 8, 1, '#43334f');
+    }
+  },
+  lowtable(c, x, y, w, h, a, t) {
+    R(c, x + 1, y + h - 3, w - 2, 3, '#241c16');
+    R(c, x, y, w, h - 3, '#3a2c1e');
+    R(c, x, y, w, 1, '#523c28');
+    R(c, x + 3, y + 2, 6, 3, '#d8d4c4');
+    R(c, x + w - 9, y + 2, 5, 4, a);
+    c.globalAlpha = 0.2; R(c, x + w - 10, y + 1, 7, 6, a); c.globalAlpha = 1;
+  },
+  tv(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#14141c');
+    R(c, x, y, w, 1, '#2c2c3e');
+    R(c, x + 1, y + 1, w - 2, h - 3, '#06080e');
+    for (let i = 0; i < h - 4; i += 2) {
+      const v = Math.sin(i * 0.8 + t * 1.4);
+      R(c, x + 2, y + 2 + i, (w - 4) * (0.35 + 0.55 * Math.abs(v)), 1,
+        v > 0.5 ? a : v > 0 ? '#2a4a6a' : '#1a2c44');
+    }
+    c.globalAlpha = 0.14; R(c, x - 2, y - 2, w + 4, h + 4, a); c.globalAlpha = 1;
+  },
+  rug(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#241a2c');
+    R(c, x + 1, y + 1, w - 2, h - 2, '#2c2036');
+    R(c, x + 3, y + 3, w - 6, h - 6, '#241a2c');
+    for (let i = 5; i < w - 5; i += 6) R(c, x + i, y + 4, 3, h - 8, '#31243c');
+    R(c, x, y, w, 1, '#3a2c46');
+  },
+  dartboard(c, x, y, w, h, a, t) {
+    const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
+    c.fillStyle = '#1a1a20';
+    c.beginPath(); c.arc(cx, cy, Math.max(0.1, r), 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#3a2a22';
+    c.beginPath(); c.arc(cx, cy, Math.max(0.1, r - 1), 0, Math.PI * 2); c.fill();
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      c.fillStyle = i % 2 ? '#c8a23a' : '#242430';
+      c.fillRect(cx + Math.cos(ang) * (r - 3) - 1, cy + Math.sin(ang) * (r - 3) - 1, 2, 2);
+    }
+    R(c, cx - 1, cy - 1, 2, 2, '#c23a3a');
+    R(c, cx + 2, cy - 4, 1, 3, '#d8d4c4');
+  },
+
+  /* ---- records & services ---- */
+  filecab(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#41485a', '#20242e');
+    const rows = Math.floor((h - 3) / 6);
+    for (let r = 0; r < rows; r++) {
+      const ry = y + 2 + r * 6;
+      R(c, x + 1, ry, w - 2, 5, '#2e3442');
+      R(c, x + 1, ry, w - 2, 1, '#4a5264');
+      R(c, x + w / 2 - 2, ry + 2, 4, 1, '#6a7284');
+      R(c, x + 2, ry + 1, 3, 1, '#8a9070');
+    }
+  },
+  archivebox(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#6a5636', '#40331f');
+    R(c, x + 1, y + 2, w - 2, 1, '#2a2113');
+    R(c, x + 2, y + 4, w - 5, 3, '#d8d4c4');
+    R(c, x + 3, y + 5, w - 7, 1, '#5e5748');
+  },
+  lamp(c, x, y, w, h, a, t) {
+    R(c, x + w / 2 - 1, y + 3, 2, h - 4, '#3a3a48');
+    R(c, x + 1, y + h - 2, w - 2, 2, '#2a2a36');
+    R(c, x, y, w, 4, '#c8a23a');
+    R(c, x, y, w, 1, '#e8c96a');
+    c.globalAlpha = 0.16 + Math.sin(t * 1.1 + x) * 0.04;
+    R(c, x - 3, y + 2, w + 6, h + 3, PX.flare);
+    c.globalAlpha = 1;
+  },
+  walllight(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#2a2a3a');
+    R(c, x, y + h - 1, w, 1, a);
+    c.globalAlpha = 0.12 + Math.sin(t * 2.2 + x) * 0.03;
+    R(c, x - 2, y + h, w + 4, 7, a);
+    c.globalAlpha = 1;
+  },
+  junction(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#3c3c50', '#1c1c26');
+    R(c, x + 1, y + 1, w - 2, h - 2, '#15151f');
+    R(c, x + 2, y + 2, 2, 2, blink(t, x, 1.7) ? PX.vital : '#1e3a2c');
+    R(c, x + w - 4, y + 2, 2, 2, blink(t, x + 3, 1.1) ? a : '#242438');
+    R(c, x + 2, y + h - 4, w - 4, 1, '#2a2a3a');
+  },
+  bar(c, x, y, w, h, a, t) {
+    slab(c, x, y + h - 8, w, 8, '#4a3628', '#281c12');
+    R(c, x + 1, y, w - 2, h - 9, '#16161f');
+    // bottles on a backlit shelf
+    for (let i = 2; i < w - 3; i += 4) {
+      const col = ['#3a6a4a', '#6a4a3a', '#4a4a7a', '#7a6a3a'][(i + x) % 4];
+      R(c, x + i, y + 2, 2, h - 12, col);
+      R(c, x + i, y + 2, 2, 1, '#cfd6e8');
+    }
+    c.globalAlpha = 0.18;
+    R(c, x + 1, y + 1, w - 2, h - 10, a);
+    c.globalAlpha = 1;
+  },
+
   /* ---- architecture & services ---- */
   pipes(c, x, y, w, h, a, t) {
     R(c, x, y, w, h, '#242432');
@@ -2657,12 +2913,14 @@ const PROPS = {
     c.globalAlpha = 1;
   },
   ceilinglight(c, x, y, w, h, a, t) {
-    const flick = 0.82 + Math.sin(t * 3.1 + x) * 0.05;
-    R(c, x, y, w, h, '#c8cadd');
-    R(c, x, y + h, w, 1, '#5a5c70');
-    c.globalAlpha = 0.09 * flick;
-    for (let i = 1; i <= 5; i++) {
-      R(c, x - i * 2, y + h, w + i * 4, i * 4, '#cfd4ff');
+    const flick = 0.85 + Math.sin(t * 3.1 + x) * 0.04;
+    R(c, x, y, w, h, '#d2d5e6');
+    R(c, x + 1, y, w - 2, 1, '#eef0ff');
+    R(c, x, y + h, w, 1, '#4a4c60');
+    // a short, narrowing pool rather than a stack of grey slabs
+    for (let i = 1; i <= 4; i++) {
+      c.globalAlpha = (0.05 - i * 0.009) * flick;
+      R(c, x + i, y + h + (i - 1) * 2, w - i * 2, 2, '#cfd4ff');
     }
     c.globalAlpha = 1;
   },
@@ -2718,10 +2976,15 @@ const PROPS = {
     c.globalAlpha = 1;
   },
   chair(c, x, y, w, h) {
-    R(c, x + 1, y + h - 2, w - 2, 2, '#22222e');
-    R(c, x, y + 2, w, h - 3, '#33333f');
-    R(c, x, y, w, 3, '#3e3e4e');
-    R(c, x + 1, y + 3, w - 2, 1, '#1a1a24');
+    // top-down: backrest at the top, seat below, legs showing at the corners
+    R(c, x + 1, y, w - 2, 2, '#4a4a5e');
+    R(c, x + 1, y, w - 2, 1, '#5e5e76');
+    R(c, x + 1, y + 2, w - 2, 1, '#191922');
+    R(c, x, y + 3, w, h - 4, '#35354a');
+    R(c, x + 1, y + 4, w - 2, h - 6, '#3d3d54');
+    R(c, x + 1, y + 4, w - 2, 1, '#4a4a64');
+    R(c, x, y + h - 1, 2, 1, '#15151c');
+    R(c, x + w - 2, y + h - 1, 2, 1, '#15151c');
   },
 
   /* ---- forge ---- */
@@ -3577,7 +3840,9 @@ class Factory {
     this.buf.height = PH;
     this.bctx = this.buf.getContext('2d');
 
-    this.deck = 1;
+    this.zoom = 'fit';
+    this.panX = 0;
+    this.panY = 0;
     this.selected = null;
     this.hover = null;
     this.t = 0;
@@ -3757,10 +4022,51 @@ class Factory {
     this.dpr = dpr;
     this.w = w;
     this.h = h;
-    // integer scale keeps every pixel square
-    this.scale = Math.max(1, Math.floor(Math.min((w - 16) / PW, (h - 16) / PH) * dpr) / dpr);
-    this.ox = (w - PW * this.scale) / 2;
-    this.oy = (h - PH * this.scale) / 2;
+
+    // Integer scale only — a fractional one gives uneven pixels and shimmer.
+    this.fitScale = Math.max(1, Math.floor(Math.min((w - 12) / PW, (h - 12) / PH)));
+    this.scale = this.zoom === 'fit' ? this.fitScale : this.zoom;
+    this.clampPan();
+  }
+
+  /** Keep the station on screen: centred when it fits, inside the edges when it does not. */
+  clampPan() {
+    const mw = PW * this.scale;
+    const mh = PH * this.scale;
+    const slackX = Math.max(0, (mw - this.w) / 2);
+    const slackY = Math.max(0, (mh - this.h) / 2);
+    this.panX = Math.max(-slackX, Math.min(slackX, this.panX));
+    this.panY = Math.max(-slackY, Math.min(slackY, this.panY));
+    this.ox = Math.round((this.w - mw) / 2 + this.panX);
+    this.oy = Math.round((this.h - mh) / 2 + this.panY);
+  }
+
+  setZoom(z) {
+    this.zoom = z;
+    if (z === 'fit') { this.panX = 0; this.panY = 0; }
+    this.resize();
+  }
+
+  /** True when the map is larger than its frame and can be dragged. */
+  get pannable() {
+    return PW * this.scale > this.w + 1 || PH * this.scale > this.h + 1;
+  }
+
+  panBy(dx, dy) {
+    this.panX += dx;
+    this.panY += dy;
+    this.clampPan();
+  }
+
+  /** Bring a room into view without moving the map if it is already visible. */
+  focusRoom(room) {
+    if (!this.pannable || !room) return;
+    const [x1, y1, x2, y2] = room.rect;
+    const cx = ((x1 + x2) / 2) * this.scale;
+    const cy = ((y1 + y2) / 2) * this.scale;
+    this.panX = (PW * this.scale) / 2 - cx;
+    this.panY = (PH * this.scale) / 2 - cy;
+    this.clampPan();
   }
 
   /** Display (CSS px, canvas-relative) -> pixel space. */
@@ -3769,7 +4075,7 @@ class Factory {
   }
 
   roomAt(x, y) {
-    return roomsOn(this.deck).find((r) => {
+    return ROOMS.find((r) => {
       const [x1, y1, x2, y2] = r.rect;
       return x >= x1 - 2 && x <= x2 + 2 && y >= y1 - 2 && y <= y2 + 2;
     }) || null;
@@ -3782,7 +4088,7 @@ class Factory {
     b.clearRect(0, 0, PW, PH);
     this.drawShell(b);
     this.drawCorridors(b);
-    for (const room of roomsOn(this.deck)) this.drawRoom(b, room);
+    for (const room of ROOMS) this.drawRoom(b, room);
     this.drawCrew(b);
 
     // blit
@@ -3873,7 +4179,7 @@ class Factory {
   }
 
   drawCorridors(b) {
-    for (const [x1, y1, x2, y2] of corridors(this.deck)) {
+    for (const [x1, y1, x2, y2] of corridors()) {
       const w = x2 - x1;
       const h = y2 - y1;
       fill(b, x1, y1, w, h, PX.floor);
@@ -3889,32 +4195,44 @@ class Factory {
       fill(b, x1, y2 - 1, w, 1, '#101018');
     }
 
-    // hazard edging down the spine
-    for (let y = 50; y < 306; y += 6) {
-      fill(b, SPINE_X - 12, y, 1, 3, '#3a3320');
-      fill(b, SPINE_X + 11, y + 3, 1, 3, '#3a3320');
+    // hazard edging down each service corridor
+    for (const vx of VCORR) {
+      for (let y = 16; y < 446; y += 7) {
+        fill(b, vx - CORR_W / 2, y, 1, 3, '#3a3320');
+        fill(b, vx + CORR_W / 2 - 1, y + 3, 1, 3, '#3a3320');
+      }
     }
 
-    // the flow line, pulsing toward the bridge
-    for (let y = 52; y < 304; y += 7) {
-      const p = ((this.t * 20 + y) % 110) / 110;
-      b.globalAlpha = 0.22 + (1 - p) * 0.55;
-      fill(b, SPINE_X - 1, y, 3, 4, PX.arcane);
+    // flow lines, pulsing toward the hall
+    for (const vx of VCORR) {
+      for (let y = 18; y < 444; y += 8) {
+        const p = ((this.t * 22 + y) % 120) / 120;
+        b.globalAlpha = 0.2 + (1 - p) * 0.5;
+        fill(b, vx - 1, y, 3, 4, PX.arcane);
+      }
+    }
+    for (let x = VCORR[0]; x < VCORR[2]; x += 8) {
+      const p = ((this.t * 22 + x) % 120) / 120;
+      b.globalAlpha = 0.2 + (1 - p) * 0.45;
+      fill(b, x, HALL_Y - 1, 4, 3, PX.arcane);
     }
     b.globalAlpha = 1;
 
-    // overhead strip lights along the corridor
-    for (const y of [70, 120, 175, 230, 285]) {
-      fill(b, SPINE_X - 5, y, 10, 1, '#c8cadd');
-      b.globalAlpha = 0.07;
-      fill(b, SPINE_X - 12, y - 4, 24, 10, '#cfd4ff');
-      b.globalAlpha = 1;
+    // overhead strips
+    for (const vx of VCORR) {
+      for (const y of [40, 110, 184, 250, 320, 400]) {
+        fill(b, vx - 6, y, 12, 1, '#c8cadd');
+        b.globalAlpha = 0.07;
+        fill(b, vx - 13, y - 5, 26, 12, '#cfd4ff');
+        b.globalAlpha = 1;
+      }
     }
 
     // lit thresholds at every door
-    for (const r of roomsOn(this.deck)) {
-      if (r.door[0] === SPINE_X) continue;
-      const x = r.door[0] < SPINE_X ? r.door[0] : r.door[0] - 3;
+    for (const r of ROOMS) {
+
+      const vx = VCORR[r.corr];
+      const x = r.door[0] < vx ? r.door[0] : r.door[0] - 3;
       const col = ACCENT[r.accent] || PX.arcane;
       b.globalAlpha = 0.6 + Math.sin(this.t * 2 + r.door[1]) * 0.2;
       fill(b, x, r.door[1] - 8, 3, 16, col);
@@ -4080,7 +4398,7 @@ class Factory {
 
   drawCrew(b) {
     // trails first so sprites sit on top
-    for (const a of this.sim.onFloor(this.deck)) {
+    for (const a of this.sim.onFloor()) {
       if (a.state !== 'transit') continue;
       for (let i = 1; i < a.wake.length; i++) {
         b.globalAlpha = (i / a.wake.length) * 0.18;
@@ -4089,7 +4407,7 @@ class Factory {
     }
     b.globalAlpha = 1;
 
-    const all = this.sim.onFloor(this.deck).slice().sort((p, q) => p.y - q.y);
+    const all = this.sim.onFloor().slice().sort((p, q) => p.y - q.y);
 
     for (const a of all) {
       const moving = a.state === 'transit';
@@ -4106,7 +4424,7 @@ class Factory {
 
   /** Name plates, drawn crisp on top of the blitted pixels. */
   drawLabels(c) {
-    const all = this.sim.onFloor(this.deck);
+    const all = this.sim.onFloor();
 
     c.textAlign = 'center';
     c.textBaseline = 'bottom';
@@ -4138,7 +4456,7 @@ class Factory {
     c.textAlign = 'left';
     c.font = `600 ${plate}px 'Chakra Petch', sans-serif`;
     c.letterSpacing = '1px';
-    for (const r of roomsOn(this.deck)) {
+    for (const r of ROOMS) {
       if (r.id === focus) continue;
       const [x1, y1] = r.rect;
       const x = this.ox + (x1 + 3) * this.scale;
@@ -4155,7 +4473,7 @@ class Factory {
     c.textAlign = 'center';
 
     // the focused room gets the full plate
-    const room = roomsOn(this.deck).find((r) => r.id === focus);
+    const room = ROOMS.find((r) => r.id === focus);
     if (room) {
       const [x1, y1, x2] = room.rect;
       const x = this.ox + ((x1 + x2) / 2) * this.scale;
@@ -4263,17 +4581,6 @@ class UI {
         </button>`).join('')}
 
       <div class="rail-block">
-        <span class="eyebrow">Deck</span>
-        <div class="deck-switch" id="deckSwitch">
-          ${FLOORS.map((d) => `
-            <button type="button" data-deck="${d.id}">
-              <span class="deck-no mono">${d.id}</span>
-              <span class="deck-name">${esc(d.sub)}</span>
-            </button>`).join('')}
-        </div>
-      </div>
-
-      <div class="rail-block">
         <span class="eyebrow">Commander</span>
         <button class="commander" type="button" data-commander="1">
           <span class="commander-mark">◆</span>
@@ -4298,13 +4605,7 @@ class UI {
     this.railEl.addEventListener('click', (e) => {
       const nav = e.target.closest('[data-screen]');
       if (nav) { this.setScreen(nav.dataset.screen); return; }
-      const deck = e.target.closest('[data-deck]');
-      if (deck) {
-        this.factory.deck = Number(deck.dataset.deck);
-        this.closeRoom();
-        this.setScreen('factory');
-        return;
-      }
+
       if (e.target.closest('[data-commander]')) this.openRoom(this.sim.arcane.deck);
     });
   }
@@ -4328,8 +4629,8 @@ class UI {
     const room = ROOM_BY_ID[id];
     if (!room) return;
     this.room = id;
-    this.factory.deck = room.deck;
     this.factory.selected = id;
+    this.factory.focusRoom(room);
     this.sim.commandTo(id);
     if (this.screen !== 'factory') this.setScreen('factory');
     else this.render();
@@ -4381,11 +4682,6 @@ class UI {
     const pct = total ? Math.round((done / total) * 100) : 0;
     $('#integrityFill').style.width = `${pct}%`;
     $('#integrityPct').textContent = `${pct}%`;
-
-    for (const d of FLOORS) {
-      const btn = this.railEl.querySelector(`[data-deck="${d.id}"]`);
-      if (btn) btn.setAttribute('aria-current', String(this.factory.deck === d.id));
-    }
 
     const a = this.sim.arcane;
     $('#arcaneWhere').textContent = a.state === 'transit'
@@ -4521,7 +4817,7 @@ class UI {
 
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">The network</h3>
-          <span class="chip">${AGENTS.length} agents · 2 decks</span></div>
+          <span class="chip">${AGENTS.length} agents · ${WINGS.length} wings</span></div>
         <div class="crew-chips">
           ${AGENTS.map((a) => `<button class="crew-chip" type="button" data-agent="${a.id}">
             <span class="dot" style="background:${a.colour}"></span>${esc(a.name)}
@@ -4621,7 +4917,7 @@ class UI {
             <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
             <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
             <span class="agent-call mono">${esc(a.call)}</span>
-            <span class="agent-role">${esc(a.role)} · ${esc(room?.name || '')} · Deck ${a.deck}</span>
+            <span class="agent-role">${esc(a.role)} · ${esc(room?.name || '')}</span>
             <span class="agent-brief">${esc(a.domain)}</span>
             <span class="agent-tags">
               ${a.tools.map((t) => `<span class="tag">${esc(TOOLS.find((x) => x.id === t)?.name || t)}</span>`).join('')}
@@ -4945,7 +5241,7 @@ class UI {
         <p class="muted-note">${sel.order ? esc(sel.order) : 'Awaiting orders on this deck.'}</p>
         <h3 class="sub-title">Send to</h3>
         <div class="crew-chips">
-          ${roomsOn(sel.floor || 1).map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
+          ${DECKS.map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
              data-send="${sel.id}" data-to="${d.id}">${esc(d.name)}</button>`).join('')}
         </div>`;
     }
@@ -5514,6 +5810,17 @@ function atEvent(e) {
 }
 
 canvas.addEventListener('pointermove', (e) => {
+  if (drag) {
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    drag.moved += Math.abs(dx) + Math.abs(dy);
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    factory.panBy(dx, dy);
+    tooltip.hidden = true;
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
   const { x, y } = atEvent(e);
   const agent = sim.agentAt(x, y);
   const room = agent ? null : factory.roomAt(x, y);
@@ -5532,7 +5839,7 @@ canvas.addEventListener('pointermove', (e) => {
   } else {
     tooltip.hidden = true;
   }
-  canvas.style.cursor = agent || room ? 'pointer' : 'default';
+  canvas.style.cursor = agent || room ? 'pointer' : factory.pannable ? 'grab' : 'default';
 });
 
 canvas.addEventListener('pointerleave', () => {
@@ -5540,7 +5847,24 @@ canvas.addEventListener('pointerleave', () => {
   tooltip.hidden = true;
 });
 
+/* ---------- drag to pan ---------- */
+
+let drag = null;
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (!factory.pannable) return;
+  drag = { x: e.clientX, y: e.clientY, moved: 0 };
+  canvas.setPointerCapture(e.pointerId);
+});
+
+canvas.addEventListener('pointerup', (e) => {
+  if (drag) canvas.releasePointerCapture(e.pointerId);
+  // a real drag suppresses the click that follows it
+  setTimeout(() => { drag = null; }, 0);
+});
+
 canvas.addEventListener('click', (e) => {
+  if (drag && drag.moved > 5) return;
   const { x, y } = atEvent(e);
   const agent = sim.agentAt(x, y);
   if (agent) { ui.selectAgent(agent.id); return; }
@@ -5557,6 +5881,18 @@ function showTip(px, py, title, body) {
   tooltip.firstElementChild.textContent = title;
   tooltip.lastElementChild.textContent = body;
 }
+
+/* ---------- zoom ---------- */
+
+document.getElementById('zoom').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-zoom]');
+  if (!btn) return;
+  const v = btn.dataset.zoom;
+  factory.setZoom(v === 'fit' ? 'fit' : Number(v));
+  for (const b of e.currentTarget.querySelectorAll('button')) {
+    b.setAttribute('aria-pressed', String(b === btn));
+  }
+});
 
 /* ---------- transport ---------- */
 

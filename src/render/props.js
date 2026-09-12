@@ -370,6 +370,142 @@ export const PROPS = {
   },
 
 
+
+  /* ---- the lounge ---- */
+  pooltable(c, x, y, w, h, a, t) {
+    // rails, then baize, then pockets, then balls
+    R(c, x, y, w, h, '#3a2416');
+    R(c, x, y, w, 1, '#5a3a22');
+    R(c, x, y + h - 1, w, 1, '#1e1208');
+    R(c, x + 3, y + 3, w - 6, h - 6, '#14472c');
+    R(c, x + 3, y + 3, w - 6, 1, '#1b5c38');
+    R(c, x + 4, y + 4, w - 8, h - 8, '#176034');
+    // pockets
+    for (const [px2, py2] of [[4, 4], [w / 2 - 1, 3], [w - 6, 4],
+                              [4, h - 6], [w / 2 - 1, h - 5], [w - 6, h - 6]]) {
+      R(c, x + px2, y + py2, 3, 3, '#080c08');
+    }
+    // balls: cue, then a loose spread
+    const balls = [[10, h / 2, '#e8e4d4'], [w * 0.56, h * 0.38, '#d4b03a'],
+                   [w * 0.64, h * 0.6, '#c23a3a'], [w * 0.72, h * 0.44, '#2f4fa8'],
+                   [w * 0.5, h * 0.66, '#1a1a1a'], [w * 0.78, h * 0.58, '#3a8a4a']];
+    for (const [bx, by, col] of balls) {
+      R(c, x + bx, y + by, 2, 2, col);
+      R(c, x + bx, y + by, 1, 1, '#ffffff');
+    }
+    // cue resting across a rail
+    const cue = Math.sin(t * 0.5) * 2;
+    R(c, x + 8, y + h - 4 + cue, w * 0.48, 1, '#b89a68');
+    R(c, x + 8, y + h - 4 + cue, 4, 1, '#6a5432');
+  },
+  sofa(c, x, y, w, h, a, t) {
+    R(c, x, y + 3, w, h - 3, '#2e2438');
+    R(c, x, y, w, 5, '#3a2d46');
+    R(c, x, y, w, 1, '#4a3a58');
+    R(c, x, y + 3, 4, h - 3, '#261e2e');
+    R(c, x + w - 4, y + 3, 4, h - 3, '#261e2e');
+    // cushions
+    for (let i = 5; i < w - 6; i += 9) {
+      R(c, x + i, y + 6, 8, h - 9, '#342842');
+      R(c, x + i, y + 6, 8, 1, '#43334f');
+    }
+  },
+  lowtable(c, x, y, w, h, a, t) {
+    R(c, x + 1, y + h - 3, w - 2, 3, '#241c16');
+    R(c, x, y, w, h - 3, '#3a2c1e');
+    R(c, x, y, w, 1, '#523c28');
+    R(c, x + 3, y + 2, 6, 3, '#d8d4c4');
+    R(c, x + w - 9, y + 2, 5, 4, a);
+    c.globalAlpha = 0.2; R(c, x + w - 10, y + 1, 7, 6, a); c.globalAlpha = 1;
+  },
+  tv(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#14141c');
+    R(c, x, y, w, 1, '#2c2c3e');
+    R(c, x + 1, y + 1, w - 2, h - 3, '#06080e');
+    for (let i = 0; i < h - 4; i += 2) {
+      const v = Math.sin(i * 0.8 + t * 1.4);
+      R(c, x + 2, y + 2 + i, (w - 4) * (0.35 + 0.55 * Math.abs(v)), 1,
+        v > 0.5 ? a : v > 0 ? '#2a4a6a' : '#1a2c44');
+    }
+    c.globalAlpha = 0.14; R(c, x - 2, y - 2, w + 4, h + 4, a); c.globalAlpha = 1;
+  },
+  rug(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#241a2c');
+    R(c, x + 1, y + 1, w - 2, h - 2, '#2c2036');
+    R(c, x + 3, y + 3, w - 6, h - 6, '#241a2c');
+    for (let i = 5; i < w - 5; i += 6) R(c, x + i, y + 4, 3, h - 8, '#31243c');
+    R(c, x, y, w, 1, '#3a2c46');
+  },
+  dartboard(c, x, y, w, h, a, t) {
+    const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) / 2;
+    c.fillStyle = '#1a1a20';
+    c.beginPath(); c.arc(cx, cy, Math.max(0.1, r), 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#3a2a22';
+    c.beginPath(); c.arc(cx, cy, Math.max(0.1, r - 1), 0, Math.PI * 2); c.fill();
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      c.fillStyle = i % 2 ? '#c8a23a' : '#242430';
+      c.fillRect(cx + Math.cos(ang) * (r - 3) - 1, cy + Math.sin(ang) * (r - 3) - 1, 2, 2);
+    }
+    R(c, cx - 1, cy - 1, 2, 2, '#c23a3a');
+    R(c, cx + 2, cy - 4, 1, 3, '#d8d4c4');
+  },
+
+  /* ---- records & services ---- */
+  filecab(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#41485a', '#20242e');
+    const rows = Math.floor((h - 3) / 6);
+    for (let r = 0; r < rows; r++) {
+      const ry = y + 2 + r * 6;
+      R(c, x + 1, ry, w - 2, 5, '#2e3442');
+      R(c, x + 1, ry, w - 2, 1, '#4a5264');
+      R(c, x + w / 2 - 2, ry + 2, 4, 1, '#6a7284');
+      R(c, x + 2, ry + 1, 3, 1, '#8a9070');
+    }
+  },
+  archivebox(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#6a5636', '#40331f');
+    R(c, x + 1, y + 2, w - 2, 1, '#2a2113');
+    R(c, x + 2, y + 4, w - 5, 3, '#d8d4c4');
+    R(c, x + 3, y + 5, w - 7, 1, '#5e5748');
+  },
+  lamp(c, x, y, w, h, a, t) {
+    R(c, x + w / 2 - 1, y + 3, 2, h - 4, '#3a3a48');
+    R(c, x + 1, y + h - 2, w - 2, 2, '#2a2a36');
+    R(c, x, y, w, 4, '#c8a23a');
+    R(c, x, y, w, 1, '#e8c96a');
+    c.globalAlpha = 0.16 + Math.sin(t * 1.1 + x) * 0.04;
+    R(c, x - 3, y + 2, w + 6, h + 3, PX.flare);
+    c.globalAlpha = 1;
+  },
+  walllight(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#2a2a3a');
+    R(c, x, y + h - 1, w, 1, a);
+    c.globalAlpha = 0.12 + Math.sin(t * 2.2 + x) * 0.03;
+    R(c, x - 2, y + h, w + 4, 7, a);
+    c.globalAlpha = 1;
+  },
+  junction(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#3c3c50', '#1c1c26');
+    R(c, x + 1, y + 1, w - 2, h - 2, '#15151f');
+    R(c, x + 2, y + 2, 2, 2, blink(t, x, 1.7) ? PX.vital : '#1e3a2c');
+    R(c, x + w - 4, y + 2, 2, 2, blink(t, x + 3, 1.1) ? a : '#242438');
+    R(c, x + 2, y + h - 4, w - 4, 1, '#2a2a3a');
+  },
+  bar(c, x, y, w, h, a, t) {
+    slab(c, x, y + h - 8, w, 8, '#4a3628', '#281c12');
+    R(c, x + 1, y, w - 2, h - 9, '#16161f');
+    // bottles on a backlit shelf
+    for (let i = 2; i < w - 3; i += 4) {
+      const col = ['#3a6a4a', '#6a4a3a', '#4a4a7a', '#7a6a3a'][(i + x) % 4];
+      R(c, x + i, y + 2, 2, h - 12, col);
+      R(c, x + i, y + 2, 2, 1, '#cfd6e8');
+    }
+    c.globalAlpha = 0.18;
+    R(c, x + 1, y + 1, w - 2, h - 10, a);
+    c.globalAlpha = 1;
+  },
+
   /* ---- architecture & services ---- */
   pipes(c, x, y, w, h, a, t) {
     R(c, x, y, w, h, '#242432');
@@ -395,12 +531,14 @@ export const PROPS = {
     c.globalAlpha = 1;
   },
   ceilinglight(c, x, y, w, h, a, t) {
-    const flick = 0.82 + Math.sin(t * 3.1 + x) * 0.05;
-    R(c, x, y, w, h, '#c8cadd');
-    R(c, x, y + h, w, 1, '#5a5c70');
-    c.globalAlpha = 0.09 * flick;
-    for (let i = 1; i <= 5; i++) {
-      R(c, x - i * 2, y + h, w + i * 4, i * 4, '#cfd4ff');
+    const flick = 0.85 + Math.sin(t * 3.1 + x) * 0.04;
+    R(c, x, y, w, h, '#d2d5e6');
+    R(c, x + 1, y, w - 2, 1, '#eef0ff');
+    R(c, x, y + h, w, 1, '#4a4c60');
+    // a short, narrowing pool rather than a stack of grey slabs
+    for (let i = 1; i <= 4; i++) {
+      c.globalAlpha = (0.05 - i * 0.009) * flick;
+      R(c, x + i, y + h + (i - 1) * 2, w - i * 2, 2, '#cfd4ff');
     }
     c.globalAlpha = 1;
   },
@@ -456,10 +594,15 @@ export const PROPS = {
     c.globalAlpha = 1;
   },
   chair(c, x, y, w, h) {
-    R(c, x + 1, y + h - 2, w - 2, 2, '#22222e');
-    R(c, x, y + 2, w, h - 3, '#33333f');
-    R(c, x, y, w, 3, '#3e3e4e');
-    R(c, x + 1, y + 3, w - 2, 1, '#1a1a24');
+    // top-down: backrest at the top, seat below, legs showing at the corners
+    R(c, x + 1, y, w - 2, 2, '#4a4a5e');
+    R(c, x + 1, y, w - 2, 1, '#5e5e76');
+    R(c, x + 1, y + 2, w - 2, 1, '#191922');
+    R(c, x, y + 3, w, h - 4, '#35354a');
+    R(c, x + 1, y + 4, w - 2, h - 6, '#3d3d54');
+    R(c, x + 1, y + 4, w - 2, 1, '#4a4a64');
+    R(c, x, y + h - 1, 2, 1, '#15151c');
+    R(c, x + w - 2, y + h - 1, 2, 1, '#15151c');
   },
 
   /* ---- forge ---- */

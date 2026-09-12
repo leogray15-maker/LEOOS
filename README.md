@@ -24,9 +24,30 @@ Click a room and the commander walks there while its dashboard opens.
                               calendar / email / store / CRM / web: not wired
 ```
 
-Two decks. **Deck 1** is operations — the rooms that run the businesses.
-**Deck 2** is command and intelligence — where decisions get made and the
-network itself is configured. ARCANE rides a lift between them.
+One facility, twenty rooms, four wings around two service corridors and a
+central hall:
+
+```
+ C1 PRODUCTION │ V1 │ C2 COMMAND │ HALL │ C3 KNOWLEDGE │ V3 │ C4 NETWORK
+```
+
+| | PRODUCTION | COMMAND | KNOWLEDGE | NETWORK |
+| --- | --- | --- | --- | --- |
+| 1 | The Lab | Bridge | Intelligence | Agent Garage |
+| 2 | Vitals | War Room | Observatory | Control Room |
+| 3 | Forge | The Council | Deal Room | Inventor's Room |
+| 4 | The Market | The Vault | The Library | The Records |
+| 5 | Beacon | Scriptorium | The Lounge | Sanctum |
+
+Routing is breadth-first over a corridor graph, not a single spine — the
+building is a grid, so agents find their own way through it. `buildGraph()`
+places nodes where corridors meet room rows and the hall; a build-time check
+proves every room is reachable from every other.
+
+The map is 640x460, larger than most stages allow at 2x, so there is a
+**FIT / 2x / 3x** zoom and drag-to-pan. Scale is always an integer — a
+fractional one gives uneven pixels and shimmer. Opening a room brings it into
+view without moving the map when it is already visible.
 
 ### The Council
 

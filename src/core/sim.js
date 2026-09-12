@@ -7,7 +7,7 @@
  * room the commander is standing in is the room that gets attention.
  */
 
-import { ROOMS, ROOM_BY_ID, SPINE_X, SPINE, roomsOn } from '../config/facility.js';
+import { ROOMS, ROOM_BY_ID, buildGraph, doorNode } from '../config/facility.js';
 import { CREW, ARCANE } from '../config/empire.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -16,25 +16,49 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 /** Somewhere inside a room, clear of the walls and the door. */
 function interiorPoint(room) {
   const [x1, y1, x2, y2] = room.rect;
-  return { x: rand(x1 + 8, x2 - 8), y: rand(y1 + 14, y2 - 6) };
+  return { x: rand(x1 + 14, x2 - 14), y: rand(y1 + 24, y2 - 8) };
 }
 
-/** Walk one room to another along the spine. */
+const GRAPH = buildGraph();
+
+/** Breadth-first over the corridor graph — the building is a grid, not a spine. */
+function nodePath(fromId, toId) {
+  const a = GRAPH.index[fromId];
+  const b = GRAPH.index[toId];
+  if (a === undefined || b === undefined) return [];
+  if (a === b) return [a];
+  const prev = new Map([[a, -1]]);
+  const q = [a];
+  while (q.length) {
+    const n = q.shift();
+    if (n === b) break;
+    for (const m of GRAPH.edges[n]) {
+      if (prev.has(m)) continue;
+      prev.set(m, n);
+      q.push(m);
+    }
+  }
+  if (!prev.has(b)) return [];
+  const out = [];
+  for (let n = b; n !== -1; n = prev.get(n)) out.push(n);
+  return out.reverse();
+}
+
+/** Walk one room to another: out of the door, along the corridors, in again. */
 function route(fromId, toId) {
   const a = ROOM_BY_ID[fromId];
   const b = ROOM_BY_ID[toId];
-  const pts = [{ x: a.door[0], y: a.door[1] }];
-  if (a.door[0] !== SPINE_X) pts.push({ x: SPINE_X, y: a.door[1] });
+  if (!a || !b) return [];
 
-  const step = a.spine <= b.spine ? 1 : -1;
-  for (let i = a.spine; i !== b.spine + step; i += step) {
-    pts.push({ x: SPINE_X, y: SPINE[i] });
+  const pts = [{ x: a.door[0], y: a.door[1] }];
+  for (const n of nodePath(doorNode(a), doorNode(b))) {
+    pts.push({ x: GRAPH.nodes[n].x, y: GRAPH.nodes[n].y });
   }
-  if (b.door[0] !== SPINE_X) pts.push({ x: SPINE_X, y: b.door[1] });
   pts.push({ x: b.door[0], y: b.door[1] });
   pts.push(interiorPoint(b));
 
-  return pts.filter((p, i) => i === 0 || Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 0.5);
+  return pts.filter((p, i) => i === 0
+    || Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 0.5);
 }
 
 function makeWalker(def, kind, speed) {
@@ -74,8 +98,8 @@ export class Sim {
 
   everyone() { return [...this.agents, this.arcane]; }
 
-  /** Agents standing on one deck. */
-  onFloor(floor) { return this.everyone().filter((a) => (a.floor || 1) === floor); }
+  /** Everyone on the floor — there is only one now. */
+  onFloor() { return this.everyone(); }
 
   inRoom(id) {
     return this.agents.filter((a) => a.deck === id && a.state === 'work');
@@ -100,34 +124,18 @@ export class Sim {
     return true;
   }
 
-  /** ARCANE walks to the room you opened, taking the lift between decks. */
+  /** ARCANE walks to the room you opened. */
   commandTo(roomId) {
     const room = ROOM_BY_ID[roomId];
     if (!room) return;
-    const a = this.arcane;
-    if (a.deck === roomId && a.state === 'work') return;
-
-    if ((a.floor || 1) !== room.deck) {
-      // the lift: step out on the new deck at the spine terminus, then walk
-      a.floor = room.deck;
-      a.x = SPINE_X;
-      a.y = SPINE[0] + 6;
-      a.deck = roomId;
-      a.path = [{ x: SPINE_X, y: room.door[1] },
-                { x: room.door[0], y: room.door[1] },
-                { x: (room.rect[0] + room.rect[2]) / 2, y: room.rect[3] - 12 }];
-      a.leg = 0;
-      a.state = 'transit';
-      this.store.trace(`ARCANE rode the lift to DECK ${room.deck} — ${room.name}`);
-      return;
-    }
-    if (this.dispatch(a, roomId)) this.store.trace(`ARCANE → ${room.name}`);
+    if (this.arcane.deck === roomId && this.arcane.state === 'work') return;
+    if (this.dispatch(this.arcane, roomId)) this.store.trace(`ARCANE → ${room.name}`);
   }
 
   /** Where a crew member drifts next: open orders pull, so does the commander. */
   chooseTarget(agent) {
     const bag = [];
-    for (const r of roomsOn(agent.floor || 1)) {
+    for (const r of ROOMS) {
       let w = 1 + this.store.openCount(r.id) * 2.4;
       if (r.id === agent.home) w += 5;
       if (r.id === this.arcane.deck) w += 4;
@@ -212,10 +220,10 @@ export class Sim {
     }
   }
 
-  agentAt(x, y, radius = 8, floor = null) {
+  agentAt(x, y, radius = 9) {
     let best = null;
     let bestD = radius;
-    for (const a of (floor ? this.onFloor(floor) : this.everyone())) {
+    for (const a of this.everyone()) {
       const d = Math.hypot(a.x - x, a.y - (y + 5));
       if (d < bestD) { bestD = d; best = a; }
     }
