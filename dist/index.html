@@ -1,0 +1,2095 @@
+<title>LEOOS Command Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ============================================================
+   LEOOS — instrument panel design system
+   A single committed visual world: a ship's command display.
+   Every colour is declared here and used through tokens.
+   ============================================================ */
+
+:root {
+  /* Ground — violet-biased neutrals, never pure grey */
+  --void:   #07070a;
+  --deck:   #0d0d13;
+  --plate:  #14141d;
+  --raised: #1b1b26;
+  --seam:   #23232f;
+  --seam-lit: #33334a;
+
+  /* Ink */
+  --ink:    #eceaf5;
+  --ash:    #7e7c94;
+  --faint:  #56546a;
+
+  /* The one bold accent */
+  --arcane: #8b5cf6;
+  --arcane-lift: #a98bff;
+  --arcane-wash: rgba(139, 92, 246, 0.14);
+
+  /* Semantic state — separate from the accent */
+  --vital:  #3ecf8e;
+  --flare:  #e8b64c;
+  --breach: #e5484d;
+  --cyan:   #56c9f0;
+
+  --r-sm: 3px;
+  --r-md: 6px;
+  --r-lg: 10px;
+
+  --f-display: 'Chakra Petch', 'Helvetica Neue', sans-serif;
+  --f-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --f-data: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --rail-w: 232px;
+  --dash-w: 356px;
+}
+
+/* The page commits to one world; it must not borrow the host ground. */
+html { color-scheme: dark; }
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+button, input, textarea { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--arcane-lift);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* ---------- shared atoms ---------- */
+
+.eyebrow {
+  font-family: var(--f-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.mono { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--faint); flex: none;
+}
+.dot.is-arcane { background: var(--arcane); box-shadow: 0 0 7px var(--arcane); }
+.dot.is-vital  { background: var(--vital);  box-shadow: 0 0 7px var(--vital); }
+.dot.is-flare  { background: var(--flare);  box-shadow: 0 0 7px var(--flare); }
+.dot.is-breach { background: var(--breach); box-shadow: 0 0 7px var(--breach); }
+.dot.is-cyan   { background: var(--cyan);   box-shadow: 0 0 7px var(--cyan); }
+
+.chip {
+  font-family: var(--f-data);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--seam);
+  color: var(--ash);
+  white-space: nowrap;
+}
+.chip.is-seed { color: var(--flare); border-color: rgba(232, 182, 76, 0.35); }
+
+/* ============================================================
+   Frame
+   ============================================================ */
+
+#os {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--dash-w);
+  grid-template-rows: 52px minmax(0, 1fr);
+  grid-template-areas: 'brand topbar topbar' 'rail stage dash';
+  height: 100dvh;
+}
+
+/* ---------- brand + topbar ---------- */
+
+.brand {
+  grid-area: brand;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px;
+  border-right: 1px solid var(--seam);
+  border-bottom: 1px solid var(--seam);
+  background: var(--deck);
+}
+.sigil { width: 22px; height: 22px; flex: none; }
+.brand-name {
+  font-family: var(--f-display);
+  font-weight: 700; font-size: 15px;
+  letter-spacing: 0.22em;
+}
+.brand-ver { font-family: var(--f-data); font-size: 9px; color: var(--faint); letter-spacing: 0.1em; }
+
+.topbar {
+  grid-area: topbar;
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--seam);
+  background: var(--deck);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.topbar::-webkit-scrollbar { display: none; }
+
+.readout { display: flex; flex-direction: column; gap: 1px; flex: none; }
+.readout-label { font-family: var(--f-display); font-size: 9px; letter-spacing: 0.16em; color: var(--faint); text-transform: uppercase; }
+.readout-value { font-family: var(--f-data); font-size: 14px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.readout-value.is-vital { color: var(--vital); }
+.readout-value.is-flare { color: var(--flare); }
+.readout-value.is-arcane { color: var(--arcane-lift); }
+
+.topbar-spacer { flex: 1 1 auto; min-width: 12px; }
+
+.transport { display: flex; gap: 0; border: 1px solid var(--seam); border-radius: var(--r-md); overflow: hidden; flex: none; }
+.transport button {
+  background: transparent; border: 0; cursor: pointer;
+  font-family: var(--f-data); font-size: 11px;
+  padding: 5px 10px; color: var(--ash);
+  border-right: 1px solid var(--seam);
+}
+.transport button:last-child { border-right: 0; }
+.transport button:hover { background: var(--raised); color: var(--ink); }
+.transport button[aria-pressed='true'] { background: var(--arcane-wash); color: var(--arcane-lift); }
+
+/* ---------- deck rail ---------- */
+
+.rail {
+  grid-area: rail;
+  border-right: 1px solid var(--seam);
+  background: var(--deck);
+  overflow-y: auto;
+  padding-block: 12px;
+}
+.rail-head { padding: 0 16px 8px; display: flex; justify-content: space-between; align-items: baseline; }
+
+.deck-btn {
+  display: grid;
+  grid-template-columns: 6px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  padding: 8px 16px;
+  text-align: left;
+  cursor: pointer;
+}
+.deck-btn:hover { background: var(--plate); }
+.deck-btn[aria-current='true'] {
+  background: var(--plate);
+  border-left-color: var(--arcane);
+}
+.deck-btn-name {
+  font-family: var(--f-display); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.1em; line-height: 1.25;
+}
+.deck-btn-sub { font-size: 10.5px; color: var(--faint); line-height: 1.3; }
+.deck-btn-count {
+  font-family: var(--f-data); font-size: 11px; color: var(--ash);
+  font-variant-numeric: tabular-nums;
+}
+.deck-btn-count.is-clear { color: var(--vital); }
+
+.rail-foot { padding: 14px 16px 4px; border-top: 1px solid var(--seam); margin-top: 12px; }
+.integrity-bar { height: 3px; background: var(--raised); border-radius: 2px; overflow: hidden; margin-top: 7px; }
+.integrity-fill { height: 100%; background: linear-gradient(90deg, var(--arcane), var(--arcane-lift)); transition: width .6s ease; }
+
+/* ---------- stage (the ship) ---------- */
+
+.stage {
+  grid-area: stage;
+  position: relative;
+  background: var(--void);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 0;
+}
+#hull { display: block; width: 100%; height: 100%; cursor: crosshair; }
+
+.stage-tag {
+  position: absolute; top: 14px; left: 18px;
+  display: flex; flex-direction: column; gap: 2px;
+  pointer-events: none;
+}
+.stage-tag-name { font-family: var(--f-display); font-size: 13px; letter-spacing: 0.24em; color: var(--ash); }
+.stage-hint { position: absolute; bottom: 58px; left: 18px; font-size: 10.5px; color: var(--faint); pointer-events: none; }
+
+.tooltip {
+  position: absolute; pointer-events: none;
+  background: var(--plate); border: 1px solid var(--seam-lit);
+  border-radius: var(--r-md); padding: 7px 10px;
+  font-size: 11px; line-height: 1.4;
+  box-shadow: 0 8px 24px rgba(0,0,0,.6);
+  max-width: 220px; z-index: 6;
+  transform: translate(-50%, -125%);
+}
+.tooltip[hidden] { display: none; }
+.tooltip-title { font-family: var(--f-display); font-size: 11px; letter-spacing: 0.1em; }
+.tooltip-body { color: var(--ash); }
+
+/* log ticker under the ship */
+.ticker {
+  border-top: 1px solid var(--seam);
+  background: var(--deck);
+  height: 44px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 18px;
+  overflow: hidden;
+}
+.ticker-label { flex: none; }
+.ticker-line {
+  font-family: var(--f-data); font-size: 11px; color: var(--ash);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ticker-time { color: var(--faint); }
+
+/* ---------- dashboard ---------- */
+
+.dash {
+  grid-area: dash;
+  border-left: 1px solid var(--seam);
+  background: var(--deck);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+
+.panel { border-bottom: 1px solid var(--seam); padding: 14px 16px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.panel-title { font-family: var(--f-display); font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; }
+
+.back-btn {
+  background: transparent; border: 1px solid var(--seam); border-radius: var(--r-sm);
+  color: var(--ash); cursor: pointer; font-family: var(--f-data); font-size: 10px;
+  padding: 3px 7px;
+}
+.back-btn:hover { border-color: var(--seam-lit); color: var(--ink); }
+
+/* orders (tasks) */
+.orders { display: flex; flex-direction: column; gap: 1px; }
+.order {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 9px;
+  align-items: start; padding: 7px 8px; margin: 0 -8px;
+  border-radius: var(--r-sm); cursor: pointer;
+  background: transparent; border: 0; text-align: left; width: calc(100% + 16px);
+}
+.order:hover { background: var(--plate); }
+.order-box {
+  width: 13px; height: 13px; margin-top: 2px; flex: none;
+  border: 1px solid var(--seam-lit); border-radius: 2px;
+  display: grid; place-items: center;
+}
+.order.is-done .order-box { background: var(--arcane); border-color: var(--arcane); }
+.order-tick { width: 8px; height: 8px; display: none; }
+.order.is-done .order-tick { display: block; }
+.order-text { font-size: 12.5px; line-height: 1.45; }
+.order.is-done .order-text { color: var(--faint); text-decoration: line-through; }
+.order-pri {
+  font-family: var(--f-data); font-size: 9px; letter-spacing: .06em;
+  padding: 1px 5px; border-radius: 2px; margin-top: 2px; flex: none;
+}
+.order-pri.p1 { color: var(--breach); background: rgba(229,72,77,.1); }
+.order-pri.p2 { color: var(--flare); background: rgba(232,182,76,.1); }
+.order-pri.p3 { color: var(--faint); background: var(--raised); }
+.order.is-done .order-pri { opacity: .35; }
+
+.order-add { display: flex; gap: 6px; margin-top: 10px; }
+.order-add input {
+  flex: 1 1 auto; min-width: 0;
+  background: var(--void); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 6px 8px; font-size: 12px;
+}
+.order-add input::placeholder { color: var(--faint); }
+.order-add input:focus { border-color: var(--arcane); outline: none; }
+.order-add button {
+  background: var(--raised); border: 1px solid var(--seam); border-radius: var(--r-sm);
+  color: var(--ink); cursor: pointer; padding: 0 11px;
+  font-family: var(--f-display); font-size: 11px; letter-spacing: .1em;
+}
+.order-add button:hover { background: var(--arcane-wash); border-color: var(--arcane); color: var(--arcane-lift); }
+
+/* ledger */
+.ledger { display: flex; flex-direction: column; }
+.ledger-row {
+  display: grid; grid-template-columns: 6px 1fr auto;
+  gap: 10px; align-items: start;
+  padding: 9px 0; border-bottom: 1px solid var(--seam);
+}
+.ledger-row > .dot { margin-top: 6px; }
+.ledger-row:last-child { border-bottom: 0; }
+.ledger-name { font-size: 12.5px; font-weight: 500; line-height: 1.3; }
+.ledger-kind { font-size: 10.5px; color: var(--faint); line-height: 1.35; }
+.ledger-val {
+  font-family: var(--f-data); font-size: 13px; font-variant-numeric: tabular-nums;
+  background: transparent; border: 1px solid transparent; border-radius: var(--r-sm);
+  padding: 2px 5px; text-align: right; width: 92px; cursor: text;
+}
+.ledger-val:hover { border-color: var(--seam); }
+.ledger-val:focus { border-color: var(--arcane); outline: none; background: var(--void); }
+
+/* signals */
+.signal {
+  display: grid; grid-template-columns: 3px 1fr; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--seam);
+}
+.signal:last-child { border-bottom: 0; }
+.signal-stripe { border-radius: 2px; }
+.signal-stripe.is-breach { background: var(--breach); }
+.signal-stripe.is-flare  { background: var(--flare); }
+.signal-stripe.is-vital  { background: var(--vital); }
+.signal-text { font-size: 12px; line-height: 1.45; }
+.signal-src { font-family: var(--f-data); font-size: 10px; color: var(--faint); }
+
+/* crew roster */
+.roster { display: flex; flex-direction: column; gap: 1px; }
+.crew-row {
+  display: grid; grid-template-columns: 6px 1fr auto; gap: 10px; align-items: center;
+  padding: 6px 8px; margin: 0 -8px; border-radius: var(--r-sm);
+  background: transparent; border: 0; width: calc(100% + 16px); text-align: left; cursor: pointer;
+}
+.crew-row > .dot { margin-top: 1px; }
+.crew-row:hover { background: var(--plate); }
+.crew-name { font-family: var(--f-display); font-size: 11.5px; letter-spacing: .09em; }
+.crew-role { font-size: 10.5px; color: var(--faint); }
+.crew-state { font-family: var(--f-data); font-size: 10px; color: var(--ash); }
+.crew-state.is-transit { color: var(--arcane-lift); }
+
+/* counsel console */
+.counsel-log {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 240px; overflow-y: auto; margin-bottom: 10px;
+}
+.counsel-turn { font-size: 12px; line-height: 1.55; }
+.counsel-turn.is-leo { color: var(--arcane-lift); font-family: var(--f-data); font-size: 11px; }
+.counsel-turn.is-ship { color: var(--ink); white-space: pre-wrap; }
+.counsel-empty { font-size: 11.5px; color: var(--faint); line-height: 1.5; }
+.counsel-form { display: flex; gap: 6px; }
+.counsel-form input {
+  flex: 1 1 auto; min-width: 0;
+  background: var(--void); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 7px 9px; font-size: 12px;
+}
+.counsel-form input:focus { border-color: var(--arcane); outline: none; }
+.counsel-form button {
+  background: var(--arcane-wash); border: 1px solid var(--arcane); border-radius: var(--r-sm);
+  color: var(--arcane-lift); cursor: pointer; padding: 0 12px;
+  font-family: var(--f-display); font-size: 11px; letter-spacing: .12em;
+}
+.counsel-form button:disabled { opacity: .4; cursor: default; }
+
+.sync-note { padding: 12px 16px; font-size: 10.5px; color: var(--faint); line-height: 1.5; }
+.sync-note b { color: var(--ash); font-weight: 600; }
+
+/* ============================================================
+   Narrow: stack to one column, ship first.
+   ============================================================ */
+@media (max-width: 1080px) {
+  :root { --dash-w: 300px; --rail-w: 196px; }
+}
+
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  #os {
+    grid-template-columns: 1fr;
+    grid-template-rows: 52px auto minmax(420px, 62vh) auto auto;
+    grid-template-areas: 'brand' 'topbar' 'stage' 'dash' 'rail';
+    height: auto;
+    min-height: 100dvh;
+  }
+  .brand { border-right: 0; justify-content: space-between; }
+  .topbar { gap: 16px; }
+  .rail, .dash { border-left: 0; border-right: 0; border-top: 1px solid var(--seam); }
+  .stage-hint { display: none; }
+  .counsel-log { max-height: 320px; }
+}
+
+</style>
+
+<div id="os">
+
+  <header class="brand">
+    <svg class="sigil" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2 L22.5 21 H1.5 Z" fill="none" stroke="#8b5cf6" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M5.8 17.4 L12 7.2 L18.2 17.4" fill="none" stroke="#a98bff" stroke-width="1.6"
+            stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M8.6 17.4 L12 12 L15.4 17.4" fill="none" stroke="#eceaf5" stroke-width="1.4"
+            stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+    <span>
+      <span class="brand-name" id="brandName">THE ARCANE</span><br>
+      <span class="brand-ver" id="brandVer">LEOOS v1.0</span>
+    </span>
+  </header>
+
+  <div class="topbar">
+    <div class="readout">
+      <span class="readout-label">Ship's date</span>
+      <span class="readout-value" id="roStardate">—</span>
+    </div>
+    <div class="readout">
+      <span class="readout-label">Open orders</span>
+      <span class="readout-value is-flare" id="roOrders">--</span>
+    </div>
+    <div class="readout">
+      <span class="readout-label">Crew at station</span>
+      <span class="readout-value is-vital" id="roCrew">--</span>
+    </div>
+    <div class="readout">
+      <span class="readout-label">Monthly</span>
+      <span class="readout-value is-arcane" id="roRevenue">—</span>
+    </div>
+
+    <span class="topbar-spacer"></span>
+
+    <div class="transport" id="transport" role="group" aria-label="Simulation speed">
+      <button type="button" data-speed="0" aria-pressed="false">HOLD</button>
+      <button type="button" data-speed="1" aria-pressed="true">1×</button>
+      <button type="button" data-speed="3" aria-pressed="false">3×</button>
+    </div>
+  </div>
+
+  <nav class="rail" id="rail" aria-label="Deck manifest"></nav>
+
+  <main class="stage">
+    <div style="position:relative;min-height:0">
+      <canvas id="hull" aria-label="Top-down view of the ship, with crew moving between decks"></canvas>
+      <div class="stage-tag">
+        <span class="stage-tag-name">HULL · TOP-DOWN</span>
+        <span class="eyebrow">Click a deck or a crew member</span>
+      </div>
+      <div class="stage-hint">Keys 1–9 jump decks · ESC returns to overview</div>
+      <div class="tooltip" id="tooltip" hidden></div>
+    </div>
+    <div class="ticker">
+      <span class="eyebrow ticker-label">Log</span>
+      <span class="ticker-line" id="tickerLine">Bringing systems online…</span>
+      <span class="ticker-time mono" id="tickerTime"></span>
+    </div>
+  </main>
+
+  <aside class="dash" id="dash" aria-label="Command dashboard"></aside>
+
+</div>
+
+<script type="module">
+/* ==== src/config/empire.js ==== */
+/**
+ * THE ARCANE EMPIRE — master configuration.
+ *
+ * This is the single file Leo edits to reshape the OS. Everything else
+ * (ship, crew, dashboard) is a renderer over this data.
+ *
+ * Ship space is 100 wide x 170 tall, nose at y=0, engines at y=170.
+ */
+
+const SHIP = {
+  name: 'THE ARCANE',
+  designation: 'LEOOS v1.0',
+  commander: 'LEO',
+  /** Hull silhouette in ship space — a dagger, echoing the Arcane sigil. */
+  hull: [
+    [50, 0], [56, 10], [61, 20], [64, 34], [65, 38], [77, 42], [79, 60],
+    [86, 68], [86, 98], [83, 104], [77, 126], [72, 150], [60, 162], [50, 170],
+    [40, 162], [28, 150], [23, 126], [17, 104], [14, 98], [14, 68],
+    [21, 60], [23, 42], [35, 38], [36, 34], [39, 20], [44, 10],
+  ],
+  /** Central corridor — crew walk this spine between compartments. */
+  spine: [[50, 36], [50, 53], [50, 83], [50, 112], [50, 136], [50, 156]],
+};
+
+/** The ventures. `seedMrr` is a STARTING PLACEHOLDER — recalibrate in the Ledger. */
+const VENTURES = [
+  { id: 'peptides', name: 'Arcane Peptides',  kind: 'Research compounds · UK', accent: 'arcane', seedMrr: 0, unit: 'orders/wk', seedUnit: 0 },
+  { id: 'track',    name: 'Arcane Track',     kind: 'Skin healing tracker · £11.99/mo · £70/yr', accent: 'vital', seedMrr: 0, unit: 'members', seedUnit: 0 },
+  { id: 'archives', name: 'Arcane Archives',  kind: 'Education platform · £128/mo', accent: 'cyan', seedMrr: 0, unit: 'members', seedUnit: 0 },
+  { id: 'codex',    name: 'The Codex',        kind: 'Books & masterclasses', accent: 'breach', seedMrr: 0, unit: 'titles', seedUnit: 12 },
+];
+
+/** The catalogue — real titles, real prices. Drives the Scriptorium. */
+const CATALOGUE = [
+  { title: 'The Dark Psych Codex',        price: 70.99, venture: 'codex' },
+  { title: 'The Arcane Game',             price: 69.99, venture: 'codex' },
+  { title: 'The Primal Code',             price: null,  venture: 'codex' },
+  { title: 'The Inner Citadel',           price: null,  venture: 'codex' },
+  { title: 'The Quiet Empire',            price: null,  venture: 'codex' },
+  { title: 'Dark Psychology Masterclass', price: null,  venture: 'codex' },
+  { title: 'Arcane Peptide 101',          price: 29.99, venture: 'peptides' },
+  { title: 'Arcane Healing Protocols',    price: 11.99, venture: 'track' },
+];
+
+/**
+ * COMPARTMENTS. Each is a real domain of the empire.
+ * rect: [x1, y1, x2, y2] in ship space. door: point on the wall facing the spine.
+ */
+const DECKS = [
+  {
+    id: 'bridge', name: 'BRIDGE', sub: 'Command · Targets',
+    rect: [42, 20, 58, 36], door: [50, 36], spine: 0, accent: 'arcane', venture: null,
+    readout: 'North star',
+  },
+  {
+    id: 'forge', name: 'FORGE', sub: 'Build · Web · App',
+    rect: [27, 42, 45, 64], door: [45, 53], spine: 1, accent: 'cyan', venture: 'track',
+    readout: 'In build',
+  },
+  {
+    id: 'beacon', name: 'BEACON', sub: 'Signal · Content · Email',
+    rect: [55, 42, 73, 64], door: [55, 53], spine: 1, accent: 'flare', venture: null,
+    readout: 'Queued',
+  },
+  {
+    id: 'apothecary', name: 'APOTHECARY', sub: 'Arcane Peptides · Stock · COA',
+    rect: [17, 70, 45, 96], door: [45, 83], spine: 2, accent: 'arcane', venture: 'peptides',
+    readout: 'Dispatch',
+  },
+  {
+    id: 'vitals', name: 'VITALS', sub: 'Arcane Track · Members',
+    rect: [55, 70, 83, 96], door: [55, 83], spine: 2, accent: 'vital', venture: 'track',
+    readout: 'Retention',
+  },
+  {
+    id: 'vault', name: 'VAULT', sub: 'Treasury · Cash · VAT',
+    rect: [25, 102, 45, 122], door: [45, 112], spine: 3, accent: 'flare', venture: null,
+    readout: 'Runway',
+  },
+  {
+    id: 'archives', name: 'ARCHIVES', sub: 'Arcane Archives · Curriculum',
+    rect: [55, 102, 75, 122], door: [55, 112], spine: 3, accent: 'cyan', venture: 'archives',
+    readout: 'Cohort',
+  },
+  {
+    id: 'scriptorium', name: 'SCRIPTORIUM', sub: 'The Codex · Writing',
+    rect: [30, 126, 46, 146], door: [46, 136], spine: 4, accent: 'breach', venture: 'codex',
+    readout: 'In draft',
+  },
+  {
+    id: 'sanctum', name: 'SANCTUM', sub: 'Leo · Body · Focus',
+    rect: [54, 126, 70, 146], door: [54, 136], spine: 4, accent: 'vital', venture: null,
+    readout: 'Protocol',
+  },
+];
+
+/** The crew. Each holds a station and walks the ship to work open orders. */
+const CREW = [
+  { id: 'vector',   name: 'VECTOR',   role: 'Navigator',    home: 'bridge' },
+  { id: 'meridian', name: 'MERIDIAN', role: 'Quartermaster',home: 'apothecary' },
+  { id: 'lumen',    name: 'LUMEN',    role: 'Physician',    home: 'vitals' },
+  { id: 'oracle',   name: 'ORACLE',   role: 'Archivist',    home: 'archives' },
+  { id: 'scribe',   name: 'SCRIBE',   role: 'Scrivener',    home: 'scriptorium' },
+  { id: 'herald',   name: 'HERALD',   role: 'Signalman',    home: 'beacon' },
+  { id: 'tally',    name: 'TALLY',    role: 'Purser',       home: 'vault' },
+  { id: 'anvil',    name: 'ANVIL',    role: 'Engineer',     home: 'forge' },
+  { id: 'keeper',   name: 'KEEPER',   role: 'Steward',      home: 'sanctum' },
+];
+
+/** Opening orders — replace freely; every one persists once you touch it. */
+const SEED_TASKS = {
+  bridge: [
+    { t: 'Set the Q4 number for each venture', p: 1 },
+    { t: 'Kill list: cut one thing that is not compounding', p: 2 },
+    { t: 'Weekly review — Sunday 18:00', p: 3 },
+  ],
+  apothecary: [
+    { t: 'Restock check — flag anything under 2 weeks cover', p: 1 },
+    { t: 'Publish COA for latest batch to the lab reports page', p: 1 },
+    { t: 'Verify 12:00 Mon–Fri dispatch cutoff is holding', p: 2 },
+    { t: 'Free UK delivery over £50 — check margin at that threshold', p: 3 },
+  ],
+  vitals: [
+    { t: 'Win back lapsed annual members (£70/yr cohort)', p: 1 },
+    { t: 'Dose-reminder push notification — copy + timing', p: 2 },
+    { t: 'Weekly skin-progress digest email', p: 2 },
+  ],
+  archives: [
+    { t: 'Onboarding sequence for new £128/mo members', p: 1 },
+    { t: 'Record module: Bioregulators 101', p: 2 },
+    { t: 'Gut Health + Bloodwork 101 — outline', p: 3 },
+  ],
+  scriptorium: [
+    { t: 'The Dark Psych Codex — final proof pass', p: 1 },
+    { t: 'The Quiet Empire — launch sequence', p: 2 },
+    { t: 'Arcane Peptide 101 — refresh for new catalogue', p: 3 },
+  ],
+  beacon: [
+    { t: 'Three clips cut from Peptide 101', p: 1 },
+    { t: 'Email: ELEVATE catalogue drop', p: 1 },
+    { t: 'Repurpose Productive Isolation into a thread', p: 3 },
+  ],
+  vault: [
+    { t: 'Reconcile the month across all four ventures', p: 1 },
+    { t: 'VAT set-aside moved to its own account', p: 1 },
+    { t: 'Subscription audit — cancel dead tooling', p: 3 },
+  ],
+  forge: [
+    { t: 'ArcaneTrack: offline dose logging + sync', p: 1 },
+    { t: 'Site: COA lookup by batch number', p: 2 },
+    { t: 'Checkout speed pass — measure before/after', p: 2 },
+  ],
+  sanctum: [
+    { t: 'Train 4x this week', p: 1 },
+    { t: 'Sleep floor: 7.5h, no exceptions', p: 1 },
+    { t: 'Deep work 06:00–09:00, ship before the world wakes', p: 2 },
+  ],
+};
+
+/* ==== src/core/store.js ==== */
+/**
+ * Persistence for LEOOS.
+ *
+ * Prefers the artifact `db` capability so the ship's state follows Leo
+ * across devices. Falls back to localStorage when db is unavailable, and
+ * to memory when even that is blocked (private windows, cleared storage).
+ * The rest of the app never knows which one it got.
+ */
+
+
+const LS_KEY = 'leoos.v1';
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+function seedState() {
+  const decks = {};
+  for (const d of DECKS) {
+    decks[d.id] = (SEED_TASKS[d.id] || []).map((s) => ({
+      id: uid(), t: s.t, p: s.p, done: false, ts: 0,
+    }));
+  }
+  const ledger = {};
+  for (const v of VENTURES) ledger[v.id] = { mrr: v.seedMrr, unit: v.seedUnit, calibrated: false };
+  return { decks, ledger, log: [] };
+}
+
+class Store {
+  constructor() {
+    this.state = seedState();
+    this.listeners = new Set();
+    this.db = null;
+    this.mode = 'memory';
+    this.writeTimer = null;
+  }
+
+  /** Subscribe to any state change. Returns an unsubscribe function. */
+  onChange(fn) {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  emit() {
+    for (const fn of this.listeners) fn(this.state);
+  }
+
+  /** Boot: try db, then localStorage. Never throws; never blocks first paint. */
+  async connect() {
+    try {
+      const local = localStorage.getItem(LS_KEY);
+      if (local) {
+        this.merge(JSON.parse(local));
+        this.mode = 'local';
+        this.emit();
+      }
+    } catch { /* storage blocked — memory only */ }
+
+    let db = null;
+    try {
+      db = await window.claude?.use?.('db');
+    } catch { db = null; }
+    if (!db) return this.mode;
+
+    this.db = db;
+    try {
+      const snap = await db.doc('system/ship').get();
+      if (snap.exists) this.merge(snap.data());
+      this.mode = 'synced';
+      this.emit();
+      db.doc('system/ship').onSnapshot(
+        (s) => {
+          if (!s.exists || s.metadata.hasPendingWrites) return;
+          this.merge(s.data());
+          this.emit();
+        },
+        () => { this.db = null; this.mode = 'local'; this.emit(); },
+      );
+    } catch {
+      this.db = null;
+      this.mode = 'local';
+    }
+    return this.mode;
+  }
+
+  /** Fold a stored body into live state without losing newly-added decks. */
+  merge(body) {
+    if (!body || typeof body !== 'object') return;
+    if (body.decks && typeof body.decks === 'object') {
+      for (const d of DECKS) {
+        if (Array.isArray(body.decks[d.id])) this.state.decks[d.id] = body.decks[d.id];
+      }
+    }
+    if (body.ledger && typeof body.ledger === 'object') {
+      for (const v of VENTURES) {
+        if (body.ledger[v.id]) this.state.ledger[v.id] = body.ledger[v.id];
+      }
+    }
+    if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
+  }
+
+  /** Persist — debounced, so a burst of ticks becomes one write. */
+  save() {
+    this.emit();
+    clearTimeout(this.writeTimer);
+    this.writeTimer = setTimeout(() => this.flush(), 450);
+  }
+
+  async flush() {
+    const body = {
+      decks: this.state.decks,
+      ledger: this.state.ledger,
+      log: this.state.log.slice(0, 50),
+    };
+    try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
+    if (!this.db) return;
+    try {
+      await this.db.doc('system/ship').set(body);
+    } catch (e) {
+      if (e && (e.code === 'revoked' || e.code === 'not_granted')) {
+        this.db = null;
+        this.mode = 'local';
+        this.emit();
+      }
+    }
+  }
+
+  /* ---------- orders ---------- */
+
+  tasks(deckId) { return this.state.decks[deckId] || []; }
+
+  openCount(deckId) { return this.tasks(deckId).filter((t) => !t.done).length; }
+
+  totalOpen() { return DECKS.reduce((n, d) => n + this.openCount(d.id), 0); }
+
+  addTask(deckId, text, p = 2) {
+    const clean = String(text).trim().slice(0, 180);
+    if (!clean) return null;
+    const task = { id: uid(), t: clean, p, done: false, ts: Date.now() };
+    this.state.decks[deckId] = [task, ...this.tasks(deckId)];
+    this.log(`Order logged — ${deckName(deckId)}: ${clean}`);
+    this.save();
+    return task;
+  }
+
+  toggleTask(deckId, taskId) {
+    const list = this.tasks(deckId);
+    const task = list.find((t) => t.id === taskId);
+    if (!task) return;
+    task.done = !task.done;
+    task.ts = Date.now();
+    this.log(task.done
+      ? `Order complete — ${deckName(deckId)}: ${task.t}`
+      : `Order reopened — ${deckName(deckId)}: ${task.t}`);
+    this.save();
+  }
+
+  /* ---------- ledger ---------- */
+
+  setLedger(ventureId, field, value) {
+    const row = this.state.ledger[ventureId] || (this.state.ledger[ventureId] = {});
+    row[field] = value;
+    row.calibrated = true;
+    this.save();
+  }
+
+  ledgerCalibrated() {
+    return VENTURES.some((v) => this.state.ledger[v.id]?.calibrated);
+  }
+
+  monthlyTotal() {
+    return VENTURES.reduce((n, v) => n + (Number(this.state.ledger[v.id]?.mrr) || 0), 0);
+  }
+
+  /* ---------- log ---------- */
+
+  log(text) {
+    this.state.log = [{ ts: Date.now(), text }, ...this.state.log].slice(0, 50);
+  }
+
+  /** A log line from the simulation — kept in memory, never written. */
+  trace(text) {
+    this.state.log = [{ ts: Date.now(), text, trace: true }, ...this.state.log].slice(0, 50);
+    this.emit();
+  }
+}
+
+function deckName(id) {
+  return DECKS.find((d) => d.id === id)?.name || id.toUpperCase();
+}
+
+/* ==== src/core/sim.js ==== */
+/**
+ * Crew simulation — the little agents that walk the ship.
+ *
+ * The hull is a tree: a central spine with one door hanging off it per
+ * compartment. Routing is therefore exact and cheap — walk up the spine
+ * from one door to the other. Agents drift toward compartments that have
+ * open orders, so a busy deck visibly draws crew.
+ */
+
+
+const DECK_MAP = Object.fromEntries(DECKS.map((d) => [d.id, d]));
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+/** A point comfortably inside a compartment, clear of its walls. */
+function interiorPoint(deck) {
+  const [x1, y1, x2, y2] = deck.rect;
+  return { x: rand(x1 + 3, x2 - 3), y: rand(y1 + 3.5, y2 - 3.5) };
+}
+
+/** Route between two compartments along the spine. */
+function route(from, to) {
+  const a = DECK_MAP[from];
+  const b = DECK_MAP[to];
+  const pts = [{ x: a.door[0], y: a.door[1] }];
+  const step = a.spine <= b.spine ? 1 : -1;
+  for (let i = a.spine; i !== b.spine + step; i += step) {
+    pts.push({ x: SHIP.spine[i][0], y: SHIP.spine[i][1] });
+  }
+  pts.push({ x: b.door[0], y: b.door[1] });
+  pts.push(interiorPoint(b));
+  // drop zero-length hops so the walk never stalls on a duplicate node
+  return pts.filter((p, i) => i === 0 || Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 0.01);
+}
+
+class Sim {
+  constructor(store) {
+    this.store = store;
+    this.speed = 1;
+    this.agents = CREW.map((c, i) => {
+      const deck = DECK_MAP[c.home];
+      const p = interiorPoint(deck);
+      return {
+        ...c,
+        deck: c.home,
+        x: p.x, y: p.y,
+        tx: p.x, ty: p.y,      // wander target inside the compartment
+        heading: 0,
+        state: 'work',
+        timer: rand(4, 16) + i * 0.7,
+        path: null,
+        leg: 0,
+        wake: [],
+        wakeClock: 0,
+        order: null,
+      };
+    });
+  }
+
+  /** Crew currently inside a compartment. */
+  inDeck(deckId) {
+    return this.agents.filter((a) => a.deck === deckId && a.state === 'work');
+  }
+
+  /** 0–1 activity level, used to light the compartment on the hull. */
+  activity(deckId) {
+    const crew = this.inDeck(deckId).length;
+    const open = this.store.openCount(deckId);
+    return Math.min(1, crew * 0.34 + Math.min(open, 4) * 0.13);
+  }
+
+  /** Where an agent goes next: open orders pull, home station pulls back. */
+  chooseTarget(agent) {
+    const weighted = [];
+    for (const d of DECKS) {
+      let w = 1 + this.store.openCount(d.id) * 2.2;
+      if (d.id === agent.home) w += 6;
+      if (d.id === agent.deck) w *= 0.25;
+      for (let i = 0; i < Math.round(w); i++) weighted.push(d.id);
+    }
+    return weighted.length ? pick(weighted) : agent.home;
+  }
+
+  /** Advance the world. `dt` in seconds. */
+  tick(dt) {
+    const step = dt * this.speed;
+    for (const agent of this.agents) {
+      agent.wakeClock += step;
+      if (agent.wakeClock > 0.07) {
+        agent.wakeClock = 0;
+        agent.wake.push({ x: agent.x, y: agent.y });
+        if (agent.wake.length > 16) agent.wake.shift();
+      }
+
+      if (agent.state === 'work') this.tickWork(agent, step);
+      else this.tickTransit(agent, step);
+    }
+  }
+
+  tickWork(agent, step) {
+    // small purposeful drift around the compartment — never a jitter
+    const dx = agent.tx - agent.x;
+    const dy = agent.ty - agent.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.6) {
+      const p = interiorPoint(DECK_MAP[agent.deck]);
+      agent.tx = p.x; agent.ty = p.y;
+    } else {
+      const v = 2.4 * step;
+      agent.x += (dx / dist) * v;
+      agent.y += (dy / dist) * v;
+      agent.heading = Math.atan2(dy, dx);
+    }
+
+    const open = this.store.tasks(agent.deck).find((t) => !t.done);
+    agent.order = open ? open.t : null;
+
+    agent.timer -= step;
+    if (agent.timer > 0) return;
+
+    const target = this.chooseTarget(agent);
+    if (target === agent.deck) {
+      agent.timer = rand(6, 18);
+      return;
+    }
+    agent.path = route(agent.deck, target);
+    agent.leg = 0;
+    agent.state = 'transit';
+    agent.deck = target;
+    agent.order = null;
+  }
+
+  tickTransit(agent, step) {
+    const next = agent.path[agent.leg];
+    if (!next) { this.arrive(agent); return; }
+    const dx = next.x - agent.x;
+    const dy = next.y - agent.y;
+    const dist = Math.hypot(dx, dy);
+    const v = 13 * step;
+    if (dist <= v) {
+      agent.x = next.x; agent.y = next.y;
+      agent.leg += 1;
+      if (agent.leg >= agent.path.length) this.arrive(agent);
+      return;
+    }
+    agent.x += (dx / dist) * v;
+    agent.y += (dy / dist) * v;
+    agent.heading = Math.atan2(dy, dx);
+  }
+
+  arrive(agent) {
+    agent.state = 'work';
+    agent.path = null;
+    agent.timer = rand(8, 22);
+    const p = interiorPoint(DECK_MAP[agent.deck]);
+    agent.tx = p.x; agent.ty = p.y;
+    this.store.trace(`${agent.name} → ${DECK_MAP[agent.deck].name}`);
+  }
+
+  /** Hit test in ship space, for clicks on the hull. */
+  agentAt(x, y, radius = 3.6) {
+    let best = null;
+    let bestD = radius;
+    for (const a of this.agents) {
+      const d = Math.hypot(a.x - x, a.y - y);
+      if (d < bestD) { bestD = d; best = a; }
+    }
+    return best;
+  }
+}
+
+function deckAt(x, y) {
+  return DECKS.find((d) => {
+    const [x1, y1, x2, y2] = d.rect;
+    return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+  }) || null;
+}
+
+/* ==== src/render/ship.js ==== */
+/**
+ * The hull — top-down canvas view of the ship and her crew.
+ *
+ * Everything is drawn in ship space (100 x 170, nose at the top) and
+ * mapped to the canvas by one fitted transform, so the geometry in
+ * empire.js is the single source of truth for the layout.
+ */
+
+
+/** Mirrors the tokens in styles/leoos.css — keep the two in step. */
+const PAL = {
+  void: '#07070a',
+  plate: '#14141d',
+  seam: '#23232f',
+  seamLit: '#33334a',
+  ink: '#eceaf5',
+  ash: '#7e7c94',
+  faint: '#56546a',
+  arcane: '#8b5cf6',
+  arcaneLift: '#a98bff',
+  vital: '#3ecf8e',
+  flare: '#e8b64c',
+  breach: '#e5484d',
+  cyan: '#56c9f0',
+};
+
+const accentOf = (name) => PAL[name === 'arcane' ? 'arcane' : name] || PAL.arcane;
+
+const CHAMFER = 2.4;
+
+function chamferPath(ctx, x1, y1, x2, y2, c = CHAMFER) {
+  ctx.beginPath();
+  ctx.moveTo(x1 + c, y1);
+  ctx.lineTo(x2 - c, y1);
+  ctx.lineTo(x2, y1 + c);
+  ctx.lineTo(x2, y2 - c);
+  ctx.lineTo(x2 - c, y2);
+  ctx.lineTo(x1 + c, y2);
+  ctx.lineTo(x1, y2 - c);
+  ctx.lineTo(x1, y1 + c);
+  ctx.closePath();
+}
+
+class ShipView {
+  constructor(canvas, sim, store) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.sim = sim;
+    this.store = store;
+    this.selected = null;      // deck id
+    this.selectedAgent = null; // agent id
+    this.hover = null;         // {kind, id, sx, sy}
+    this.sweep = 0;
+    this.t = 0;
+    this.stars = Array.from({ length: 150 }, () => ({
+      x: Math.random() * 140 - 20,
+      y: Math.random() * 210 - 20,
+      r: Math.random() * 0.55 + 0.12,
+      a: Math.random() * 0.5 + 0.12,
+      drift: Math.random() * 0.5 + 0.2,
+    }));
+    this.resize();
+  }
+
+  resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = this.canvas.getBoundingClientRect();
+    const w = Math.max(rect.width, 1);
+    const h = Math.max(rect.height, 1);
+    this.canvas.width = Math.round(w * dpr);
+    this.canvas.height = Math.round(h * dpr);
+    this.dpr = dpr;
+    this.w = w;
+    this.h = h;
+    const pad = 16;
+    this.scale = Math.min((w - pad * 2) / 100, (h - pad * 2) / 170);
+    this.ox = (w - 100 * this.scale) / 2;
+    this.oy = (h - 170 * this.scale) / 2;
+  }
+
+  sx(x) { return this.ox + x * this.scale; }
+  sy(y) { return this.oy + y * this.scale; }
+  /** Canvas coordinates (CSS pixels) back into ship space. */
+  toShip(px, py) {
+    return { x: (px - this.ox) / this.scale, y: (py - this.oy) / this.scale };
+  }
+
+  draw(dt) {
+    const ctx = this.ctx;
+    this.t += dt;
+    this.sweep = (this.sweep + dt * 0.42) % (Math.PI * 2);
+
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.clearRect(0, 0, this.w, this.h);
+    ctx.fillStyle = PAL.void;
+    ctx.fillRect(0, 0, this.w, this.h);
+
+    this.drawStars();
+    this.drawHull();
+    this.drawEngines();
+    this.drawCorridors();
+    for (const deck of DECKS) this.drawDeck(deck);
+    this.drawSweep();
+    this.drawWakes();
+    for (const agent of this.sim.agents) this.drawAgent(agent);
+  }
+
+  drawStars() {
+    const ctx = this.ctx;
+    for (const s of this.stars) {
+      const y = ((s.y + this.t * s.drift) % 210) - 20;
+      const tw = 0.75 + Math.sin(this.t * s.drift * 3 + s.x) * 0.25;
+      ctx.globalAlpha = s.a * tw;
+      ctx.fillStyle = '#c9c4e8';
+      ctx.beginPath();
+      ctx.arc(this.sx(s.x), this.sy(y), s.r * this.scale * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  hullPath() {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    SHIP.hull.forEach(([x, y], i) => {
+      const px = this.sx(x);
+      const py = this.sy(y);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.closePath();
+  }
+
+  drawHull() {
+    const ctx = this.ctx;
+
+    // outer bloom
+    ctx.save();
+    this.hullPath();
+    ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
+    ctx.shadowBlur = 34;
+    ctx.fillStyle = 'rgba(20, 20, 29, 0.95)';
+    ctx.fill();
+    ctx.restore();
+
+    // deck plating gradient
+    const g = ctx.createLinearGradient(0, this.sy(0), 0, this.sy(170));
+    g.addColorStop(0, 'rgba(32, 28, 52, 0.95)');
+    g.addColorStop(0.55, 'rgba(17, 17, 26, 0.95)');
+    g.addColorStop(1, 'rgba(12, 12, 19, 0.95)');
+    this.hullPath();
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // plating seams
+    ctx.save();
+    this.hullPath();
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(255,255,255,0.028)';
+    ctx.lineWidth = 1;
+    for (let y = 10; y < 170; y += 8) {
+      ctx.beginPath();
+      ctx.moveTo(this.sx(0), this.sy(y));
+      ctx.lineTo(this.sx(100), this.sy(y));
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // hull line
+    this.hullPath();
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  drawEngines() {
+    const ctx = this.ctx;
+    const pulse = 0.55 + Math.sin(this.t * 2.1) * 0.18;
+    for (const x of [44, 50, 56]) {
+      const px = this.sx(x);
+      const py = this.sy(158);
+      const r = this.scale * (x === 50 ? 4.6 : 3.2);
+      const g = ctx.createRadialGradient(px, py, 0, px, py, r * 2.4);
+      g.addColorStop(0, `rgba(169, 139, 255, ${0.75 * pulse})`);
+      g.addColorStop(0.4, `rgba(139, 92, 246, ${0.32 * pulse})`);
+      g.addColorStop(1, 'rgba(139, 92, 246, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(px, py, r * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawCorridors() {
+    const ctx = this.ctx;
+    const spine = SHIP.spine;
+    ctx.lineCap = 'round';
+
+    // corridor floor
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.10)';
+    ctx.lineWidth = this.scale * 3.4;
+    ctx.beginPath();
+    ctx.moveTo(this.sx(spine[0][0]), this.sy(spine[0][1]));
+    for (const [x, y] of spine.slice(1)) ctx.lineTo(this.sx(x), this.sy(y));
+    ctx.stroke();
+    for (const d of DECKS) {
+      const node = spine[d.spine];
+      ctx.beginPath();
+      ctx.moveTo(this.sx(d.door[0]), this.sy(d.door[1]));
+      ctx.lineTo(this.sx(node[0]), this.sy(node[1]));
+      ctx.stroke();
+    }
+
+    // centre guide
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.30)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([this.scale * 1.6, this.scale * 2.4]);
+    ctx.beginPath();
+    ctx.moveTo(this.sx(spine[0][0]), this.sy(spine[0][1]));
+    for (const [x, y] of spine.slice(1)) ctx.lineTo(this.sx(x), this.sy(y));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // junction nodes
+    for (const [x, y] of spine) {
+      ctx.fillStyle = 'rgba(169, 139, 255, 0.45)';
+      ctx.beginPath();
+      ctx.arc(this.sx(x), this.sy(y), Math.max(1.5, this.scale * 0.6), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawDeck(deck) {
+    const ctx = this.ctx;
+    const [x1, y1, x2, y2] = deck.rect;
+    const accent = accentOf(deck.accent);
+    const act = this.sim.activity(deck.id);
+    const isSel = this.selected === deck.id;
+    const isHover = this.hover?.kind === 'deck' && this.hover.id === deck.id;
+
+    // sweep lighting — compartments brighten as the scan passes over them
+    const cx = (x1 + x2) / 2;
+    const cy = (y1 + y2) / 2;
+    let ang = Math.atan2(cy - 88, cx - 50) - this.sweep;
+    ang = Math.atan2(Math.sin(ang), Math.cos(ang));
+    const lit = Math.max(0, 1 - Math.abs(ang) / 0.85) * 0.5;
+
+    const px1 = this.sx(x1), py1 = this.sy(y1), px2 = this.sx(x2), py2 = this.sy(y2);
+
+    ctx.save();
+    if (isSel) {
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = 22;
+    }
+    chamferPath(ctx, px1, py1, px2, py2, CHAMFER * this.scale);
+    ctx.fillStyle = `rgba(11, 11, 18, ${0.86 + act * 0.06})`;
+    ctx.fill();
+    ctx.restore();
+
+    // activity wash
+    chamferPath(ctx, px1, py1, px2, py2, CHAMFER * this.scale);
+    ctx.fillStyle = hexA(accent, 0.05 + act * 0.16 + lit * 0.06);
+    ctx.fill();
+
+    // walls
+    chamferPath(ctx, px1, py1, px2, py2, CHAMFER * this.scale);
+    ctx.strokeStyle = isSel ? accent
+      : isHover ? hexA(accent, 0.8)
+      : hexA(accent, 0.3 + act * 0.3 + lit * 0.25);
+    ctx.lineWidth = isSel ? 2 : 1.2;
+    ctx.stroke();
+
+    // door notch
+    ctx.strokeStyle = hexA(accent, 0.85);
+    ctx.lineWidth = 2.5;
+    const dv = deck.door[0] === 50; // bridge opens along the spine
+    ctx.beginPath();
+    if (dv) {
+      ctx.moveTo(this.sx(deck.door[0] - 2.4), this.sy(deck.door[1]));
+      ctx.lineTo(this.sx(deck.door[0] + 2.4), this.sy(deck.door[1]));
+    } else {
+      ctx.moveTo(this.sx(deck.door[0]), this.sy(deck.door[1] - 2.4));
+      ctx.lineTo(this.sx(deck.door[0]), this.sy(deck.door[1] + 2.4));
+    }
+    ctx.stroke();
+
+    // label + open-order count
+    const pad = this.scale * 2.6;
+    const open = this.store.openCount(deck.id);
+    const countText = open ? String(open).padStart(2, '0') : '--';
+    let fs = Math.max(7, Math.min(11, this.scale * 1.55));
+
+    ctx.textBaseline = 'top';
+    ctx.font = `${Math.max(7, fs * 0.92)}px 'IBM Plex Mono', monospace`;
+    const countW = ctx.measureText(countText).width;
+
+    // The narrow aft compartments have long names — shrink to fit the wall.
+    const room = (px2 - px1) - pad * 2 - countW - this.scale * 1.6;
+    ctx.font = `600 ${fs}px 'Chakra Petch', sans-serif`;
+    while (fs > 6 && ctx.measureText(deck.name).width > room) {
+      fs -= 0.5;
+      ctx.font = `600 ${fs}px 'Chakra Petch', sans-serif`;
+    }
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = isSel ? PAL.ink : hexA(PAL.ink, 0.72);
+    ctx.fillText(deck.name, px1 + pad, py1 + pad);
+
+    ctx.textAlign = 'right';
+    ctx.font = `${Math.max(7, fs * 0.92)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = open ? hexA(accent, 0.95) : hexA(PAL.faint, 0.9);
+    ctx.fillText(countText, px2 - pad, py1 + pad);
+
+    // crew count along the bottom wall
+    const crew = this.sim.inDeck(deck.id).length;
+    if (crew && this.scale > 1.3) {
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.font = `${Math.max(6.5, fs * 0.82)}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = hexA(PAL.ash, 0.85);
+      ctx.fillText(`${crew} crew`, px1 + pad, py2 - pad * 0.8);
+    }
+  }
+
+  drawSweep() {
+    const ctx = this.ctx;
+    const cx = this.sx(50);
+    const cy = this.sy(88);
+    const r = this.scale * 105;
+    ctx.save();
+    this.hullPath();
+    ctx.clip();
+    const g = ctx.createConicGradient
+      ? ctx.createConicGradient(this.sweep, cx, cy)
+      : null;
+    if (g) {
+      g.addColorStop(0, 'rgba(139, 92, 246, 0.16)');
+      g.addColorStop(0.06, 'rgba(139, 92, 246, 0.0)');
+      g.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(169, 139, 255, 0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(this.sweep) * r, cy + Math.sin(this.sweep) * r);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawWakes() {
+    const ctx = this.ctx;
+    for (const a of this.sim.agents) {
+      if (a.wake.length < 2) continue;
+      for (let i = 1; i < a.wake.length; i++) {
+        const p = a.wake[i - 1];
+        const q = a.wake[i];
+        ctx.strokeStyle = hexA(PAL.arcaneLift, (i / a.wake.length) * 0.24);
+        ctx.lineWidth = Math.max(0.8, this.scale * 0.38);
+        ctx.beginPath();
+        ctx.moveTo(this.sx(p.x), this.sy(p.y));
+        ctx.lineTo(this.sx(q.x), this.sy(q.y));
+        ctx.stroke();
+      }
+    }
+  }
+
+  drawAgent(agent) {
+    const ctx = this.ctx;
+    const px = this.sx(agent.x);
+    const py = this.sy(agent.y);
+    const r = Math.max(2.4, this.scale * 1.05);
+    const sel = this.selectedAgent === agent.id;
+    const hov = this.hover?.kind === 'agent' && this.hover.id === agent.id;
+    const colour = agent.state === 'transit' ? PAL.arcaneLift : PAL.ink;
+
+    // halo
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r * 4);
+    g.addColorStop(0, hexA(PAL.arcaneLift, 0.5));
+    g.addColorStop(1, 'rgba(139, 92, 246, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, r * 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // body
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // heading pip
+    ctx.strokeStyle = hexA(PAL.arcaneLift, 0.9);
+    ctx.lineWidth = Math.max(1, this.scale * 0.3);
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + Math.cos(agent.heading) * r * 2.1, py + Math.sin(agent.heading) * r * 2.1);
+    ctx.stroke();
+
+    if (sel || hov) {
+      ctx.strokeStyle = PAL.arcaneLift;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(px, py, r * 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.font = `${Math.max(7.5, this.scale * 1.25)}px 'IBM Plex Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = PAL.ink;
+      ctx.fillText(agent.name, px, py - r * 3.4);
+    }
+  }
+}
+
+/** #rrggbb + alpha → rgba() */
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+/* ==== src/render/ui.js ==== */
+/**
+ * The panels — deck rail, readouts, dashboard, inspectors, counsel.
+ * Pure DOM. The canvas owns the ship; this owns everything around it.
+ */
+
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const deckById = Object.fromEntries(DECKS.map((d) => [d.id, d]));
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
+
+const money = (n) => `£${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
+
+const clockTime = (ts) => new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+/** Ship's date — a real, readable stamp, not a sci-fi gimmick. */
+function stardate(d = new Date()) {
+  const day = String(d.getDate()).padStart(2, '0');
+  const mon = d.toLocaleString('en-GB', { month: 'short' }).toUpperCase();
+  return `${day} ${mon} ${d.getFullYear()} · ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+class UI {
+  constructor(store, sim, shipView) {
+    this.store = store;
+    this.sim = sim;
+    this.ship = shipView;
+    this.view = { kind: 'overview' };
+    this.counsel = [];
+    this.counselBusy = false;
+    this.sampler = null;
+    this.mount();
+  }
+
+  /* ---------------- structure ---------------- */
+
+  mount() {
+    $('#brandName').textContent = SHIP.name;
+    $('#brandVer').textContent = SHIP.designation;
+    this.railEl = $('#rail');
+    this.dashEl = $('#dash');
+    this.tickerEl = $('#tickerLine');
+    this.tickerTime = $('#tickerTime');
+    this.buildRail();
+
+    this.dashEl.addEventListener('click', (e) => this.onDashClick(e));
+    this.dashEl.addEventListener('submit', (e) => this.onDashSubmit(e));
+    this.dashEl.addEventListener('change', (e) => this.onDashChange(e));
+    this.dashEl.addEventListener('focusout', () => {
+      if (this.dashDirty) setTimeout(() => this.renderDash(), 0);
+    });
+  }
+
+  buildRail() {
+    const head = `
+      <div class="rail-head">
+        <span class="eyebrow">Deck manifest</span>
+        <span class="eyebrow" id="railOpen"></span>
+      </div>`;
+    const rows = DECKS.map((d) => `
+      <button class="deck-btn" type="button" data-deck="${d.id}">
+        <span class="dot is-${d.accent}"></span>
+        <span>
+          <span class="deck-btn-name">${esc(d.name)}</span><br>
+          <span class="deck-btn-sub">${esc(d.sub)}</span>
+        </span>
+        <span class="deck-btn-count mono" data-count="${d.id}">--</span>
+      </button>`).join('');
+    const foot = `
+      <div class="rail-foot">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span class="eyebrow">Orders complete</span>
+          <span class="mono" id="integrityPct" style="font-size:11px;color:var(--ash)"></span>
+        </div>
+        <div class="integrity-bar"><div class="integrity-fill" id="integrityFill" style="width:0%"></div></div>
+      </div>`;
+    this.railEl.innerHTML = head + rows + foot;
+    this.railEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-deck]');
+      if (btn) this.selectDeck(btn.dataset.deck);
+    });
+  }
+
+  /* ---------------- selection ---------------- */
+
+  selectDeck(id) {
+    this.view = { kind: 'deck', id };
+    this.ship.selected = id;
+    this.ship.selectedAgent = null;
+    this.render();
+    this.dashEl.scrollTop = 0;
+  }
+
+  selectAgent(id) {
+    const agent = this.sim.agents.find((a) => a.id === id);
+    if (!agent) return;
+    this.view = { kind: 'agent', id };
+    this.ship.selectedAgent = id;
+    this.ship.selected = agent.deck;
+    this.render();
+    this.dashEl.scrollTop = 0;
+  }
+
+  clearSelection() {
+    this.view = { kind: 'overview' };
+    this.ship.selected = null;
+    this.ship.selectedAgent = null;
+    this.render();
+  }
+
+  /* ---------------- render ---------------- */
+
+  render() {
+    this.renderRail();
+    this.renderTop();
+    this.renderDash();
+  }
+
+  renderRail() {
+    for (const d of DECKS) {
+      const open = this.store.openCount(d.id);
+      const el = this.railEl.querySelector(`[data-count="${d.id}"]`);
+      if (el) {
+        el.textContent = open ? String(open).padStart(2, '0') : 'CLEAR';
+        el.classList.toggle('is-clear', open === 0);
+      }
+      const btn = this.railEl.querySelector(`[data-deck="${d.id}"]`);
+      if (btn) btn.setAttribute('aria-current', String(this.ship.selected === d.id));
+    }
+    const total = DECKS.reduce((n, d) => n + this.store.tasks(d.id).length, 0);
+    const done = DECKS.reduce((n, d) => n + this.store.tasks(d.id).filter((t) => t.done).length, 0);
+    const pct = total ? Math.round((done / total) * 100) : 100;
+    $('#railOpen').textContent = `${this.store.totalOpen()} open`;
+    $('#integrityFill').style.width = `${pct}%`;
+    $('#integrityPct').textContent = `${pct}%`;
+  }
+
+  renderTop() {
+    $('#roStardate').textContent = stardate();
+    $('#roOrders').textContent = String(this.store.totalOpen()).padStart(2, '0');
+    const moving = this.sim.agents.filter((a) => a.state === 'transit').length;
+    $('#roCrew').textContent = `${this.sim.agents.length - moving}/${this.sim.agents.length}`;
+    const total = this.store.monthlyTotal();
+    $('#roRevenue').textContent = this.store.ledgerCalibrated() ? money(total) : '—';
+  }
+
+  renderDash() {
+    // Never rebuild the panel out from under a field Leo is typing in.
+    const active = document.activeElement;
+    if (active && active.tagName === 'INPUT' && this.dashEl.contains(active)) {
+      this.dashDirty = true;
+      return;
+    }
+    this.dashDirty = false;
+    const v = this.view;
+    const body = v.kind === 'deck' ? this.deckPanel(v.id)
+      : v.kind === 'agent' ? this.agentPanel(v.id)
+      : this.overviewPanels();
+    this.dashEl.innerHTML = body + this.counselPanel() + this.syncNote();
+  }
+
+  /* ---------------- panels ---------------- */
+
+  overviewPanels() {
+    return this.directivesPanel() + this.ledgerPanel() + this.signalsPanel() + this.rosterPanel();
+  }
+
+  directivesPanel() {
+    const items = [];
+    for (const d of DECKS) {
+      for (const t of this.store.tasks(d.id)) {
+        if (!t.done && t.p === 1) items.push({ deck: d, task: t });
+      }
+    }
+    items.sort((a, b) => a.deck.name.localeCompare(b.deck.name));
+    const top = items.slice(0, 6);
+    const list = top.length
+      ? `<div class="orders">${top.map(({ deck, task }) => this.orderRow(deck.id, task, deck.name)).join('')}</div>`
+      : `<p class="counsel-empty">No priority-one orders standing. Set the next one from any deck.</p>`;
+    return `
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Standing directives</h2>
+          <span class="chip">P1 · ${items.length}</span>
+        </div>
+        ${list}
+      </section>`;
+  }
+
+  ledgerPanel() {
+    const rows = VENTURES.map((v) => {
+      const row = this.store.state.ledger[v.id] || {};
+      return `
+        <div class="ledger-row">
+          <span class="dot is-${v.accent}"></span>
+          <span>
+            <span class="ledger-name">${esc(v.name)}</span><br>
+            <span class="ledger-kind">${esc(v.kind)}</span>
+          </span>
+          <input class="ledger-val mono" type="text" inputmode="numeric"
+                 id="ledger-${v.id}" data-ledger="${v.id}"
+                 value="${row.mrr ? money(row.mrr) : '—'}"
+                 aria-label="Monthly revenue for ${esc(v.name)}">
+        </div>`;
+    }).join('');
+    const calibrated = this.store.ledgerCalibrated();
+    return `
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Ledger · monthly</h2>
+          ${calibrated
+            ? `<span class="chip mono">${money(this.store.monthlyTotal())}</span>`
+            : '<span class="chip is-seed">Uncalibrated</span>'}
+        </div>
+        <div class="ledger">${rows}</div>
+        ${calibrated ? '' : '<p class="counsel-empty" style="margin:10px 0 0">Figures are blank until you set them. Type into any row — it saves and syncs.</p>'}
+      </section>`;
+  }
+
+  signalsPanel() {
+    const signals = [];
+    for (const d of DECKS) {
+      const tasks = this.store.tasks(d.id);
+      const p1 = tasks.filter((t) => !t.done && t.p === 1).length;
+      if (p1 >= 3) signals.push({ level: 'breach', text: `${d.name} is carrying ${p1} priority-one orders. Something here needs delegating or cutting.`, src: d.name });
+      else if (tasks.length && tasks.every((t) => t.done)) signals.push({ level: 'vital', text: `${d.name} is clear. Every order complete.`, src: d.name });
+    }
+    if (!this.store.ledgerCalibrated()) {
+      signals.push({ level: 'flare', text: 'Ledger has never been calibrated. Without real numbers the Vault readout is blind.', src: 'VAULT' });
+    }
+    const priced = CATALOGUE.filter((c) => c.price).length;
+    signals.push({ level: 'vital', text: `${CATALOGUE.length} titles in the catalogue, ${priced} with a price on file.`, src: 'SCRIPTORIUM' });
+
+    const order = { breach: 0, flare: 1, vital: 2 };
+    signals.sort((a, b) => order[a.level] - order[b.level]);
+
+    return `
+      <section class="panel">
+        <div class="panel-head"><h2 class="panel-title">Signals</h2>
+          <span class="chip">${signals.length}</span></div>
+        ${signals.slice(0, 5).map((s) => `
+          <div class="signal">
+            <span class="signal-stripe is-${s.level}"></span>
+            <span>
+              <span class="signal-text">${esc(s.text)}</span><br>
+              <span class="signal-src">${esc(s.src)}</span>
+            </span>
+          </div>`).join('')}
+      </section>`;
+  }
+
+  rosterPanel() {
+    const rows = this.sim.agents.map((a) => {
+      const deck = deckById[a.deck];
+      const state = a.state === 'transit' ? `→ ${deck.name}` : deck.name;
+      return `
+        <button class="crew-row" type="button" data-agent="${a.id}">
+          <span class="dot is-${deck.accent}"></span>
+          <span>
+            <span class="crew-name">${esc(a.name)}</span><br>
+            <span class="crew-role">${esc(a.role)}</span>
+          </span>
+          <span class="crew-state mono ${a.state === 'transit' ? 'is-transit' : ''}">${esc(state)}</span>
+        </button>`;
+    }).join('');
+    return `
+      <section class="panel">
+        <div class="panel-head"><h2 class="panel-title">Crew</h2>
+          <span class="chip">${CREW.length} aboard</span></div>
+        <div class="roster">${rows}</div>
+      </section>`;
+  }
+
+  orderRow(deckId, task, prefix) {
+    return `
+      <button class="order ${task.done ? 'is-done' : ''}" type="button"
+              data-toggle="${task.id}" data-deck="${deckId}"
+              aria-pressed="${task.done}">
+        <span class="order-box">
+          <svg class="order-tick" viewBox="0 0 8 8" aria-hidden="true">
+            <path d="M1 4.2 L3 6.2 L7 1.6" fill="none" stroke="#07070a" stroke-width="1.6"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="order-text">${prefix ? `<span class="mono" style="color:var(--faint);font-size:10px">${esc(prefix)} </span>` : ''}${esc(task.t)}</span>
+        <span class="order-pri p${task.p}">P${task.p}</span>
+      </button>`;
+  }
+
+  deckPanel(id) {
+    const deck = deckById[id];
+    const tasks = this.store.tasks(id);
+    const open = tasks.filter((t) => !t.done);
+    const done = tasks.filter((t) => t.done);
+    const crew = this.sim.agents.filter((a) => a.deck === id);
+    const venture = VENTURES.find((v) => v.id === deck.venture);
+
+    const list = tasks.length
+      ? `<div class="orders">${[...open, ...done].map((t) => this.orderRow(id, t)).join('')}</div>`
+      : '<p class="counsel-empty">No orders on this deck.</p>';
+
+    return `
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="dot is-${deck.accent}" style="display:inline-block;margin-right:6px"></span>${esc(deck.name)}</h2>
+          <button class="back-btn" type="button" data-back="1">← All decks</button>
+        </div>
+        <p class="ledger-kind" style="margin:0 0 12px">${esc(deck.sub)}${venture ? ` · ${esc(venture.name)}` : ''}</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="chip mono">${open.length} open</span>
+          <span class="chip mono">${done.length} done</span>
+          <span class="chip mono">${crew.length} crew</span>
+        </div>
+        ${list}
+        <form class="order-add" data-add="${id}">
+          <input type="text" id="add-${id}" placeholder="Issue an order to ${esc(deck.name)}…" autocomplete="off">
+          <button type="submit">Issue</button>
+        </form>
+      </section>`;
+  }
+
+  agentPanel(id) {
+    const a = this.sim.agents.find((x) => x.id === id);
+    if (!a) return this.overviewPanels();
+    const deck = deckById[a.deck];
+    const home = deckById[a.home];
+    return `
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">${esc(a.name)}</h2>
+          <button class="back-btn" type="button" data-back="1">← All decks</button>
+        </div>
+        <p class="ledger-kind" style="margin:0 0 12px">${esc(a.role)} · station ${esc(home.name)}</p>
+        <div class="ledger">
+          <div class="ledger-row"><span class="dot is-${deck.accent}"></span>
+            <span><span class="ledger-name">Position</span><br>
+            <span class="ledger-kind">${a.state === 'transit' ? 'In transit' : 'Working'}</span></span>
+            <span class="mono" style="font-size:12px">${esc(deck.name)}</span></div>
+          <div class="ledger-row"><span class="dot"></span>
+            <span><span class="ledger-name">Current order</span><br>
+            <span class="ledger-kind">${a.order ? esc(a.order) : 'Awaiting orders on this deck'}</span></span>
+            <span></span></div>
+        </div>
+        <button class="back-btn" type="button" data-goto="${a.deck}" style="margin-top:12px">Open ${esc(deck.name)} →</button>
+      </section>`;
+  }
+
+  counselPanel() {
+    const log = this.counsel.length
+      ? this.counsel.map((turn) => `<p class="counsel-turn is-${turn.who}">${turn.who === 'leo' ? '&gt; ' : ''}${esc(turn.text)}</p>`).join('')
+      : `<p class="counsel-empty">Ask the ship anything about the empire — where to spend the next hour, what to cut, how to price a launch. It reads the current state of every deck before it answers.</p>`;
+    return `
+      <section class="panel">
+        <div class="panel-head"><h2 class="panel-title">Counsel</h2>
+          <span class="chip">${this.sampler === null ? 'Standby' : 'Online'}</span></div>
+        <div class="counsel-log" id="counselLog">${log}</div>
+        <form class="counsel-form" data-counsel="1">
+          <input type="text" id="counselInput" placeholder="Put a question to the ship…" autocomplete="off" ${this.counselBusy ? 'disabled' : ''}>
+          <button type="submit" ${this.counselBusy ? 'disabled' : ''}>${this.counselBusy ? '···' : 'Ask'}</button>
+        </form>
+      </section>`;
+  }
+
+  syncNote() {
+    const mode = this.store.mode;
+    const label = mode === 'synced' ? '<b>Synced.</b> Orders and ledger follow you across every device signed in to this artifact.'
+      : mode === 'local' ? '<b>Local.</b> Orders are saved in this browser only.'
+      : '<b>Memory only.</b> Storage is blocked here, so changes will not survive a reload.';
+    return `<p class="sync-note">${label}</p>`;
+  }
+
+  /* ---------------- events ---------------- */
+
+  onDashClick(e) {
+    const toggle = e.target.closest('[data-toggle]');
+    if (toggle) {
+      this.store.toggleTask(toggle.dataset.deck, toggle.dataset.toggle);
+      return;
+    }
+    if (e.target.closest('[data-back]')) { this.clearSelection(); return; }
+    const goto = e.target.closest('[data-goto]');
+    if (goto) { this.selectDeck(goto.dataset.goto); return; }
+    const agent = e.target.closest('[data-agent]');
+    if (agent) { this.selectAgent(agent.dataset.agent); }
+  }
+
+  onDashSubmit(e) {
+    const add = e.target.closest('[data-add]');
+    if (add) {
+      e.preventDefault();
+      const deckId = add.dataset.add;
+      const input = add.querySelector('input');
+      const issued = this.store.addTask(deckId, input.value);
+      // addTask re-renders the panel synchronously, so re-find the field.
+      const fresh = this.dashEl.querySelector(`[data-add="${deckId}"] input`);
+      if (fresh) {
+        if (issued) fresh.value = '';
+        fresh.focus();
+      }
+      return;
+    }
+    if (e.target.closest('[data-counsel]')) {
+      e.preventDefault();
+      const input = $('#counselInput');
+      this.ask(input.value);
+      input.value = '';
+    }
+  }
+
+  onDashChange(e) {
+    const led = e.target.closest('[data-ledger]');
+    if (!led) return;
+    const n = Number(String(led.value).replace(/[^0-9.]/g, ''));
+    this.store.setLedger(led.dataset.ledger, 'mrr', Number.isFinite(n) ? n : 0);
+  }
+
+  /* ---------------- counsel ---------------- */
+
+  attachSampler(sample) {
+    this.sampler = sample;
+    this.renderDash();
+  }
+
+  /** A compact brief of the whole ship, so answers are grounded in real state. */
+  brief() {
+    const decks = DECKS.map((d) => {
+      const open = this.store.tasks(d.id).filter((t) => !t.done);
+      return `${d.name} (${d.sub}): ${open.length ? open.map((t) => `[P${t.p}] ${t.t}`).join('; ') : 'clear'}`;
+    }).join('\n');
+    const ledger = VENTURES.map((v) => {
+      const row = this.store.state.ledger[v.id] || {};
+      return `${v.name} — ${v.kind} — monthly: ${row.mrr ? money(row.mrr) : 'not set'}`;
+    }).join('\n');
+    const cat = CATALOGUE.map((c) => `${c.title}${c.price ? ` £${c.price}` : ''}`).join('; ');
+    return `VENTURES\n${ledger}\n\nCATALOGUE\n${cat}\n\nDECKS AND OPEN ORDERS\n${decks}`;
+  }
+
+  async ask(question) {
+    const q = String(question || '').trim();
+    if (!q || this.counselBusy) return;
+    if (!this.sampler) {
+      this.counsel.push({ who: 'leo', text: q });
+      this.counsel.push({ who: 'ship', text: 'Counsel is offline in this view — it needs the published page on claude.ai.' });
+      this.renderDash();
+      return;
+    }
+    this.counsel.push({ who: 'leo', text: q });
+    this.counselBusy = true;
+    this.renderDash();
+
+    const turn = { who: 'ship', text: 'Thinking…' };
+    this.counsel.push(turn);
+    this.renderDash();
+
+    const prompt = [
+      'You are the intelligence aboard THE ARCANE, the operating system of Leo, who runs the Arcane brand:',
+      'Arcane Peptides (UK research compounds, HPLC verified, COA per batch), Arcane Track (skin healing tracker, £11.99/mo or £70/yr),',
+      'Arcane Archives (£128/mo education platform), and The Codex (books and masterclasses).',
+      '',
+      'Answer Leo directly and concretely. Be short — six sentences at most, or a tight list.',
+      'Reference the real state below when it is relevant. Never invent numbers that are not given;',
+      'if a figure is missing, say it is missing and say what it would take to know it.',
+      'Speak plainly. No preamble, no flattery.',
+      '',
+      'SHIP STATE',
+      this.brief(),
+      '',
+      `QUESTION: ${q}`,
+    ].join('\n');
+
+    try {
+      const res = await this.sampler(prompt, {
+        modelTier: 'default',
+        onText: ({ text }) => {
+          turn.text = text;
+          const el = $('#counselLog');
+          if (el) el.lastElementChild.textContent = text;
+        },
+      });
+      turn.text = res.text || turn.text;
+    } catch (err) {
+      turn.text = err?.code === 'rate_limited'
+        ? 'Counsel is rate limited. Try again shortly.'
+        : err?.code === 'not_granted'
+          ? 'Counsel needs permission from this view to reach Claude.'
+          : `Counsel could not answer (${esc(err?.code || 'unknown')}).`;
+    } finally {
+      this.counselBusy = false;
+      this.renderDash();
+      $('#counselInput')?.focus();
+    }
+  }
+
+  /* ---------------- ticker ---------------- */
+
+  renderTicker() {
+    const entry = this.store.state.log[0];
+    if (!entry) {
+      this.tickerEl.textContent = 'All systems nominal. Crew at station.';
+      this.tickerTime.textContent = '';
+      return;
+    }
+    this.tickerEl.textContent = entry.text;
+    this.tickerTime.textContent = clockTime(entry.ts);
+  }
+}
+
+/* ==== src/app.js ==== */
+/**
+ * LEOOS boot — wires the store, the simulation, the hull and the panels,
+ * then runs one animation loop for the whole ship.
+ */
+
+
+
+
+
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const store = new Store();
+const sim = new Sim(store);
+const canvas = document.getElementById('hull');
+const view = new ShipView(canvas, sim, store);
+const ui = new UI(store, sim, view);
+const tooltip = document.getElementById('tooltip');
+
+/* ---------- state changes repaint the panels ---------- */
+
+store.onChange(() => {
+  ui.renderRail();
+  ui.renderTop();
+  ui.renderTicker();
+  ui.renderDash();
+});
+
+ui.render();
+ui.renderTicker();
+
+/* ---------- the loop ---------- */
+
+let last = performance.now();
+let sinceUi = 0;
+
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+
+  if (!reduceMotion && sim.speed > 0) sim.tick(dt);
+  view.draw(reduceMotion ? 0 : dt);
+
+  sinceUi += dt;
+  if (sinceUi > 0.8) {
+    sinceUi = 0;
+    ui.renderTop();
+    ui.renderRail();
+    if (ui.view.kind === 'agent' || ui.view.kind === 'overview') ui.renderDash();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- pointer on the hull ---------- */
+
+canvas.addEventListener('pointermove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+  const { x, y } = view.toShip(px, py);
+
+  const agent = sim.agentAt(x, y);
+  const deck = agent ? null : deckAt(x, y);
+
+  view.hover = agent ? { kind: 'agent', id: agent.id }
+    : deck ? { kind: 'deck', id: deck.id }
+    : null;
+
+  if (agent) {
+    showTip(px, py, agent.name, `${agent.role} · ${agent.state === 'transit' ? 'in transit' : 'working'}`);
+  } else if (deck) {
+    const open = store.openCount(deck.id);
+    showTip(px, py, deck.name, `${deck.sub} — ${open ? `${open} open` : 'clear'}`);
+  } else {
+    tooltip.hidden = true;
+  }
+  canvas.style.cursor = agent || deck ? 'pointer' : 'crosshair';
+});
+
+canvas.addEventListener('pointerleave', () => {
+  view.hover = null;
+  tooltip.hidden = true;
+});
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const { x, y } = view.toShip(e.clientX - rect.left, e.clientY - rect.top);
+  const agent = sim.agentAt(x, y);
+  if (agent) { ui.selectAgent(agent.id); return; }
+  const deck = deckAt(x, y);
+  if (deck) ui.selectDeck(deck.id);
+  else ui.clearSelection();
+});
+
+function showTip(px, py, title, body) {
+  tooltip.hidden = false;
+  tooltip.style.left = `${px}px`;
+  tooltip.style.top = `${py}px`;
+  tooltip.innerHTML = `<div class="tooltip-title"></div><div class="tooltip-body"></div>`;
+  tooltip.firstElementChild.textContent = title;
+  tooltip.lastElementChild.textContent = body;
+}
+
+/* ---------- transport ---------- */
+
+document.getElementById('transport').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-speed]');
+  if (!btn) return;
+  sim.speed = Number(btn.dataset.speed);
+  for (const b of e.currentTarget.querySelectorAll('button')) {
+    b.setAttribute('aria-pressed', String(b === btn));
+  }
+});
+
+/* ---------- keyboard ---------- */
+
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
+  if (e.key === 'Escape') { ui.clearSelection(); return; }
+  const n = Number(e.key);
+  if (n >= 1 && n <= DECKS.length) ui.selectDeck(DECKS[n - 1].id);
+});
+
+/* ---------- layout ---------- */
+
+const ro = new ResizeObserver(() => view.resize());
+ro.observe(canvas.parentElement);
+window.addEventListener('resize', () => view.resize());
+
+/* ---------- late-arriving capabilities ---------- */
+
+store.connect().then(() => {
+  ui.renderDash();
+});
+
+window.claude?.use?.('sample').then((sample) => {
+  if (sample) ui.attachSampler(sample);
+}).catch(() => { /* counsel stays on standby */ });
+
+/* Fonts land after first paint; redraw so canvas labels pick them up. */
+document.fonts?.ready?.then(() => view.resize());
+</script>

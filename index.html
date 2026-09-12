@@ -1,0 +1,73 @@
+<title>LEOOS Command Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles/leoos.css">
+
+<div id="os">
+
+  <header class="brand">
+    <svg class="sigil" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2 L22.5 21 H1.5 Z" fill="none" stroke="#8b5cf6" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M5.8 17.4 L12 7.2 L18.2 17.4" fill="none" stroke="#a98bff" stroke-width="1.6"
+            stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M8.6 17.4 L12 12 L15.4 17.4" fill="none" stroke="#eceaf5" stroke-width="1.4"
+            stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+    <span>
+      <span class="brand-name" id="brandName">THE ARCANE</span><br>
+      <span class="brand-ver" id="brandVer">LEOOS v1.0</span>
+    </span>
+  </header>
+
+  <div class="topbar">
+    <div class="readout">
+      <span class="readout-label">Ship's date</span>
+      <span class="readout-value" id="roStardate">—</span>
+    </div>
+    <div class="readout">
+      <span class="readout-label">Open orders</span>
+      <span class="readout-value is-flare" id="roOrders">--</span>
+    </div>
+    <div class="readout">
+      <span class="readout-label">Crew at station</span>
+      <span class="readout-value is-vital" id="roCrew">--</span>
+    </div>
+    <div class="readout">
+      <span class="readout-label">Monthly</span>
+      <span class="readout-value is-arcane" id="roRevenue">—</span>
+    </div>
+
+    <span class="topbar-spacer"></span>
+
+    <div class="transport" id="transport" role="group" aria-label="Simulation speed">
+      <button type="button" data-speed="0" aria-pressed="false">HOLD</button>
+      <button type="button" data-speed="1" aria-pressed="true">1×</button>
+      <button type="button" data-speed="3" aria-pressed="false">3×</button>
+    </div>
+  </div>
+
+  <nav class="rail" id="rail" aria-label="Deck manifest"></nav>
+
+  <main class="stage">
+    <div style="position:relative;min-height:0">
+      <canvas id="hull" aria-label="Top-down view of the ship, with crew moving between decks"></canvas>
+      <div class="stage-tag">
+        <span class="stage-tag-name">HULL · TOP-DOWN</span>
+        <span class="eyebrow">Click a deck or a crew member</span>
+      </div>
+      <div class="stage-hint">Keys 1–9 jump decks · ESC returns to overview</div>
+      <div class="tooltip" id="tooltip" hidden></div>
+    </div>
+    <div class="ticker">
+      <span class="eyebrow ticker-label">Log</span>
+      <span class="ticker-line" id="tickerLine">Bringing systems online…</span>
+      <span class="ticker-time mono" id="tickerTime"></span>
+    </div>
+  </main>
+
+  <aside class="dash" id="dash" aria-label="Command dashboard"></aside>
+
+</div>
+
+<script type="module" src="src/app.js"></script>

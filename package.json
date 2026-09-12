@@ -1,0 +1,11 @@
+{
+  "name": "leoos",
+  "version": "1.0.0",
+  "description": "LEOOS — the operating system of the Arcane empire.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "dev": "npx --yes serve . -l 5173"
+  }
+}
