@@ -6,66 +6,82 @@
  *   . transparent
  */
 
-/** Crew: 7 x 11, two-frame walk. */
+/** Crew: 9 x 14, two-frame walk. */
 const CREW_A = [
-  '..ooo..',
-  '..ooo..',
-  '..eee..',
-  '..ccc..',
-  '.ccccc.',
-  'occccco',
-  '.ccccc.',
-  '..ddd..',
-  '..d.d..',
-  '..o.o..',
-  '.oo.oo.',
+  '...ooo...',
+  '..ooooo..',
+  '..oeeeo..',
+  '..ooooo..',
+  '...ccc...',
+  '..ccccc..',
+  '.lcccccl.',
+  'occccccco',
+  'occccccco',
+  '.dcccccd.',
+  '..ddddd..',
+  '..dd.dd..',
+  '..oo.oo..',
+  '.ooo.ooo.',
 ];
 
 const CREW_B = [
-  '..ooo..',
-  '..ooo..',
-  '..eee..',
-  '..ccc..',
-  '.ccccc.',
-  'occccco',
-  '.ccccc.',
-  '..ddd..',
-  '..dd...',
-  '..o.oo.',
-  '.oo..o.',
+  '...ooo...',
+  '..ooooo..',
+  '..oeeeo..',
+  '..ooooo..',
+  '...ccc...',
+  '..ccccc..',
+  '.lcccccl.',
+  'occccccco',
+  'occccccco',
+  '.dcccccd.',
+  '..ddddd..',
+  '..ddddd..',
+  '..ooo.o..',
+  '.ooo..oo.',
 ];
 
-/** ARCANE: 9 x 13, cloaked, a head taller than the crew. */
+/** ARCANE: 12 x 18, cloaked, half again the height of the crew. */
 const ARCANE_A = [
-  '...ooo...',
-  '..olllo..',
-  '..oeeeo..',
-  '...lll...',
-  '..ccccc..',
-  '.ccccccc.',
-  'lcccccccl',
-  'lcccccccl',
-  '.lcccccl.',
-  '..ddddd..',
-  '..dd.dd..',
-  '..o...o..',
-  '.oo...oo.',
+  '....oooo....',
+  '...ollllo...',
+  '...oeeeeo...',
+  '...ollllo...',
+  '....llll....',
+  '...cccccc...',
+  '..cccccccc..',
+  '.lccccccccl.',
+  'lccccccccccl',
+  'lccccccccccl',
+  '.lccccccccl.',
+  '..dddddddd..',
+  '...dddddd...',
+  '...dd..dd...',
+  '...oo..oo...',
+  '..ooo..ooo..',
+  '..oo....oo..',
+  '.ooo....ooo.',
 ];
 
 const ARCANE_B = [
-  '...ooo...',
-  '..olllo..',
-  '..oeeeo..',
-  '...lll...',
-  '..ccccc..',
-  '.ccccccc.',
-  'lcccccccl',
-  'lcccccccl',
-  '.lcccccl.',
-  '..ddddd..',
-  '..dddd...',
-  '..o..o...',
-  '.oo..oo..',
+  '....oooo....',
+  '...ollllo...',
+  '...oeeeeo...',
+  '...ollllo...',
+  '....llll....',
+  '...cccccc...',
+  '..cccccccc..',
+  '.lccccccccl.',
+  'lccccccccccl',
+  'lccccccccccl',
+  '.lccccccccl.',
+  '..dddddddd..',
+  '...dddddd...',
+  '...dddddd...',
+  '...ooo.oo...',
+  '..ooo...oo..',
+  '..oo.....o..',
+  '.ooo.....oo.',
 ];
 
 const cache = new Map();
@@ -115,8 +131,8 @@ export function sprite(kind, colour, frame) {
 }
 
 export const SPRITE_SIZE = {
-  crew: { w: 7, h: 11 },
-  arcane: { w: 9, h: 13 },
+  crew: { w: 9, h: 14 },
+  arcane: { w: 12, h: 18 },
 };
 
 /**
@@ -134,7 +150,7 @@ export function drawSprite(ctx, kind, colour, x, y, phase, opts = {}) {
     ctx.globalAlpha = opts.glow;
     ctx.fillStyle = colour;
     ctx.beginPath();
-    ctx.ellipse(Math.round(x), Math.round(y) - 1, size.w * 0.9, size.h * 0.42, 0, 0, Math.PI * 2);
+    ctx.ellipse(Math.round(x), Math.round(y) - 1, Math.max(0.1, size.w * 0.9), Math.max(0.1, size.h * 0.42), 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
   }

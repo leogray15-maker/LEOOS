@@ -63,11 +63,11 @@ export class Sim {
     this.speed = 1;
     this.selectedAgent = null;
     this.agents = CREW.map((c, i) => {
-      const a = makeWalker(c, 'crew', 26);
+      const a = makeWalker(c, 'crew', 30);
       a.timer += i * 0.6;
       return a;
     });
-    this.arcane = makeWalker(ARCANE, 'arcane', 34);
+    this.arcane = makeWalker(ARCANE, 'arcane', 40);
   }
 
   everyone() { return [...this.agents, this.arcane]; }

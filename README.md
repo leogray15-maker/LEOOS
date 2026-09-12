@@ -23,18 +23,31 @@ Click a room and the commander walks there while its dashboard opens.
 
 ## The pixel renderer
 
-Everything is drawn into a 300x260 offscreen buffer at 1:1, then blitted to the
-visible canvas at an **integer** scale with `imageSmoothingEnabled = false`.
-That is what keeps the pixels square instead of soupy. The landscape shape is
-deliberate — it fills a widescreen stage at 3x rather than 2x.
+Everything is drawn into a **380x320** offscreen buffer at 1:1, then blitted to
+the visible canvas at an **integer** scale with `imageSmoothingEnabled = false`.
+That is what keeps the pixels square instead of soupy.
 
-- `src/config/facility.js` — the floor plan and every hand-placed prop
-- `src/render/props.js` — 43 prop painters; no two rooms share furniture
+Three composited layers, back to front:
+
+1. **The field** — a 760x640 industrial landscape baked once at startup from a
+   seeded PRNG: three depth layers of structures with lit windows, pipe and
+   gantry runs, docking spars, dust. It is drawn centred on the station and
+   overflows the stage, so the facility sits *in* a place rather than in a void.
+   The station's own footprint is kept clear of it.
+2. **The station** — shell, corridors, rooms, props, crew, in the 380x320 buffer.
+3. **Atmosphere** — vignette and scanlines at display resolution.
+
+- `src/config/facility.js` — the floor plan and all 185 hand-placed props
+- `src/render/props.js` — 78 prop painters; no two rooms share furniture
 - `src/render/sprites.js` — character matrices, baked once and blitted
-- `src/render/factory.js` — buffer, blit, labels, hit testing
+- `src/render/factory.js` — field, buffer, blit, atmosphere, labels, hit testing
+
+Walls have real height: an outer cast shadow, a dark body, a lit top lip, with
+the doorway cut out of all three. Floors carry per-room wear — scuffs, stains, a
+drain, and darkened edges — seeded off the room id so it is stable across loads.
 
 Sprites are declared as character matrices (`o` outline, `c` colour, `d` shade,
-`l` highlight, `e` visor). ARCANE is 9x13 and cloaked; the crew are 7x11. Each
+`l` highlight, `e` visor). ARCANE is 12x18 and cloaked; the crew are 9x14. Each
 is baked once per colour and frame into a tiny canvas, so a crowded room costs
 nothing.
 
