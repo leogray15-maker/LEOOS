@@ -1,38 +1,34 @@
-<title>LEOOS Command Deck</title>
+<title>Arcane Command Deck</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* ============================================================
-   LEOOS — instrument panel design system
-   A single committed visual world: a ship's command display.
-   Every colour is declared here and used through tokens.
+   LEOOS — instrument panel for THE ARCANE.
+   One committed visual world: a facility control console.
    ============================================================ */
 
 :root {
-  /* Ground — violet-biased neutrals, never pure grey */
   --void:   #07070a;
-  --deck:   #0d0d13;
-  --plate:  #14141d;
-  --raised: #1b1b26;
-  --seam:   #23232f;
+  --deck:   #0c0c12;
+  --plate:  #13131c;
+  --raised: #1a1a25;
+  --seam:   #222230;
   --seam-lit: #33334a;
 
-  /* Ink */
   --ink:    #eceaf5;
-  --ash:    #7e7c94;
-  --faint:  #56546a;
+  --ash:    #807e96;
+  --faint:  #55536b;
 
-  /* The one bold accent */
   --arcane: #8b5cf6;
   --arcane-lift: #a98bff;
-  --arcane-wash: rgba(139, 92, 246, 0.14);
+  --arcane-wash: rgba(139, 92, 246, 0.13);
 
-  /* Semantic state — separate from the accent */
   --vital:  #3ecf8e;
   --flare:  #e8b64c;
   --breach: #e5484d;
   --cyan:   #56c9f0;
+  --gold:   #d9a441;
 
   --r-sm: 3px;
   --r-md: 6px;
@@ -42,11 +38,10 @@
   --f-body: 'IBM Plex Sans', system-ui, sans-serif;
   --f-data: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --rail-w: 232px;
-  --dash-w: 356px;
+  --rail-w: 234px;
+  --dash-w: 340px;
 }
 
-/* The page commits to one world; it must not borrow the host ground. */
 html { color-scheme: dark; }
 
 body {
@@ -61,49 +56,66 @@ body {
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-
 button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--arcane-lift); outline-offset: 2px; border-radius: var(--r-sm); }
 
-:focus-visible {
-  outline: 2px solid var(--arcane-lift);
-  outline-offset: 2px;
-  border-radius: var(--r-sm);
-}
-
-/* ---------- shared atoms ---------- */
+/* ---------- atoms ---------- */
 
 .eyebrow {
-  font-family: var(--f-display);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--faint);
+  font-family: var(--f-display); font-size: 10px; font-weight: 600;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--faint);
 }
-
 .mono { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+.muted-note { font-size: 11.5px; color: var(--faint); line-height: 1.55; margin: 0; }
+.warn-note { font-size: 11.5px; color: var(--flare); line-height: 1.55; margin: 10px 0 0; }
 
-.dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--faint); flex: none;
-}
+.is-arcane { color: var(--arcane-lift); }
+.is-vital  { color: var(--vital); }
+.is-flare  { color: var(--flare); }
+.is-breach { color: var(--breach); }
+.is-cyan   { color: var(--cyan); }
+.is-gold   { color: var(--gold); }
+.is-clear  { color: var(--vital); }
+
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex: none; }
 .dot.is-arcane { background: var(--arcane); box-shadow: 0 0 7px var(--arcane); }
 .dot.is-vital  { background: var(--vital);  box-shadow: 0 0 7px var(--vital); }
 .dot.is-flare  { background: var(--flare);  box-shadow: 0 0 7px var(--flare); }
 .dot.is-breach { background: var(--breach); box-shadow: 0 0 7px var(--breach); }
 .dot.is-cyan   { background: var(--cyan);   box-shadow: 0 0 7px var(--cyan); }
+.dot.is-gold   { background: var(--gold);   box-shadow: 0 0 7px var(--gold); }
 
 .chip {
-  font-family: var(--f-data);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  padding: 2px 6px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--seam);
-  color: var(--ash);
-  white-space: nowrap;
+  font-family: var(--f-data); font-size: 10px; letter-spacing: .05em;
+  padding: 2px 6px; border-radius: var(--r-sm);
+  border: 1px solid var(--seam); color: var(--ash); white-space: nowrap;
 }
-.chip.is-seed { color: var(--flare); border-color: rgba(232, 182, 76, 0.35); }
+.chip.is-seed, .chip.is-flare { color: var(--flare); border-color: rgba(232,182,76,.38); }
+.chip.is-arcane { color: var(--arcane-lift); border-color: rgba(139,92,246,.42); }
+.chip.is-breach { color: var(--breach); border-color: rgba(229,72,77,.42); }
+.chip.is-ash { color: var(--ash); }
+
+.meter { height: 4px; background: var(--raised); border-radius: 2px; overflow: hidden; }
+.meter-fill { height: 100%; border-radius: 2px; transition: width .5s ease; background: var(--arcane); }
+.meter-fill.is-vital  { background: var(--vital); }
+.meter-fill.is-flare  { background: var(--flare); }
+.meter-fill.is-breach { background: var(--breach); }
+.meter-fill.is-cyan   { background: var(--cyan); }
+.meter-fill.is-gold   { background: var(--gold); }
+.meter-fill.is-arcane { background: linear-gradient(90deg, var(--arcane), var(--arcane-lift)); }
+
+.sub-title {
+  font-family: var(--f-display); font-size: 11px; font-weight: 600;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--ash);
+  margin: 18px 0 8px;
+}
+
+.back-btn, .icon-btn {
+  background: transparent; border: 1px solid var(--seam); border-radius: var(--r-sm);
+  color: var(--ash); cursor: pointer; font-family: var(--f-data); font-size: 10px; padding: 4px 8px;
+}
+.back-btn:hover, .icon-btn:hover { border-color: var(--seam-lit); color: var(--ink); }
+.icon-btn { font-size: 12px; line-height: 1; padding: 5px 8px; }
 
 /* ============================================================
    Frame
@@ -117,192 +129,187 @@ button, input, textarea { font: inherit; color: inherit; }
   height: 100dvh;
 }
 
-/* ---------- brand + topbar ---------- */
-
 .brand {
   grid-area: brand;
-  display: flex; align-items: center; gap: 10px;
-  padding: 0 16px;
-  border-right: 1px solid var(--seam);
-  border-bottom: 1px solid var(--seam);
+  display: flex; align-items: center; gap: 10px; padding: 0 16px;
+  border-right: 1px solid var(--seam); border-bottom: 1px solid var(--seam);
   background: var(--deck);
 }
 .sigil { width: 22px; height: 22px; flex: none; }
-.brand-name {
-  font-family: var(--f-display);
-  font-weight: 700; font-size: 15px;
-  letter-spacing: 0.22em;
-}
-.brand-ver { font-family: var(--f-data); font-size: 9px; color: var(--faint); letter-spacing: 0.1em; }
+.brand-name { font-family: var(--f-display); font-weight: 700; font-size: 15px; letter-spacing: .2em; }
+.brand-ver { font-family: var(--f-data); font-size: 9px; color: var(--faint); letter-spacing: .1em; }
 
 .topbar {
   grid-area: topbar;
-  display: flex; align-items: center; gap: 20px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--seam);
-  background: var(--deck);
-  overflow-x: auto;
-  scrollbar-width: none;
+  display: flex; align-items: center; gap: 20px; padding: 0 18px;
+  border-bottom: 1px solid var(--seam); background: var(--deck);
+  overflow-x: auto; scrollbar-width: none;
 }
 .topbar::-webkit-scrollbar { display: none; }
-
 .readout { display: flex; flex-direction: column; gap: 1px; flex: none; }
-.readout-label { font-family: var(--f-display); font-size: 9px; letter-spacing: 0.16em; color: var(--faint); text-transform: uppercase; }
-.readout-value { font-family: var(--f-data); font-size: 14px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.readout-value.is-vital { color: var(--vital); }
-.readout-value.is-flare { color: var(--flare); }
-.readout-value.is-arcane { color: var(--arcane-lift); }
-
+.readout-label { font-family: var(--f-display); font-size: 9px; letter-spacing: .15em; color: var(--faint); text-transform: uppercase; }
+.readout-value { font-size: 14px; letter-spacing: -.01em; }
 .topbar-spacer { flex: 1 1 auto; min-width: 12px; }
 
-.transport { display: flex; gap: 0; border: 1px solid var(--seam); border-radius: var(--r-md); overflow: hidden; flex: none; }
+.transport { display: flex; border: 1px solid var(--seam); border-radius: var(--r-md); overflow: hidden; flex: none; }
 .transport button {
-  background: transparent; border: 0; cursor: pointer;
-  font-family: var(--f-data); font-size: 11px;
-  padding: 5px 10px; color: var(--ash);
-  border-right: 1px solid var(--seam);
+  background: transparent; border: 0; border-right: 1px solid var(--seam);
+  cursor: pointer; font-family: var(--f-data); font-size: 11px; padding: 5px 10px; color: var(--ash);
 }
 .transport button:last-child { border-right: 0; }
 .transport button:hover { background: var(--raised); color: var(--ink); }
 .transport button[aria-pressed='true'] { background: var(--arcane-wash); color: var(--arcane-lift); }
 
-/* ---------- deck rail ---------- */
+/* ---------- left navigation ---------- */
 
 .rail {
-  grid-area: rail;
-  border-right: 1px solid var(--seam);
-  background: var(--deck);
-  overflow-y: auto;
-  padding-block: 12px;
+  grid-area: rail; border-right: 1px solid var(--seam); background: var(--deck);
+  overflow-y: auto; padding-block: 12px;
 }
-.rail-head { padding: 0 16px 8px; display: flex; justify-content: space-between; align-items: baseline; }
+.rail-head { padding: 0 16px 8px; }
+.rail-block { padding: 14px 16px 0; margin-top: 12px; border-top: 1px solid var(--seam); }
+.rail-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
 
-.deck-btn {
-  display: grid;
-  grid-template-columns: 6px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  background: transparent;
-  border: 0;
-  border-left: 2px solid transparent;
-  padding: 8px 16px;
-  text-align: left;
-  cursor: pointer;
+.nav-btn {
+  display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: center;
+  width: 100%; background: transparent; border: 0;
+  border-left: 2px solid transparent; padding: 7px 16px; text-align: left; cursor: pointer;
 }
-.deck-btn:hover { background: var(--plate); }
-.deck-btn[aria-current='true'] {
-  background: var(--plate);
-  border-left-color: var(--arcane);
-}
-.deck-btn-name {
-  font-family: var(--f-display); font-size: 12px; font-weight: 600;
-  letter-spacing: 0.1em; line-height: 1.25;
-}
-.deck-btn-sub { font-size: 10.5px; color: var(--faint); line-height: 1.3; }
-.deck-btn-count {
-  font-family: var(--f-data); font-size: 11px; color: var(--ash);
-  font-variant-numeric: tabular-nums;
-}
-.deck-btn-count.is-clear { color: var(--vital); }
+.nav-btn:hover { background: var(--plate); }
+.nav-btn[aria-current='true'] { background: var(--plate); border-left-color: var(--arcane); }
+.nav-btn[aria-current='true'] .nav-name { color: var(--arcane-lift); }
+.nav-no { font-size: 10px; color: var(--faint); }
+.nav-name { font-family: var(--f-display); font-size: 12px; font-weight: 600; letter-spacing: .1em; line-height: 1.25; }
+.nav-sub { font-size: 10.5px; color: var(--faint); line-height: 1.3; }
 
-.rail-foot { padding: 14px 16px 4px; border-top: 1px solid var(--seam); margin-top: 12px; }
-.integrity-bar { height: 3px; background: var(--raised); border-radius: 2px; overflow: hidden; margin-top: 7px; }
-.integrity-fill { height: 100%; background: linear-gradient(90deg, var(--arcane), var(--arcane-lift)); transition: width .6s ease; }
+.commander {
+  display: grid; grid-template-columns: 16px 1fr; gap: 9px; align-items: center;
+  width: 100%; margin-top: 7px; padding: 8px 9px; text-align: left; cursor: pointer;
+  background: var(--arcane-wash); border: 1px solid rgba(139,92,246,.4); border-radius: var(--r-md);
+}
+.commander:hover { background: rgba(139,92,246,.2); }
+.commander-mark { color: var(--arcane-lift); font-size: 13px; }
+.commander-name { font-family: var(--f-display); font-size: 12px; font-weight: 600; letter-spacing: .14em; color: var(--arcane-lift); }
+.commander-where { font-size: 10px; color: var(--ash); }
 
-/* ---------- stage (the ship) ---------- */
+/* ---------- stage ---------- */
 
 .stage {
-  grid-area: stage;
-  position: relative;
-  background: var(--void);
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  min-width: 0;
+  grid-area: stage; position: relative; background: var(--void);
+  display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0;
 }
-#hull { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.stage-body { position: relative; min-height: 0; }
+.stage-canvas { position: absolute; inset: 0; }
+#hull { display: block; width: 100%; height: 100%; }
 
-.stage-tag {
-  position: absolute; top: 14px; left: 18px;
-  display: flex; flex-direction: column; gap: 2px;
-  pointer-events: none;
+.stage-tag { position: absolute; top: 12px; left: 16px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; }
+.stage-tag-name { font-family: var(--f-display); font-size: 12px; letter-spacing: .24em; color: var(--ash); }
+
+.stage-screen {
+  position: absolute; inset: 0; overflow-y: auto;
+  padding: 18px 22px 28px; background: var(--void);
 }
-.stage-tag-name { font-family: var(--f-display); font-size: 13px; letter-spacing: 0.24em; color: var(--ash); }
-.stage-hint { position: absolute; bottom: 58px; left: 18px; font-size: 10.5px; color: var(--faint); pointer-events: none; }
+.stage-screen[hidden], .stage-canvas[hidden] { display: none; }
+
+.screen-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.screen-title { font-family: var(--f-display); font-size: 18px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: 0; }
 
 .tooltip {
-  position: absolute; pointer-events: none;
-  background: var(--plate); border: 1px solid var(--seam-lit);
-  border-radius: var(--r-md); padding: 7px 10px;
-  font-size: 11px; line-height: 1.4;
-  box-shadow: 0 8px 24px rgba(0,0,0,.6);
-  max-width: 220px; z-index: 6;
-  transform: translate(-50%, -125%);
+  position: absolute; pointer-events: none; z-index: 6;
+  background: var(--plate); border: 1px solid var(--seam-lit); border-radius: var(--r-md);
+  padding: 7px 10px; font-size: 11px; line-height: 1.4; max-width: 230px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.6); transform: translate(-50%, -125%);
 }
 .tooltip[hidden] { display: none; }
-.tooltip-title { font-family: var(--f-display); font-size: 11px; letter-spacing: 0.1em; }
+.tooltip-title { font-family: var(--f-display); font-size: 11px; letter-spacing: .1em; }
 .tooltip-body { color: var(--ash); }
 
-/* log ticker under the ship */
 .ticker {
-  border-top: 1px solid var(--seam);
-  background: var(--deck);
-  height: 44px;
-  display: flex; align-items: center; gap: 12px;
-  padding: 0 18px;
-  overflow: hidden;
+  border-top: 1px solid var(--seam); background: var(--deck); height: 42px;
+  display: flex; align-items: center; gap: 12px; padding: 0 18px; overflow: hidden;
 }
 .ticker-label { flex: none; }
-.ticker-line {
-  font-family: var(--f-data); font-size: 11px; color: var(--ash);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.ticker-line { font-family: var(--f-data); font-size: 11px; color: var(--ash); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ticker-time { color: var(--faint); }
 
-/* ---------- dashboard ---------- */
+/* ---------- room dashboard overlay ---------- */
 
-.dash {
-  grid-area: dash;
-  border-left: 1px solid var(--seam);
-  background: var(--deck);
-  overflow-y: auto;
-  display: flex; flex-direction: column;
+.room-overlay {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: min(420px, 94%);
+  background: rgba(10, 10, 16, 0.97);
+  border-left: 1px solid var(--seam-lit);
+  box-shadow: -18px 0 40px rgba(0,0,0,.55);
+  overflow-y: auto; padding: 16px 18px 26px; z-index: 5;
+  animation: slideIn .18s ease-out;
 }
+.room-overlay[hidden] { display: none; }
+@keyframes slideIn { from { transform: translateX(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .room-overlay { animation: none; } }
 
-.panel { border-bottom: 1px solid var(--seam); padding: 14px 16px; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
-.panel-title { font-family: var(--f-display); font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; }
+.room-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  padding-left: 11px; border-left: 3px solid var(--arcane); }
+.room-head.is-vital  { border-left-color: var(--vital); }
+.room-head.is-flare  { border-left-color: var(--flare); }
+.room-head.is-breach { border-left-color: var(--breach); }
+.room-head.is-cyan   { border-left-color: var(--cyan); }
+.room-head.is-gold   { border-left-color: var(--gold); }
+.room-title { font-family: var(--f-display); font-size: 19px; font-weight: 700; letter-spacing: .12em; margin: 2px 0 1px; }
+.room-sub { font-size: 11.5px; color: var(--ash); margin: 0; }
+.room-blurb { font-size: 12.5px; line-height: 1.6; color: var(--ash); margin: 14px 0 0; }
 
-.back-btn {
-  background: transparent; border: 1px solid var(--seam); border-radius: var(--r-sm);
-  color: var(--ash); cursor: pointer; font-family: var(--f-data); font-size: 10px;
-  padding: 3px 7px;
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 1px;
+  background: var(--seam); border: 1px solid var(--seam); border-radius: var(--r-md); overflow: hidden; margin-top: 14px; }
+.stat { background: var(--deck); padding: 10px 11px; display: flex; flex-direction: column; gap: 2px; }
+.stat-n { font-family: var(--f-data); font-size: 17px; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.stat-l { font-size: 10px; color: var(--faint); line-height: 1.3; }
+
+.crew-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.crew-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--plate); border: 1px solid var(--seam); border-radius: var(--r-sm);
+  color: var(--ash); cursor: pointer; padding: 5px 9px;
+  font-family: var(--f-display); font-size: 11px; letter-spacing: .08em;
 }
-.back-btn:hover { border-color: var(--seam-lit); color: var(--ink); }
+.crew-chip:hover { border-color: var(--seam-lit); color: var(--ink); }
+.crew-chip.is-here { color: var(--ink); border-color: var(--seam-lit); background: var(--raised); }
 
-/* orders (tasks) */
+/* ---------- goals ---------- */
+
+.goal { padding: 10px 0; border-bottom: 1px solid var(--seam); }
+.goal:last-child { border-bottom: 0; }
+.goal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 7px; }
+.goal-name { font-size: 12.5px; line-height: 1.4; }
+.goal-val { font-size: 12px; white-space: nowrap; }
+.goal-target { color: var(--faint); }
+.goal-foot { display: flex; align-items: center; gap: 7px; margin-top: 7px; }
+.goal-pct { margin-left: auto; font-size: 11px; color: var(--ash); }
+.goal-input {
+  width: 74px; background: var(--void); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 3px 6px; font-size: 11px;
+}
+.goal-input:focus { border-color: var(--arcane); outline: none; }
+
+/* ---------- orders ---------- */
+
 .orders { display: flex; flex-direction: column; gap: 1px; }
 .order {
-  display: grid; grid-template-columns: auto 1fr auto; gap: 9px;
-  align-items: start; padding: 7px 8px; margin: 0 -8px;
-  border-radius: var(--r-sm); cursor: pointer;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: start;
+  padding: 7px 8px; margin: 0 -8px; border-radius: var(--r-sm); cursor: pointer;
   background: transparent; border: 0; text-align: left; width: calc(100% + 16px);
 }
 .order:hover { background: var(--plate); }
 .order-box {
   width: 13px; height: 13px; margin-top: 2px; flex: none;
-  border: 1px solid var(--seam-lit); border-radius: 2px;
-  display: grid; place-items: center;
+  border: 1px solid var(--seam-lit); border-radius: 2px; display: grid; place-items: center;
 }
 .order.is-done .order-box { background: var(--arcane); border-color: var(--arcane); }
 .order-tick { width: 8px; height: 8px; display: none; }
 .order.is-done .order-tick { display: block; }
 .order-text { font-size: 12.5px; line-height: 1.45; }
+.order-pre { color: var(--faint); font-size: 10px; }
 .order.is-done .order-text { color: var(--faint); text-decoration: line-through; }
-.order-pri {
-  font-family: var(--f-data); font-size: 9px; letter-spacing: .06em;
-  padding: 1px 5px; border-radius: 2px; margin-top: 2px; flex: none;
-}
+.order-pri { font-family: var(--f-data); font-size: 9px; padding: 1px 5px; border-radius: 2px; margin-top: 2px; flex: none; }
 .order-pri.p1 { color: var(--breach); background: rgba(229,72,77,.1); }
 .order-pri.p2 { color: var(--flare); background: rgba(232,182,76,.1); }
 .order-pri.p3 { color: var(--faint); background: var(--raised); }
@@ -310,8 +317,7 @@ button, input, textarea { font: inherit; color: inherit; }
 
 .order-add { display: flex; gap: 6px; margin-top: 10px; }
 .order-add input {
-  flex: 1 1 auto; min-width: 0;
-  background: var(--void); border: 1px solid var(--seam);
+  flex: 1 1 auto; min-width: 0; background: var(--void); border: 1px solid var(--seam);
   border-radius: var(--r-sm); padding: 6px 8px; font-size: 12px;
 }
 .order-add input::placeholder { color: var(--faint); }
@@ -323,65 +329,94 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .order-add button:hover { background: var(--arcane-wash); border-color: var(--arcane); color: var(--arcane-lift); }
 
-/* ledger */
-.ledger { display: flex; flex-direction: column; }
-.ledger-row {
-  display: grid; grid-template-columns: 6px 1fr auto;
-  gap: 10px; align-items: start;
-  padding: 9px 0; border-bottom: 1px solid var(--seam);
-}
-.ledger-row > .dot { margin-top: 6px; }
-.ledger-row:last-child { border-bottom: 0; }
-.ledger-name { font-size: 12.5px; font-weight: 500; line-height: 1.3; }
-.ledger-kind { font-size: 10.5px; color: var(--faint); line-height: 1.35; }
-.ledger-val {
-  font-family: var(--f-data); font-size: 13px; font-variant-numeric: tabular-nums;
-  background: transparent; border: 1px solid transparent; border-radius: var(--r-sm);
-  padding: 2px 5px; text-align: right; width: 92px; cursor: text;
-}
-.ledger-val:hover { border-color: var(--seam); }
-.ledger-val:focus { border-color: var(--arcane); outline: none; background: var(--void); }
+/* ---------- screens ---------- */
 
-/* signals */
-.signal {
-  display: grid; grid-template-columns: 3px 1fr; gap: 10px;
-  padding: 9px 0; border-bottom: 1px solid var(--seam);
+.block { border: 1px solid var(--seam); border-radius: var(--r-md); background: var(--deck); padding: 14px 15px; margin-bottom: 12px; }
+.block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+.block-title {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; border: 0; cursor: pointer; padding: 0; color: var(--ink);
+  font-family: var(--f-display); font-size: 13px; font-weight: 600; letter-spacing: .11em;
 }
-.signal:last-child { border-bottom: 0; }
-.signal-stripe { border-radius: 2px; }
-.signal-stripe.is-breach { background: var(--breach); }
-.signal-stripe.is-flare  { background: var(--flare); }
-.signal-stripe.is-vital  { background: var(--vital); }
-.signal-text { font-size: 12px; line-height: 1.45; }
-.signal-src { font-family: var(--f-data); font-size: 10px; color: var(--faint); }
+.block-title:hover { color: var(--arcane-lift); }
 
-/* crew roster */
-.roster { display: flex; flex-direction: column; gap: 1px; }
-.crew-row {
+.fact-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.fact {
+  font-size: 10.5px; color: var(--ash); background: var(--plate);
+  border: 1px solid var(--seam); border-radius: var(--r-sm); padding: 3px 7px;
+}
+
+.field-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; }
+.field-l { font-size: 10px; color: var(--faint); font-family: var(--f-display); letter-spacing: .12em; text-transform: uppercase; }
+.field-i {
+  background: var(--void); border: 1px solid var(--seam); border-radius: var(--r-sm);
+  padding: 6px 8px; font-size: 12.5px; width: 100%;
+}
+.field-i:focus { border-color: var(--arcane); outline: none; }
+
+.cost-row { display: grid; grid-template-columns: 1fr 110px; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--seam); }
+.cost-row:last-child { border-bottom: 0; }
+.cost-name {
+  display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 0;
+  padding: 0; cursor: pointer; color: var(--ink); font-size: 12.5px; text-align: left;
+}
+.cost-name:hover { color: var(--arcane-lift); }
+
+.alloc { padding: 10px 0; border-bottom: 1px solid var(--seam); }
+.alloc:last-child { border-bottom: 0; }
+.alloc-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
+.alloc-name { font-size: 12.5px; }
+.alloc-amt { font-size: 13px; }
+.alloc-foot { display: flex; align-items: center; gap: 10px; margin-top: 7px; }
+.alloc-foot .muted-note { flex: 1 1 auto; }
+.pct-input {
+  width: 52px; background: var(--void); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 3px 6px; font-size: 11px; text-align: right;
+}
+.pct-input:focus { border-color: var(--arcane); outline: none; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 10px; }
+.agent-card {
+  display: flex; flex-direction: column; gap: 3px; text-align: left; cursor: pointer;
+  background: var(--deck); border: 1px solid var(--seam); border-radius: var(--r-md); padding: 12px 13px;
+}
+.agent-card:hover { border-color: var(--seam-lit); background: var(--plate); }
+.agent-card.is-commander { border-color: rgba(139,92,246,.45); background: var(--arcane-wash); }
+.agent-swatch { width: 100%; height: 3px; border-radius: 2px; margin-bottom: 6px; }
+.agent-name { font-family: var(--f-display); font-size: 13px; font-weight: 600; letter-spacing: .11em; }
+.agent-role { font-size: 11px; color: var(--ash); }
+.agent-where { font-size: 10px; color: var(--faint); }
+.agent-brief { font-size: 11px; color: var(--faint); line-height: 1.45; margin-top: 5px; }
+
+/* ---------- right telemetry ---------- */
+
+.dash { grid-area: dash; border-left: 1px solid var(--seam); background: var(--deck); overflow-y: auto; }
+.panel { border-bottom: 1px solid var(--seam); padding: 14px 16px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.panel-title { font-family: var(--f-display); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; margin: 0; }
+
+.floor-row {
   display: grid; grid-template-columns: 6px 1fr auto; gap: 10px; align-items: center;
-  padding: 6px 8px; margin: 0 -8px; border-radius: var(--r-sm);
-  background: transparent; border: 0; width: calc(100% + 16px); text-align: left; cursor: pointer;
+  width: calc(100% + 16px); margin: 0 -8px; padding: 7px 8px;
+  background: transparent; border: 0; border-radius: var(--r-sm); text-align: left; cursor: pointer;
 }
-.crew-row > .dot { margin-top: 1px; }
-.crew-row:hover { background: var(--plate); }
-.crew-name { font-family: var(--f-display); font-size: 11.5px; letter-spacing: .09em; }
-.crew-role { font-size: 10.5px; color: var(--faint); }
-.crew-state { font-family: var(--f-data); font-size: 10px; color: var(--ash); }
-.crew-state.is-transit { color: var(--arcane-lift); }
+.floor-row:hover { background: var(--plate); }
+.floor-name { font-family: var(--f-display); font-size: 11.5px; letter-spacing: .09em; }
+.floor-sub { font-size: 10px; color: var(--faint); }
 
-/* counsel console */
-.counsel-log {
-  display: flex; flex-direction: column; gap: 10px;
-  max-height: 240px; overflow-y: auto; margin-bottom: 10px;
-}
-.counsel-turn { font-size: 12px; line-height: 1.55; }
+.mini-alloc { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid var(--seam); }
+.mini-alloc:last-of-type { border-bottom: 0; }
+.mini-name { font-size: 11.5px; color: var(--ash); }
+.mini-amt { font-size: 12px; }
+
+.counsel-log { display: flex; flex-direction: column; gap: 10px; max-height: 230px; overflow-y: auto; margin-bottom: 10px; }
+.counsel-turn { font-size: 12px; line-height: 1.55; margin: 0; }
 .counsel-turn.is-leo { color: var(--arcane-lift); font-family: var(--f-data); font-size: 11px; }
-.counsel-turn.is-ship { color: var(--ink); white-space: pre-wrap; }
-.counsel-empty { font-size: 11.5px; color: var(--faint); line-height: 1.5; }
+.counsel-turn.is-ship { white-space: pre-wrap; }
 .counsel-form { display: flex; gap: 6px; }
 .counsel-form input {
-  flex: 1 1 auto; min-width: 0;
-  background: var(--void); border: 1px solid var(--seam);
+  flex: 1 1 auto; min-width: 0; background: var(--void); border: 1px solid var(--seam);
   border-radius: var(--r-sm); padding: 7px 9px; font-size: 12px;
 }
 .counsel-form input:focus { border-color: var(--arcane); outline: none; }
@@ -392,95 +427,85 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .counsel-form button:disabled { opacity: .4; cursor: default; }
 
-.sync-note { padding: 12px 16px; font-size: 10.5px; color: var(--faint); line-height: 1.5; }
-.sync-note b { color: var(--ash); font-weight: 600; }
+/* ---------- signal cards ---------- */
 
-/* ============================================================
-   Narrow: stack to one column, ship first.
-   ============================================================ */
-@media (max-width: 1080px) {
-  :root { --dash-w: 300px; --rail-w: 196px; }
-}
-
-@media (max-width: 860px) {
-  body { overflow: auto; }
-  #os {
-    grid-template-columns: 1fr;
-    grid-template-rows: 52px auto minmax(420px, 62vh) auto auto;
-    grid-template-areas: 'brand' 'topbar' 'stage' 'dash' 'rail';
-    height: auto;
-    min-height: 100dvh;
-  }
-  .brand { border-right: 0; justify-content: space-between; }
-  .topbar { gap: 16px; }
-  .rail, .dash { border-left: 0; border-right: 0; border-top: 1px solid var(--seam); }
-  .stage-hint { display: none; }
-  .counsel-log { max-height: 320px; }
-}
-
-/* ============================================================
-   Signal queue — drafts from the Archives, ready to paste
-   ============================================================ */
-
-.signal-card {
-  border: 1px solid var(--seam);
-  border-radius: var(--r-md);
-  background: var(--plate);
-  padding: 11px 12px;
-  margin-bottom: 10px;
-}
-.signal-card:last-child { margin-bottom: 0; }
-
+.signal-card { border: 1px solid var(--seam); border-radius: var(--r-md); background: var(--deck); padding: 12px 13px; margin-bottom: 10px; }
 .signal-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
 .signal-card-src { font-family: var(--f-data); font-size: 10px; color: var(--faint); }
-
-.chip.is-arcane { color: var(--arcane-lift); border-color: rgba(139, 92, 246, .4); }
-.chip.is-breach { color: var(--breach); border-color: rgba(229, 72, 77, .4); }
-.chip.is-flare  { color: var(--flare);  border-color: rgba(232, 182, 76, .4); }
-.chip.is-ash    { color: var(--ash); }
-
-.signal-card-hook {
-  margin: 0 0 8px;
-  font-size: 13px; font-weight: 600; line-height: 1.4;
-  text-wrap: balance;
-}
-
+.signal-card-hook { margin: 0 0 8px; font-size: 13.5px; font-weight: 600; line-height: 1.42; text-wrap: balance; }
 .signal-card-body {
-  margin: 0 0 10px;
-  font-family: var(--f-body);
-  font-size: 12px; line-height: 1.6;
-  color: var(--ash);
-  white-space: pre-wrap;
-  max-height: 168px;
-  overflow-y: auto;
-  padding: 9px 10px;
-  background: var(--void);
-  border: 1px solid var(--seam);
-  border-radius: var(--r-sm);
-  user-select: text;
+  margin: 0 0 10px; font-family: var(--f-body); font-size: 12px; line-height: 1.6; color: var(--ash);
+  white-space: pre-wrap; max-height: 190px; overflow-y: auto; padding: 9px 10px;
+  background: var(--void); border: 1px solid var(--seam); border-radius: var(--r-sm); user-select: text;
 }
-
-.signal-card-acts { display: flex; align-items: center; gap: 6px; }
+.signal-card-acts { display: flex; align-items: center; gap: 6px; margin-top: 9px; }
 .signal-card-spacer { flex: 1 1 auto; }
 
 .act {
-  font-family: var(--f-display);
-  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
-  padding: 4px 9px; border-radius: var(--r-sm);
-  border: 1px solid var(--seam);
-  background: transparent; color: var(--ash);
-  cursor: pointer; text-decoration: none; display: inline-block;
+  font-family: var(--f-display); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: var(--r-sm); border: 1px solid var(--seam);
+  background: transparent; color: var(--ash); cursor: pointer; text-decoration: none; display: inline-block;
 }
 .act:hover { border-color: var(--seam-lit); color: var(--ink); }
 .act.is-primary { border-color: var(--arcane); color: var(--arcane-lift); background: var(--arcane-wash); }
-.act.is-primary:hover { background: rgba(139, 92, 246, .22); }
-.act.is-primary.is-done { border-color: var(--vital); color: var(--vital); background: rgba(62, 207, 142, .12); }
+.act.is-primary:hover { background: rgba(139,92,246,.22); }
+.act.is-primary.is-done { border-color: var(--vital); color: var(--vital); background: rgba(62,207,142,.12); }
 .act.is-quiet { color: var(--faint); }
-.act.is-quiet:hover { color: var(--breach); border-color: rgba(229, 72, 77, .45); }
+.act.is-quiet:hover { color: var(--breach); border-color: rgba(229,72,77,.45); }
 
-/* the queue nested inside the Beacon deck panel */
-.inline-queue { margin: 14px -16px 0; border-top: 1px solid var(--seam); }
-.inline-queue .panel { border-bottom: 0; }
+/* ============================================================
+   Narrow
+   ============================================================ */
+
+@media (max-width: 1180px) { :root { --dash-w: 300px; --rail-w: 206px; } }
+
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  #os {
+    grid-template-columns: 1fr;
+    grid-template-rows: 52px auto minmax(440px, 66vh) auto auto;
+    grid-template-areas: 'brand' 'topbar' 'stage' 'dash' 'rail';
+    height: auto; min-height: 100dvh;
+  }
+  .brand { border-right: 0; }
+  .topbar { gap: 16px; }
+  .rail, .dash { border-left: 0; border-right: 0; border-top: 1px solid var(--seam); }
+  .room-overlay { width: 100%; }
+  .counsel-log { max-height: 300px; }
+}
+
+/* ---------- room widget tables ---------- */
+
+.src-note { display: flex; align-items: center; gap: 7px; font-size: 10.5px; color: var(--faint); margin: 0 0 10px; line-height: 1.5; }
+.dim { color: var(--faint); }
+
+.tbl { border: 1px solid var(--seam); border-radius: var(--r-md); overflow: hidden; }
+.tbl-head, .tbl-row {
+  display: grid; grid-template-columns: 1.4fr .7fr .6fr .8fr .9fr;
+  gap: 8px; align-items: center; padding: 7px 10px;
+}
+.tbl-head {
+  background: var(--plate);
+  font-family: var(--f-display); font-size: 9px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--faint);
+}
+.tbl-row { border-top: 1px solid var(--seam); font-size: 12px; }
+.tbl-row:hover { background: var(--plate); }
+.tbl-row.is-2 { grid-template-columns: 1.5fr 1fr auto; }
+.tbl-row.is-pdf { grid-template-columns: 1fr auto auto; }
+.tbl-code { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.tbl-title { font-size: 12.5px; line-height: 1.35; }
+.tbl-from { font-size: 10px; color: var(--faint); }
+
+.vial { width: 5px; height: 10px; border-radius: 1px; flex: none; display: inline-block; }
+.vial.is-ghk   { background: linear-gradient(180deg, #5fa8f0 0 30%, #2f7fd6 30%); box-shadow: 0 0 6px rgba(47,127,214,.7); }
+.vial.is-clear { background: linear-gradient(180deg, #d8dde8 0 30%, #9fb4c8 30%); }
+.vial.is-amber { background: linear-gradient(180deg, #e2c08a 0 30%, #c98f3a 30%); }
+
+.doctrine {
+  font-size: 12.5px; line-height: 1.6; color: var(--ash); margin: 0 0 8px;
+  padding-left: 11px; border-left: 2px solid var(--seam-lit);
+}
 
 </style>
 
@@ -496,27 +521,17 @@ button, input, textarea { font: inherit; color: inherit; }
     </svg>
     <span>
       <span class="brand-name" id="brandName">THE ARCANE</span><br>
-      <span class="brand-ver" id="brandVer">LEOOS v1.0</span>
+      <span class="brand-ver" id="brandVer">LEOOS v2.0</span>
     </span>
   </header>
 
   <div class="topbar">
-    <div class="readout">
-      <span class="readout-label">Ship's date</span>
-      <span class="readout-value" id="roStardate">—</span>
-    </div>
-    <div class="readout">
-      <span class="readout-label">Open orders</span>
-      <span class="readout-value is-flare" id="roOrders">--</span>
-    </div>
-    <div class="readout">
-      <span class="readout-label">Crew at station</span>
-      <span class="readout-value is-vital" id="roCrew">--</span>
-    </div>
-    <div class="readout">
-      <span class="readout-label">Monthly</span>
-      <span class="readout-value is-arcane" id="roRevenue">—</span>
-    </div>
+    <div class="readout"><span class="readout-label">Stamp</span><span class="readout-value mono" id="roStamp">—</span></div>
+    <div class="readout"><span class="readout-label">Open orders</span><span class="readout-value mono is-flare" id="roOrders">--</span></div>
+    <div class="readout"><span class="readout-label">Crew</span><span class="readout-value mono is-vital" id="roCrew">--</span></div>
+    <div class="readout"><span class="readout-label">Revenue / mo</span><span class="readout-value mono is-arcane" id="roRevenue">—</span></div>
+    <div class="readout"><span class="readout-label">Runway</span><span class="readout-value mono is-gold" id="roRunway">—</span></div>
+    <div class="readout"><span class="readout-label">Drafts</span><span class="readout-value mono" id="roDrafts">--</span></div>
 
     <span class="topbar-spacer"></span>
 
@@ -527,17 +542,20 @@ button, input, textarea { font: inherit; color: inherit; }
     </div>
   </div>
 
-  <nav class="rail" id="rail" aria-label="Deck manifest"></nav>
+  <nav class="rail" id="rail" aria-label="Navigation"></nav>
 
   <main class="stage">
-    <div style="position:relative;min-height:0">
-      <canvas id="hull" aria-label="Top-down view of the ship, with crew moving between decks"></canvas>
-      <div class="stage-tag">
-        <span class="stage-tag-name">HULL · TOP-DOWN</span>
-        <span class="eyebrow">Click a deck or a crew member</span>
+    <div class="stage-body">
+      <div class="stage-canvas" id="stageCanvas">
+        <canvas id="hull" aria-label="Top-down view of the facility, with crew moving between rooms"></canvas>
+        <div class="stage-tag">
+          <span class="stage-tag-name">THE FACTORY</span>
+          <span class="eyebrow">Click a room to open its dashboard</span>
+        </div>
+        <div class="tooltip" id="tooltip" hidden></div>
       </div>
-      <div class="stage-hint">Keys 1–9 jump decks · ESC returns to overview</div>
-      <div class="tooltip" id="tooltip" hidden></div>
+      <div class="stage-screen" id="stageScreen" hidden></div>
+      <aside class="room-overlay" id="roomOverlay" hidden></aside>
     </div>
     <div class="ticker">
       <span class="eyebrow ticker-label">Log</span>
@@ -546,122 +564,466 @@ button, input, textarea { font: inherit; color: inherit; }
     </div>
   </main>
 
-  <aside class="dash" id="dash" aria-label="Command dashboard"></aside>
+  <aside class="dash" id="dash" aria-label="Telemetry"></aside>
 
 </div>
 
 <script type="module">
-/* ==== src/config/empire.js ==== */
+/* ==== src/config/facility.js ==== */
 /**
- * THE ARCANE EMPIRE — master configuration.
+ * THE ARCANE — facility floor plan.
  *
- * This is the single file Leo edits to reshape the OS. Everything else
- * (ship, crew, dashboard) is a renderer over this data.
+ * PIXEL space: 300 x 260, drawn to an offscreen buffer at 1:1 and
+ * blitted up at an integer scale with smoothing off — genuine pixel art
+ * rather than smoothed vectors. The landscape shape is deliberate: it
+ * fills a widescreen stage at 3x instead of 2x.
  *
- * Ship space is 100 wide x 170 tall, nose at y=0, engines at y=170.
+ * Every room is hand-furnished. No two read the same.
  */
 
-const SHIP = {
-  name: 'THE ARCANE',
-  designation: 'LEOOS v1.0',
-  commander: 'LEO',
-  /** Hull silhouette in ship space — a dagger, echoing the Arcane sigil. */
-  hull: [
-    [50, 0], [56, 10], [61, 20], [64, 34], [65, 38], [77, 42], [79, 60],
-    [86, 68], [86, 98], [83, 104], [77, 126], [72, 150], [60, 162], [50, 170],
-    [40, 162], [28, 150], [23, 126], [17, 104], [14, 98], [14, 68],
-    [21, 60], [23, 42], [35, 38], [36, 34], [39, 20], [44, 10],
-  ],
-  /** Central corridor — crew walk this spine between compartments. */
-  spine: [[50, 36], [50, 53], [50, 83], [50, 112], [50, 136], [50, 156]],
+const PW = 300;
+const PH = 260;
+
+/** The central corridor. Rooms hang off it left and right. */
+const SPINE_X = 150;
+const SPINE = [42, 72, 122, 172, 222];
+
+const PX = {
+  space:    '#06060a',
+  hullDark: '#0f0f18',
+  hull:     '#171722',
+  hullLit:  '#242433',
+  wall:     '#2c2c3e',
+  wallTop:  '#3c3c54',
+  floor:    '#13131d',
+  grate:    '#191926',
+  ink:      '#ecebf5',
+  ash:      '#7e7c94',
+  faint:    '#4a4860',
+  arcane:   '#8b5cf6',
+  arcaneLt: '#a98bff',
+  vital:    '#3ecf8e',
+  flare:    '#e8b64c',
+  breach:   '#e5484d',
+  cyan:     '#56c9f0',
+  gold:     '#d9a441',
+  rose:     '#e0609a',
 };
 
-/** The ventures. `seedMrr` is a STARTING PLACEHOLDER — recalibrate in the Ledger. */
-const VENTURES = [
-  { id: 'peptides', name: 'Arcane Peptides',  kind: 'Research compounds · UK', accent: 'arcane', seedMrr: 0, unit: 'orders/wk', seedUnit: 0 },
-  { id: 'track',    name: 'Arcane Track',     kind: 'Skin healing tracker · £11.99/mo · £70/yr', accent: 'vital', seedMrr: 0, unit: 'members', seedUnit: 0 },
-  { id: 'archives', name: 'Arcane Archives',  kind: 'Education platform · £128/mo', accent: 'cyan', seedMrr: 0, unit: 'members', seedUnit: 0 },
-  { id: 'codex',    name: 'The Codex',        kind: 'Books & masterclasses', accent: 'breach', seedMrr: 0, unit: 'titles', seedUnit: 12 },
-];
-
-/** The catalogue — real titles, real prices. Drives the Scriptorium. */
-const CATALOGUE = [
-  { title: 'The Dark Psych Codex',        price: 70.99, venture: 'codex' },
-  { title: 'The Arcane Game',             price: 69.99, venture: 'codex' },
-  { title: 'The Primal Code',             price: null,  venture: 'codex' },
-  { title: 'The Inner Citadel',           price: null,  venture: 'codex' },
-  { title: 'The Quiet Empire',            price: null,  venture: 'codex' },
-  { title: 'Dark Psychology Masterclass', price: null,  venture: 'codex' },
-  { title: 'Arcane Peptide 101',          price: 29.99, venture: 'peptides' },
-  { title: 'Arcane Healing Protocols',    price: 11.99, venture: 'track' },
-];
-
-/**
- * COMPARTMENTS. Each is a real domain of the empire.
- * rect: [x1, y1, x2, y2] in ship space. door: point on the wall facing the spine.
- */
-const DECKS = [
+/** Props are [type, x, y, w, h] in room-local pixels. */
+const ROOMS = [
   {
     id: 'bridge', name: 'BRIDGE', sub: 'Command · Targets',
-    rect: [42, 20, 58, 36], door: [50, 36], spine: 0, accent: 'arcane', venture: null,
-    readout: 'North star',
+    rect: [100, 8, 200, 42], door: [150, 42], spine: 0,
+    accent: 'arcane', floor: 'plate', venture: null,
+    blurb: 'The whole empire on one screen. Targets are set here and everything downstream obeys them.',
+    props: [
+      ['viewport', 5, 3, 90, 5],
+      ['console', 10, 11, 20, 7], ['console', 40, 11, 20, 7], ['console', 70, 11, 20, 7],
+      ['holo', 42, 20, 14, 12],
+      ['terminal', 6, 21, 7, 9], ['terminal', 87, 21, 7, 9],
+      ['floorlight', 28, 29, 44, 2],
+    ],
   },
   {
-    id: 'forge', name: 'FORGE', sub: 'Build · Web · App',
-    rect: [27, 42, 45, 64], door: [45, 53], spine: 1, accent: 'cyan', venture: 'track',
-    readout: 'In build',
+    id: 'forge', name: 'FORGE', sub: 'Build · Site · App',
+    rect: [16, 50, 134, 94], door: [134, 72], spine: 1,
+    accent: 'cyan', floor: 'grid', venture: 'track',
+    blurb: 'Where the site and the ArcaneTrack app get built. Racks on one wall, a bench on the other.',
+    props: [
+      ['rack', 6, 9, 10, 24], ['rack', 20, 9, 10, 24], ['rack', 34, 9, 10, 24],
+      ['cable', 49, 10, 2, 26],
+      ['bench', 57, 10, 40, 9],
+      ['screen', 59, 22, 13, 8], ['screen', 76, 22, 13, 8],
+      ['crate', 6, 33, 9, 8], ['crate', 18, 33, 9, 8],
+      ['plant', 101, 26, 9, 12],
+      ['terminal', 101, 10, 8, 11],
+    ],
   },
   {
     id: 'beacon', name: 'BEACON', sub: 'Signal · Content · Email',
-    rect: [55, 42, 73, 64], door: [55, 53], spine: 1, accent: 'flare', venture: null,
-    readout: 'Queued',
+    rect: [166, 50, 284, 94], door: [166, 72], spine: 1,
+    accent: 'flare', floor: 'grid', venture: null,
+    blurb: 'The broadcast deck. Everything the outside world hears leaves the building from here.',
+    props: [
+      ['dish', 82, 8, 26, 26],
+      ['screen', 8, 9, 16, 9], ['screen', 26, 9, 16, 9], ['screen', 44, 9, 16, 9],
+      ['screen', 8, 20, 16, 9], ['screen', 26, 20, 16, 9], ['screen', 44, 20, 16, 9],
+      ['desk', 8, 32, 52, 8],
+      ['mic', 64, 26, 6, 9],
+      ['floorlight', 64, 38, 14, 2],
+    ],
   },
   {
-    id: 'apothecary', name: 'APOTHECARY', sub: 'Arcane Peptides · Stock · COA',
-    rect: [17, 70, 45, 96], door: [45, 83], spine: 2, accent: 'arcane', venture: 'peptides',
-    readout: 'Dispatch',
+    id: 'apothecary', name: 'THE LAB', sub: 'Arcane Peptides · Stock · COA · Dispatch',
+    rect: [16, 100, 134, 144], door: [134, 122], spine: 2,
+    accent: 'arcane', floor: 'clean', venture: 'peptides',
+    blurb: 'Cold storage, vial racks, instruments and the packing bench. Nothing leaves this room without a lab report against its batch.',
+    props: [
+      ['fridge', 5, 6, 13, 20], ['fridge', 19, 6, 13, 20],
+      ['vialrack', 35, 6, 22, 9, 'ghk'],
+      ['vialrack', 35, 17, 22, 9, 'clear'],
+      ['microscope', 60, 6, 9, 11],
+      ['scales', 71, 8, 9, 8],
+      ['centrifuge', 82, 6, 13, 11],
+      ['autoclave', 98, 5, 13, 14],
+      ['bench', 60, 20, 36, 7],
+      ['conveyor', 36, 30, 44, 6],
+      ['packstation', 82, 24, 18, 12],
+      ['shipbox', 5, 29, 9, 9], ['shipbox', 16, 29, 9, 9], ['shipbox', 27, 31, 7, 7],
+      ['terminal', 102, 24, 8, 11],
+    ],
   },
   {
     id: 'vitals', name: 'VITALS', sub: 'Arcane Track · Members',
-    rect: [55, 70, 83, 96], door: [55, 83], spine: 2, accent: 'vital', venture: 'track',
-    readout: 'Retention',
+    rect: [166, 100, 284, 144], door: [166, 122], spine: 2,
+    accent: 'vital', floor: 'clean', venture: 'track',
+    blurb: 'Every dose logged, every day mapped. Member health and churn are watched from here.',
+    props: [
+      ['bed', 6, 8, 26, 12], ['bed', 6, 24, 26, 12],
+      ['monitor', 34, 9, 8, 8], ['monitor', 34, 25, 8, 8],
+      ['chart', 46, 8, 30, 15],
+      ['desk', 46, 27, 30, 8],
+      ['bed', 80, 24, 26, 12],
+      ['plant', 82, 8, 9, 12], ['plant', 95, 8, 9, 12],
+      ['monitor', 108, 25, 6, 8],
+    ],
   },
   {
     id: 'vault', name: 'VAULT', sub: 'Treasury · Cash · VAT',
-    rect: [25, 102, 45, 122], door: [45, 112], spine: 3, accent: 'flare', venture: null,
-    readout: 'Runway',
+    rect: [16, 150, 134, 194], door: [134, 172], spine: 3,
+    accent: 'gold', floor: 'plate', venture: null,
+    blurb: 'Cash, runway, and the tax set-aside. This room decides what every other room can spend.',
+    props: [
+      ['safe', 6, 8, 22, 22],
+      ['bullion', 34, 10, 8, 5], ['bullion', 34, 17, 8, 5], ['bullion', 34, 24, 8, 5],
+      ['bullion', 45, 13, 8, 5], ['bullion', 45, 20, 8, 5],
+      ['ledgerdesk', 60, 9, 24, 13],
+      ['terminal', 90, 9, 8, 11],
+      ['floorlight', 60, 26, 30, 2],
+      ['crate', 6, 32, 10, 8],
+      ['pillar', 102, 30, 8, 8],
+    ],
   },
   {
-    id: 'archives', name: 'ARCHIVES', sub: 'Arcane Archives · Curriculum',
-    rect: [55, 102, 75, 122], door: [55, 112], spine: 3, accent: 'cyan', venture: 'archives',
-    readout: 'Cohort',
+    id: 'archives', name: 'THE LIBRARY', sub: 'Archives · Content · PDF products',
+    rect: [166, 150, 284, 194], door: [166, 172], spine: 3,
+    accent: 'cyan', floor: 'grid', venture: 'archives',
+    blurb: 'Forty-eight courses and thousands of modules on the shelves. Posts get written here and modules get cut into PDFs worth selling.',
+    props: [
+      ['tallshelf', 4, 4, 11, 30], ['tallshelf', 17, 4, 11, 30],
+      ['tallshelf', 30, 4, 11, 30], ['tallshelf', 43, 4, 11, 30],
+      ['ladder', 57, 7, 5, 24],
+      ['readingdesk', 65, 5, 24, 14],
+      ['printer', 93, 4, 16, 14],
+      ['pdfstack', 65, 22, 17, 12],
+      ['terminal', 86, 22, 8, 12],
+      ['holo', 97, 21, 13, 13],
+      ['floorlight', 4, 37, 50, 2],
+    ],
   },
   {
     id: 'scriptorium', name: 'SCRIPTORIUM', sub: 'The Codex · Writing',
-    rect: [30, 126, 46, 146], door: [46, 136], spine: 4, accent: 'breach', venture: 'codex',
-    readout: 'In draft',
+    rect: [16, 200, 134, 244], door: [134, 222], spine: 4,
+    accent: 'breach', floor: 'plate', venture: 'codex',
+    blurb: 'Where the books get written. The Dark Psych Codex, The Quiet Empire, The Arcane Game.',
+    props: [
+      ['desk', 6, 9, 28, 8],
+      ['papers', 9, 6, 20, 3],
+      ['shelf', 40, 7, 9, 22], ['shelf', 52, 7, 9, 22],
+      ['press', 68, 9, 16, 17],
+      ['terminal', 10, 20, 8, 11],
+      ['candle', 30, 20, 4, 7],
+      ['crate', 92, 10, 10, 10],
+      ['floorlight', 90, 30, 16, 2],
+    ],
   },
   {
     id: 'sanctum', name: 'SANCTUM', sub: 'Leo · Body · Focus',
-    rect: [54, 126, 70, 146], door: [54, 136], spine: 4, accent: 'vital', venture: null,
-    readout: 'Protocol',
+    rect: [166, 200, 284, 244], door: [166, 222], spine: 4,
+    accent: 'vital', floor: 'clean', venture: null,
+    blurb: 'Training, sleep, deep work. The operator is a system component and gets maintained like one.',
+    props: [
+      ['bed', 6, 8, 26, 12],
+      ['rig', 40, 8, 20, 15],
+      ['plant', 66, 8, 10, 12],
+      ['desk', 6, 25, 26, 8],
+      ['mat', 40, 26, 24, 11],
+      ['screen', 82, 9, 14, 8],
+      ['floorlight', 82, 28, 16, 2],
+    ],
   },
 ];
 
-/** The crew. Each holds a station and walks the ship to work open orders. */
-const CREW = [
-  { id: 'vector',   name: 'VECTOR',   role: 'Navigator',    home: 'bridge' },
-  { id: 'meridian', name: 'MERIDIAN', role: 'Quartermaster',home: 'apothecary' },
-  { id: 'lumen',    name: 'LUMEN',    role: 'Physician',    home: 'vitals' },
-  { id: 'oracle',   name: 'ORACLE',   role: 'Archivist',    home: 'archives' },
-  { id: 'scribe',   name: 'SCRIBE',   role: 'Scrivener',    home: 'scriptorium' },
-  { id: 'herald',   name: 'HERALD',   role: 'Signalman',    home: 'beacon' },
-  { id: 'tally',    name: 'TALLY',    role: 'Purser',       home: 'vault' },
-  { id: 'anvil',    name: 'ANVIL',    role: 'Engineer',     home: 'forge' },
-  { id: 'keeper',   name: 'KEEPER',   role: 'Steward',      home: 'sanctum' },
+const ROOM_BY_ID = Object.fromEntries(ROOMS.map((r) => [r.id, r]));
+
+/** Corridor segments as [x1, y1, x2, y2] pixel rects. */
+function corridors() {
+  const segs = [[SPINE_X - 10, 38, SPINE_X + 10, 248]];
+  for (const r of ROOMS) {
+    if (r.door[0] === SPINE_X) continue;
+    const left = r.door[0] < SPINE_X;
+    segs.push(left
+      ? [r.door[0], r.door[1] - 7, SPINE_X - 10, r.door[1] + 7]
+      : [SPINE_X + 10, r.door[1] - 7, r.door[0], r.door[1] + 7]);
+  }
+  return segs;
+}
+
+/* ==== src/config/roomdata.js ==== */
+/**
+ * Per-room dashboard data.
+ *
+ * These are DEMO ROWS — real structure, placeholder numbers — so every
+ * room opens as a working dashboard instead of an empty shell. Each set
+ * carries a `source` line naming what it will be wired to. Replace the
+ * rows here, or let the live connection overwrite them later.
+ *
+ * Nothing in this file is a claim about what any compound does. Stock,
+ * batch and COA state only.
+ */
+
+/* ---------------- THE LAB ---------------- */
+
+const INVENTORY = {
+  source: 'Placeholder — will read live stock from Arcane Peptides.',
+  columns: ['Compound', 'Size', 'Vials', 'Batch', 'COA'],
+  rows: [
+    { code: 'GHK-Cu',       size: '50mg', vials: 0, batch: '—', coa: 'pending', tint: 'ghk' },
+    { code: 'BPC-157',      size: '5mg',  vials: 0, batch: '—', coa: 'published', tint: 'clear' },
+    { code: 'TB-500',       size: '5mg',  vials: 0, batch: '—', coa: 'published', tint: 'clear' },
+    { code: 'KPV',          size: '10mg', vials: 0, batch: '—', coa: 'pending', tint: 'clear' },
+    { code: 'MOTS-c',       size: '10mg', vials: 0, batch: '—', coa: 'none', tint: 'clear' },
+    { code: 'SS-31',        size: '10mg', vials: 0, batch: '—', coa: 'none', tint: 'amber' },
+    { code: 'VIP',          size: '5mg',  vials: 0, batch: '—', coa: 'none', tint: 'clear' },
+    { code: 'Cerebrolysin', size: '5ml',  vials: 0, batch: '—', coa: 'none', tint: 'amber' },
+  ],
+};
+
+const DISPATCH = {
+  source: 'Placeholder — will read the live order queue.',
+  note: 'Cutoff is 12:00 Mon–Fri. Free UK delivery over £50.',
+  rows: [
+    { ref: '—', items: 'No orders in the queue', stage: 'idle' },
+  ],
+  stages: ['packing', 'ready', 'shipped', 'idle'],
+};
+
+/* ---------------- THE LIBRARY ---------------- */
+
+const PDF_PRODUCTS = {
+  source: 'Placeholder — cut from real modules in The Arcane Archives.',
+  rows: [
+    { title: 'The Shame Opening', from: 'Mind HiJacking', pages: 9, price: 9.99, stage: 'draft' },
+    { title: 'Fifteen Openers That Move People', from: 'Mind HiJacking', pages: 24, price: 19.99, stage: 'idea' },
+    { title: 'Envy or Fear: Reading Your Critics', from: 'Mindset Mastery', pages: 12, price: 7.99, stage: 'idea' },
+    { title: 'Retention Beats Acquisition', from: 'Entrepreneurship Mastery', pages: 14, price: 12.99, stage: 'draft' },
+    { title: 'The Three Forces Controlling You', from: 'Deep Psy', pages: 18, price: 14.99, stage: 'idea' },
+    { title: 'Peptide 101 Field Guide', from: 'Arcane Lab Peptides 101', pages: 32, price: 29.99, stage: 'live' },
+  ],
+  stages: ['live', 'draft', 'idea'],
+};
+
+/* ---------------- VITALS ---------------- */
+
+const COHORTS = {
+  source: 'Placeholder — will read live from Arcane Track.',
+  rows: [
+    { label: 'Active monthly', count: 0, note: '£11.99 / month' },
+    { label: 'Active annual', count: 0, note: '£70 / year' },
+    { label: 'Joined this month', count: 0, note: 'New members' },
+    { label: 'Lapsed', count: 0, note: 'Win-back list' },
+    { label: 'Logging daily', count: 0, note: 'Dose logged in last 24h' },
+  ],
+};
+
+/* ---------------- FORGE ---------------- */
+
+const BUILD_QUEUE = {
+  source: 'Placeholder — the build board.',
+  rows: [
+    { item: 'Offline dose logging + sync', target: 'ArcaneTrack', stage: 'building' },
+    { item: 'COA lookup by batch number', target: 'Peptides site', stage: 'queued' },
+    { item: 'Checkout speed pass', target: 'Peptides site', stage: 'queued' },
+    { item: 'PDF delivery + licence keys', target: 'Library', stage: 'idea' },
+    { item: 'Member dashboard v2', target: 'Archives', stage: 'idea' },
+  ],
+  stages: ['building', 'queued', 'idea', 'shipped'],
+};
+
+/* ---------------- SCRIPTORIUM ---------------- */
+
+const MANUSCRIPTS = {
+  source: 'The Codex. Progress is yours to set.',
+  rows: [
+    { title: 'The Dark Psych Codex', stage: 'proofing', pct: 90, price: 70.99 },
+    { title: 'The Arcane Game', stage: 'live', pct: 100, price: 69.99 },
+    { title: 'The Quiet Empire', stage: 'drafting', pct: 45, price: null },
+    { title: 'The Inner Citadel', stage: 'live', pct: 100, price: null },
+    { title: 'The Primal Code', stage: 'live', pct: 100, price: null },
+  ],
+  stages: ['live', 'proofing', 'drafting'],
+};
+
+/* ---------------- SANCTUM ---------------- */
+
+const PROTOCOL = {
+  source: 'The operator is a system component. Maintained like one.',
+  rows: [
+    { item: 'Train', target: 4, unit: 'per week' },
+    { item: 'Sleep floor', target: 7.5, unit: 'hours' },
+    { item: 'Deep work block', target: 3, unit: 'hours / day' },
+    { item: 'Steps', target: 8000, unit: 'per day' },
+    { item: 'Read', target: 20, unit: 'pages / day' },
+  ],
+};
+
+/* ---------------- BRIDGE ---------------- */
+
+const DOCTRINE = [
+  'Retention beats acquisition. Keep adding value daily.',
+  'One new module a day. Never a zero day.',
+  'Nothing ships without a COA against its batch.',
+  'The split happens before the spending, not after.',
 ];
 
-/** Opening orders — replace freely; every one persists once you touch it. */
+/** Which dataset a room shows. */
+const ROOM_WIDGET = {
+  apothecary: 'lab',
+  archives: 'library',
+  vitals: 'cohorts',
+  forge: 'build',
+  scriptorium: 'manuscripts',
+  sanctum: 'protocol',
+  beacon: 'signals',
+  vault: 'treasury',
+  bridge: 'doctrine',
+};
+
+/* ==== src/config/empire.js ==== */
+/**
+ * THE ARCANE EMPIRE — the business layer.
+ *
+ * Layout lives in config/facility.js. This file is the part Leo edits
+ * when the business changes: what he sells, who crews it, what he is
+ * aiming at, and where the money goes.
+ */
+
+
+/** Rooms are the decks — one import point for the rest of the app. */
+const DECKS = ROOMS;
+
+const OPERATOR = { name: 'LEO', brand: 'THE ARCANE', system: 'LEOOS v2.0' };
+
+/** The ventures. Figures start blank on purpose — set them in the Ledger. */
+const VENTURES = [
+  {
+    id: 'peptides', name: 'Arcane Peptides', room: 'apothecary', accent: 'arcane',
+    kind: 'Research compounds · UK', model: 'Per order',
+    facts: ['HPLC verified', 'COA every batch', 'Free UK delivery over £50', 'Dispatch 12:00 Mon–Fri'],
+    price: null, unitLabel: 'orders / mo',
+  },
+  {
+    id: 'archives', name: 'Arcane Archives', room: 'archives', accent: 'cyan',
+    kind: 'Education platform', model: 'Subscription',
+    facts: ['£128 / month', '~3,300 modules', '48 courses'],
+    price: 128, unitLabel: 'members',
+  },
+  {
+    id: 'track', name: 'Arcane Track', room: 'vitals', accent: 'vital',
+    kind: 'Skin healing tracker · TSW & eczema', model: 'Subscription',
+    facts: ['£11.99 / month', '£70 / year', 'Every dose logged'],
+    price: 11.99, unitLabel: 'members',
+  },
+  {
+    id: 'codex', name: 'The Codex', room: 'scriptorium', accent: 'breach',
+    kind: 'Books & masterclasses', model: 'One-off',
+    facts: ['8 titles live', 'Highest ticket £70.99'],
+    price: null, unitLabel: 'sales / mo',
+  },
+];
+
+const CATALOGUE = [
+  { title: 'The Dark Psych Codex', price: 70.99, venture: 'codex' },
+  { title: 'The Arcane Game', price: 69.99, venture: 'codex' },
+  { title: 'Arcane Peptide 101', price: 29.99, venture: 'peptides' },
+  { title: 'Arcane Healing Protocols', price: 11.99, venture: 'track' },
+  { title: 'The Primal Code', price: null, venture: 'codex' },
+  { title: 'The Inner Citadel', price: null, venture: 'codex' },
+  { title: 'The Quiet Empire', price: null, venture: 'codex' },
+  { title: 'Dark Psychology Masterclass', price: null, venture: 'codex' },
+];
+
+/** The commander. Driven by Leo, not by the simulation. */
+const ARCANE = {
+  id: 'arcane', name: 'ARCANE', role: 'Commander',
+  home: 'bridge', colour: '#a98bff',
+  brief: 'You. Open a room and the commander walks there; the crew follow the attention.',
+};
+
+const CREW = [
+  { id: 'vector',   name: 'VECTOR',   role: 'Navigator',     home: 'bridge',      colour: '#b79cff', brief: 'Holds the targets and says which one is slipping.' },
+  { id: 'anvil',    name: 'ANVIL',    role: 'Engineer',      home: 'forge',       colour: '#56c9f0', brief: 'Site, app, automation. Anything that has to be built.' },
+  { id: 'herald',   name: 'HERALD',   role: 'Signalman',     home: 'beacon',      colour: '#e8b64c', brief: 'Content, email, launches. Everything the world hears.' },
+  { id: 'meridian', name: 'MERIDIAN', role: 'Quartermaster', home: 'apothecary',  colour: '#c68bff', brief: 'Stock cover, COA, dispatch cutoffs.' },
+  { id: 'lumen',    name: 'LUMEN',    role: 'Physician',     home: 'vitals',      colour: '#3ecf8e', brief: 'Member health, churn, the people on the protocol.' },
+  { id: 'tally',    name: 'TALLY',    role: 'Purser',        home: 'vault',       colour: '#d9a441', brief: 'Cash, VAT, reconciliation. Says what you can spend.' },
+  { id: 'oracle',   name: 'ORACLE',   role: 'Archivist',     home: 'archives',    colour: '#6bd6ff', brief: 'Curriculum and the 3,300 modules underneath it.' },
+  { id: 'scribe',   name: 'SCRIBE',   role: 'Scrivener',     home: 'scriptorium', colour: '#e5484d', brief: 'The Codex. Drafts, proofs, launch sequences.' },
+  { id: 'keeper',   name: 'KEEPER',   role: 'Steward',       home: 'sanctum',     colour: '#7ee0a8', brief: 'Sleep, training, deep work. The operator is a component.' },
+];
+
+/**
+ * GOALS — money and work, each anchored to a room.
+ * `target` is the number that ends it; progress is stored and editable.
+ */
+const GOALS = [
+  { id: 'g-mrr',     kind: 'money', room: 'vault',       name: '£10k a month across all four ventures', target: 10000, unit: '£',           auto: 'mrr' },
+  { id: 'g-members', kind: 'money', room: 'archives',    name: '50 Archives members at £128',            target: 50,    unit: 'members' },
+  { id: 'g-runway',  kind: 'money', room: 'vault',       name: 'Six months of runway banked',            target: 6,     unit: 'months',      auto: 'runway' },
+  { id: 'g-track',   kind: 'money', room: 'vitals',      name: '250 Arcane Track subscribers',           target: 250,   unit: 'members' },
+  { id: 'g-index',   kind: 'work',  room: 'archives',    name: 'All 3,300 modules indexed',              target: 3300,  unit: 'modules' },
+  { id: 'g-posts',   kind: 'work',  room: 'beacon',      name: 'Post every day for 90 days',             target: 90,    unit: 'days' },
+  { id: 'g-coa',     kind: 'work',  room: 'apothecary',  name: 'COA published for every live batch',     target: 100,   unit: '%' },
+  { id: 'g-sync',    kind: 'work',  room: 'forge',       name: 'ArcaneTrack offline sync shipped',       target: 100,   unit: '%' },
+  { id: 'g-codex',   kind: 'work',  room: 'scriptorium', name: 'The Quiet Empire launched',              target: 100,   unit: '%' },
+  { id: 'g-train',   kind: 'work',  room: 'sanctum',     name: 'Train four times a week',                target: 4,     unit: 'per week' },
+];
+
+/**
+ * THE BUDGETER.
+ * `fixed` is what leaves every month regardless of sales.
+ * `split` is how whatever survives gets divided. Percentages must total 100.
+ */
+const BUDGET = {
+  fixed: [
+    { id: 'stock',    name: 'Stock & storage',      amount: 0, room: 'apothecary' },
+    { id: 'shipping', name: 'Packaging & postage',  amount: 0, room: 'apothecary' },
+    { id: 'testing',  name: 'HPLC & COA testing',   amount: 0, room: 'apothecary' },
+    { id: 'software', name: 'Software & hosting',   amount: 0, room: 'forge' },
+    { id: 'ads',      name: 'Ads & promotion',      amount: 0, room: 'beacon' },
+    { id: 'personal', name: 'Personal fixed costs', amount: 0, room: 'sanctum' },
+  ],
+  split: [
+    { id: 'tax',      name: 'Tax set-aside', pct: 25, note: 'VAT and corporation tax. Untouchable.', accent: 'breach' },
+    { id: 'reinvest', name: 'Reinvest',      pct: 35, note: 'Stock, build, ads — the compounding half.', accent: 'arcane' },
+    { id: 'pay',      name: 'Pay yourself',  pct: 25, note: 'The reason any of this exists.', accent: 'vital' },
+    { id: 'reserve',  name: 'War chest',     pct: 15, note: 'Runway. Lets you say no to bad deals.', accent: 'gold' },
+  ],
+};
+
+/** The left-hand navigation, numbered like a control panel. */
+const SCREENS = [
+  { id: 'factory',  no: '01', name: 'THE FACTORY', sub: 'Live floor' },
+  { id: 'agents',   no: '02', name: 'AGENTS',      sub: 'Crew & orders' },
+  { id: 'orders',   no: '03', name: 'ORDERS',      sub: 'Every open task' },
+  { id: 'ventures', no: '04', name: 'VENTURES',    sub: 'The four businesses' },
+  { id: 'ledger',   no: '05', name: 'LEDGER',      sub: 'Money & budget' },
+  { id: 'goals',    no: '06', name: 'GOALS',       sub: 'Money & work targets' },
+  { id: 'signals',  no: '07', name: 'SIGNALS',     sub: 'Posts from the Archives' },
+  { id: 'system',   no: '08', name: 'SYSTEM',      sub: 'Status & sync' },
+];
+
 const SEED_TASKS = {
   bridge: [
     { t: 'Set the Q4 number for each venture', p: 1 },
@@ -814,8 +1176,13 @@ function seedState() {
     }));
   }
   const ledger = {};
-  for (const v of VENTURES) ledger[v.id] = { mrr: v.seedMrr, unit: v.seedUnit, calibrated: false };
-  return { decks, ledger, log: [], posts: SEED_POSTS.slice() };
+  for (const v of VENTURES) ledger[v.id] = { mrr: 0, units: 0, calibrated: false };
+  const goals = {};
+  for (const g of GOALS) goals[g.id] = { progress: 0 };
+  const budget = { cash: 0, fixed: {}, split: {} };
+  for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
+  for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
+  return { decks, ledger, goals, budget, log: [], posts: SEED_POSTS.slice() };
 }
 
 class Store {
@@ -890,6 +1257,19 @@ class Store {
     }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
+    if (body.goals && typeof body.goals === 'object') {
+      for (const g of GOALS) if (body.goals[g.id]) this.state.goals[g.id] = body.goals[g.id];
+    }
+    if (body.budget && typeof body.budget === 'object') {
+      const b = body.budget;
+      if (Number.isFinite(b.cash)) this.state.budget.cash = b.cash;
+      for (const f of BUDGET.fixed) {
+        if (Number.isFinite(b.fixed?.[f.id])) this.state.budget.fixed[f.id] = b.fixed[f.id];
+      }
+      for (const sp of BUDGET.split) {
+        if (Number.isFinite(b.split?.[sp.id])) this.state.budget.split[sp.id] = b.split[sp.id];
+      }
+    }
   }
 
   /** Persist — debounced, so a burst of ticks becomes one write. */
@@ -905,6 +1285,8 @@ class Store {
       ledger: this.state.ledger,
       log: this.state.log.slice(0, 50),
       posts: this.state.posts.slice(0, 60),
+      goals: this.state.goals,
+      budget: this.state.budget,
     };
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
@@ -949,7 +1331,46 @@ class Store {
     this.save();
   }
 
-  /* ---------- ledger ---------- */
+  /* ---------- money ---------- */
+
+  monthlyRevenue() {
+    return VENTURES.reduce((n, v) => n + (Number(this.state.ledger[v.id]?.mrr) || 0), 0);
+  }
+
+  monthlyFixed() {
+    return BUDGET.fixed.reduce((n, f) => n + (Number(this.state.budget.fixed[f.id]) || 0), 0);
+  }
+
+  /** What survives the month before anything is allocated. */
+  monthlyNet() { return this.monthlyRevenue() - this.monthlyFixed(); }
+
+  /** Months of cover at the current burn. Infinite burn-free is reported as null. */
+  runwayMonths() {
+    const burn = this.monthlyFixed();
+    if (burn <= 0) return null;
+    return (Number(this.state.budget.cash) || 0) / burn;
+  }
+
+  /** Net profit split into its envelopes. */
+  allocations() {
+    const net = Math.max(0, this.monthlyNet());
+    return BUDGET.split.map((sp) => ({
+      ...sp,
+      pct: Number(this.state.budget.split[sp.id]) || 0,
+      amount: net * ((Number(this.state.budget.split[sp.id]) || 0) / 100),
+    }));
+  }
+
+  splitTotal() {
+    return BUDGET.split.reduce((n, sp) => n + (Number(this.state.budget.split[sp.id]) || 0), 0);
+  }
+
+  setBudget(field, id, value) {
+    const n = Number.isFinite(value) ? value : 0;
+    if (field === 'cash') this.state.budget.cash = n;
+    else this.state.budget[field][id] = n;
+    this.save();
+  }
 
   setLedger(ventureId, field, value) {
     const row = this.state.ledger[ventureId] || (this.state.ledger[ventureId] = {});
@@ -962,8 +1383,23 @@ class Store {
     return VENTURES.some((v) => this.state.ledger[v.id]?.calibrated);
   }
 
-  monthlyTotal() {
-    return VENTURES.reduce((n, v) => n + (Number(this.state.ledger[v.id]?.mrr) || 0), 0);
+  /* ---------- goals ---------- */
+
+  /** A goal's live value: auto-derived where it can be, stored otherwise. */
+  goalValue(goal) {
+    if (goal.auto === 'mrr') return this.monthlyRevenue();
+    if (goal.auto === 'runway') return this.runwayMonths() ?? 0;
+    return Number(this.state.goals[goal.id]?.progress) || 0;
+  }
+
+  goalPct(goal) {
+    if (!goal.target) return 0;
+    return Math.max(0, Math.min(1, this.goalValue(goal) / goal.target));
+  }
+
+  setGoal(id, progress) {
+    this.state.goals[id] = { progress: Number.isFinite(progress) ? progress : 0 };
+    this.save();
   }
 
   /* ---------- signal queue ---------- */
@@ -1004,144 +1440,170 @@ function deckName(id) {
 
 /* ==== src/core/sim.js ==== */
 /**
- * Crew simulation — the little agents that walk the ship.
+ * Crew simulation.
  *
- * The hull is a tree: a central spine with one door hanging off it per
- * compartment. Routing is therefore exact and cheap — walk up the spine
- * from one door to the other. Agents drift toward compartments that have
- * open orders, so a busy deck visibly draws crew.
+ * ARCANE is the one you drive: select a room and the commander walks
+ * there. The nine crew work their own stations but drift toward whatever
+ * room is carrying the most open orders — and toward ARCANE, because the
+ * room the commander is standing in is the room that gets attention.
  */
 
 
-const DECK_MAP = Object.fromEntries(DECKS.map((d) => [d.id, d]));
+
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-/** A point comfortably inside a compartment, clear of its walls. */
-function interiorPoint(deck) {
-  const [x1, y1, x2, y2] = deck.rect;
-  return { x: rand(x1 + 3, x2 - 3), y: rand(y1 + 3.5, y2 - 3.5) };
+/** Somewhere inside a room, clear of the walls and the door. */
+function interiorPoint(room) {
+  const [x1, y1, x2, y2] = room.rect;
+  return { x: rand(x1 + 8, x2 - 8), y: rand(y1 + 14, y2 - 6) };
 }
 
-/** Route between two compartments along the spine. */
-function route(from, to) {
-  const a = DECK_MAP[from];
-  const b = DECK_MAP[to];
+/** Walk one room to another along the spine. */
+function route(fromId, toId) {
+  const a = ROOM_BY_ID[fromId];
+  const b = ROOM_BY_ID[toId];
   const pts = [{ x: a.door[0], y: a.door[1] }];
+  if (a.door[0] !== SPINE_X) pts.push({ x: SPINE_X, y: a.door[1] });
+
   const step = a.spine <= b.spine ? 1 : -1;
   for (let i = a.spine; i !== b.spine + step; i += step) {
-    pts.push({ x: SHIP.spine[i][0], y: SHIP.spine[i][1] });
+    pts.push({ x: SPINE_X, y: SPINE[i] });
   }
+  if (b.door[0] !== SPINE_X) pts.push({ x: SPINE_X, y: b.door[1] });
   pts.push({ x: b.door[0], y: b.door[1] });
   pts.push(interiorPoint(b));
-  // drop zero-length hops so the walk never stalls on a duplicate node
-  return pts.filter((p, i) => i === 0 || Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 0.01);
+
+  return pts.filter((p, i) => i === 0 || Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 0.5);
+}
+
+function makeWalker(def, kind, speed) {
+  const room = ROOM_BY_ID[def.home];
+  const p = interiorPoint(room);
+  return {
+    ...def,
+    kind,
+    speed,
+    deck: def.home,
+    x: p.x, y: p.y,
+    tx: p.x, ty: p.y,
+    state: 'work',
+    timer: rand(3, 14),
+    path: null,
+    leg: 0,
+    wake: [],
+    wakeClock: 0,
+    order: null,
+  };
 }
 
 class Sim {
   constructor(store) {
     this.store = store;
     this.speed = 1;
+    this.selectedAgent = null;
     this.agents = CREW.map((c, i) => {
-      const deck = DECK_MAP[c.home];
-      const p = interiorPoint(deck);
-      return {
-        ...c,
-        deck: c.home,
-        x: p.x, y: p.y,
-        tx: p.x, ty: p.y,      // wander target inside the compartment
-        heading: 0,
-        state: 'work',
-        timer: rand(4, 16) + i * 0.7,
-        path: null,
-        leg: 0,
-        wake: [],
-        wakeClock: 0,
-        order: null,
-      };
+      const a = makeWalker(c, 'crew', 26);
+      a.timer += i * 0.6;
+      return a;
     });
+    this.arcane = makeWalker(ARCANE, 'arcane', 34);
   }
 
-  /** Crew currently inside a compartment. */
-  inDeck(deckId) {
-    return this.agents.filter((a) => a.deck === deckId && a.state === 'work');
+  everyone() { return [...this.agents, this.arcane]; }
+
+  inRoom(id) {
+    return this.agents.filter((a) => a.deck === id && a.state === 'work');
   }
 
-  /** 0–1 activity level, used to light the compartment on the hull. */
-  activity(deckId) {
-    const crew = this.inDeck(deckId).length;
-    const open = this.store.openCount(deckId);
-    return Math.min(1, crew * 0.34 + Math.min(open, 4) * 0.13);
+  /** 0–1, drives how brightly a room is lit. */
+  activity(id) {
+    const crew = this.inRoom(id).length;
+    const open = this.store.openCount(id);
+    const boss = this.arcane.deck === id && this.arcane.state === 'work' ? 0.3 : 0;
+    return Math.min(1, crew * 0.26 + Math.min(open, 4) * 0.1 + boss);
   }
 
-  /** Where an agent goes next: open orders pull, home station pulls back. */
-  chooseTarget(agent) {
-    const weighted = [];
-    for (const d of DECKS) {
-      let w = 1 + this.store.openCount(d.id) * 2.2;
-      if (d.id === agent.home) w += 6;
-      if (d.id === agent.deck) w *= 0.25;
-      for (let i = 0; i < Math.round(w); i++) weighted.push(d.id);
+  /** Send anyone to a room. This is the command primitive. */
+  dispatch(agent, roomId) {
+    if (!agent || !ROOM_BY_ID[roomId] || agent.deck === roomId) return false;
+    agent.path = route(agent.deck, roomId);
+    agent.leg = 0;
+    agent.state = 'transit';
+    agent.deck = roomId;
+    agent.order = null;
+    return true;
+  }
+
+  /** ARCANE walks to the room you opened. */
+  commandTo(roomId) {
+    if (this.arcane.deck === roomId && this.arcane.state === 'work') return;
+    if (this.dispatch(this.arcane, roomId)) {
+      this.store.trace(`ARCANE → ${ROOM_BY_ID[roomId].name}`);
     }
-    return weighted.length ? pick(weighted) : agent.home;
   }
 
-  /** Advance the world. `dt` in seconds. */
+  /** Where a crew member drifts next: open orders pull, so does the commander. */
+  chooseTarget(agent) {
+    const bag = [];
+    for (const r of ROOMS) {
+      let w = 1 + this.store.openCount(r.id) * 2.4;
+      if (r.id === agent.home) w += 5;
+      if (r.id === this.arcane.deck) w += 4;
+      if (r.id === agent.deck) w *= 0.2;
+      for (let i = 0; i < Math.round(w); i++) bag.push(r.id);
+    }
+    return bag.length ? pick(bag) : agent.home;
+  }
+
   tick(dt) {
     const step = dt * this.speed;
-    for (const agent of this.agents) {
-      agent.wakeClock += step;
-      if (agent.wakeClock > 0.07) {
-        agent.wakeClock = 0;
-        agent.wake.push({ x: agent.x, y: agent.y });
-        if (agent.wake.length > 16) agent.wake.shift();
+    for (const a of this.everyone()) {
+      a.wakeClock += step;
+      if (a.wakeClock > 0.05) {
+        a.wakeClock = 0;
+        a.wake.push({ x: a.x, y: a.y });
+        if (a.wake.length > 14) a.wake.shift();
       }
-
-      if (agent.state === 'work') this.tickWork(agent, step);
-      else this.tickTransit(agent, step);
+      if (a.state === 'work') this.tickWork(a, step);
+      else this.tickTransit(a, step);
     }
   }
 
   tickWork(agent, step) {
-    // small purposeful drift around the compartment — never a jitter
     const dx = agent.tx - agent.x;
     const dy = agent.ty - agent.y;
     const dist = Math.hypot(dx, dy);
-    if (dist < 0.6) {
-      const p = interiorPoint(DECK_MAP[agent.deck]);
+    if (dist < 1.2) {
+      const p = interiorPoint(ROOM_BY_ID[agent.deck]);
       agent.tx = p.x; agent.ty = p.y;
+      agent.state = 'work';
     } else {
-      const v = 2.4 * step;
+      const v = agent.speed * 0.28 * step;
       agent.x += (dx / dist) * v;
       agent.y += (dy / dist) * v;
-      agent.heading = Math.atan2(dy, dx);
     }
 
     const open = this.store.tasks(agent.deck).find((t) => !t.done);
     agent.order = open ? open.t : null;
 
+    // ARCANE holds position until you send them somewhere
+    if (agent.kind === 'arcane') return;
+
     agent.timer -= step;
     if (agent.timer > 0) return;
-
     const target = this.chooseTarget(agent);
-    if (target === agent.deck) {
-      agent.timer = rand(6, 18);
-      return;
-    }
-    agent.path = route(agent.deck, target);
-    agent.leg = 0;
-    agent.state = 'transit';
-    agent.deck = target;
-    agent.order = null;
+    if (target === agent.deck) { agent.timer = rand(5, 15); return; }
+    this.dispatch(agent, target);
   }
 
   tickTransit(agent, step) {
-    const next = agent.path[agent.leg];
+    const next = agent.path?.[agent.leg];
     if (!next) { this.arrive(agent); return; }
     const dx = next.x - agent.x;
     const dy = next.y - agent.y;
     const dist = Math.hypot(dx, dy);
-    const v = 13 * step;
+    const v = agent.speed * step;
     if (dist <= v) {
       agent.x = next.x; agent.y = next.y;
       agent.leg += 1;
@@ -1150,98 +1612,597 @@ class Sim {
     }
     agent.x += (dx / dist) * v;
     agent.y += (dy / dist) * v;
-    agent.heading = Math.atan2(dy, dx);
   }
 
   arrive(agent) {
     agent.state = 'work';
     agent.path = null;
-    agent.timer = rand(8, 22);
-    const p = interiorPoint(DECK_MAP[agent.deck]);
+    agent.timer = rand(7, 20);
+    const p = interiorPoint(ROOM_BY_ID[agent.deck]);
     agent.tx = p.x; agent.ty = p.y;
-    this.store.trace(`${agent.name} → ${DECK_MAP[agent.deck].name}`);
+    if (agent.kind !== 'arcane') {
+      this.store.trace(`${agent.name} reached ${ROOM_BY_ID[agent.deck].name}`);
+    }
   }
 
-  /** Hit test in ship space, for clicks on the hull. */
-  agentAt(x, y, radius = 3.6) {
+  agentAt(x, y, radius = 8) {
     let best = null;
     let bestD = radius;
-    for (const a of this.agents) {
-      const d = Math.hypot(a.x - x, a.y - y);
+    for (const a of this.everyone()) {
+      const d = Math.hypot(a.x - x, a.y - (y + 5));
       if (d < bestD) { bestD = d; best = a; }
     }
     return best;
   }
 }
 
-function deckAt(x, y) {
-  return DECKS.find((d) => {
-    const [x1, y1, x2, y2] = d.rect;
-    return x >= x1 && x <= x2 && y >= y1 && y <= y2;
-  }) || null;
-}
-
-/* ==== src/render/ship.js ==== */
+/* ==== src/render/props.js ==== */
 /**
- * The hull — top-down canvas view of the ship and her crew.
- *
- * Everything is drawn in ship space (100 x 170, nose at the top) and
- * mapped to the canvas by one fitted transform, so the geometry in
- * empire.js is the single source of truth for the layout.
+ * Prop painters — the furniture that makes each room its own place.
+ * Every painter draws in raw pixel coordinates on the low-res buffer.
  */
 
 
-/** Mirrors the tokens in styles/leoos.css — keep the two in step. */
-const PAL = {
-  void: '#07070a',
-  plate: '#14141d',
-  seam: '#23232f',
-  seamLit: '#33334a',
-  ink: '#eceaf5',
-  ash: '#7e7c94',
-  faint: '#56546a',
-  arcane: '#8b5cf6',
-  arcaneLift: '#a98bff',
-  vital: '#3ecf8e',
-  flare: '#e8b64c',
-  breach: '#e5484d',
-  cyan: '#56c9f0',
-};
+const R = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x | 0, y | 0, Math.max(1, w | 0), Math.max(1, h | 0)); };
 
-const accentOf = (name) => PAL[name === 'arcane' ? 'arcane' : name] || PAL.arcane;
-
-const CHAMFER = 2.4;
-
-function chamferPath(ctx, x1, y1, x2, y2, c = CHAMFER) {
-  ctx.beginPath();
-  ctx.moveTo(x1 + c, y1);
-  ctx.lineTo(x2 - c, y1);
-  ctx.lineTo(x2, y1 + c);
-  ctx.lineTo(x2, y2 - c);
-  ctx.lineTo(x2 - c, y2);
-  ctx.lineTo(x1 + c, y2);
-  ctx.lineTo(x1, y2 - c);
-  ctx.lineTo(x1, y1 + c);
-  ctx.closePath();
+/** A slab with a lit top edge and a dark base — reads as a solid object. */
+function slab(c, x, y, w, h, top, body, base) {
+  R(c, x, y, w, h, body);
+  R(c, x, y, w, 1, top);
+  R(c, x, y + h - 1, w, 1, base || '#0b0b12');
 }
 
-class ShipView {
+const blink = (t, seed, rate = 1.6) => (Math.sin(t * rate + seed * 2.3) > 0.1);
+
+const PROPS = {
+  /* ---- command ---- */
+  viewport(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#070711');
+    for (let i = 0; i < w; i += 3) {
+      const v = Math.sin(i * 0.4 + t * 0.6);
+      R(c, x + i, y + 1, 2, h - 2, v > 0.4 ? '#1b2f52' : v > -0.2 ? '#12203a' : '#0c1526');
+    }
+    R(c, x, y, w, 1, PX.wallTop);
+    // a slow star drifting past the glass
+    R(c, x + ((t * 6) % w | 0), y + 2 + ((Math.sin(t) * 2) | 0), 1, 1, '#9fb6e8');
+  },
+  console(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, PX.wallTop, PX.wall);
+    for (let i = 0; i < 4; i++) {
+      R(c, x + 2 + i * 3, y + 2, 2, 2, blink(t, i) ? a : PX.faint);
+    }
+    R(c, x + 1, y + h - 3, w - 2, 2, '#0e1424');
+  },
+  holo(c, x, y, w, h, a, t) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const r = (w / 2) * (0.72 + Math.sin(t * 1.3) * 0.06);
+    c.fillStyle = a;
+    c.globalAlpha = 0.22;
+    c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 0.55;
+    c.beginPath(); c.arc(cx, cy, r * 0.5, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 1;
+    R(c, x, y + h - 1, w, 1, a);
+  },
+  terminal(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, PX.wallTop, PX.wall);
+    R(c, x + 1, y + 1, w - 2, h - 4, '#081018');
+    for (let i = 1; i < h - 4; i += 2) {
+      R(c, x + 2, y + 1 + i, Math.max(1, (w - 4) * (0.4 + 0.6 * Math.abs(Math.sin(i + t)))), 1, a);
+    }
+  },
+  floorlight(c, x, y, w, h, a, t) {
+    c.globalAlpha = 0.5 + Math.sin(t * 1.1) * 0.15;
+    R(c, x, y, w, h, a);
+    c.globalAlpha = 0.14;
+    R(c, x - 1, y - 2, w + 2, h + 4, a);
+    c.globalAlpha = 1;
+  },
+
+  /* ---- build ---- */
+  rack(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, PX.wallTop, '#1b1b28');
+    for (let r = 0; r < (h - 4) / 4; r++) {
+      const ry = y + 3 + r * 4;
+      R(c, x + 1, ry, w - 2, 3, '#101019');
+      R(c, x + 2, ry + 1, 1, 1, blink(t, r, 3) ? PX.vital : '#1e3a2c');
+      R(c, x + 4, ry + 1, 1, 1, blink(t, r + 7, 2.2) ? a : '#1a2a3a');
+    }
+  },
+  bench(c, x, y, w, h, a) { slab(c, x, y, w, h, '#4a4436', '#332f26'); },
+  screen(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#0a0a12');
+    R(c, x + 1, y + 1, w - 2, h - 2, '#05080f');
+    const lines = Math.max(1, (h - 3) / 2 | 0);
+    for (let i = 0; i < lines; i++) {
+      const len = (w - 4) * (0.3 + 0.7 * Math.abs(Math.sin(i * 1.7 + t * 0.8)));
+      R(c, x + 2, y + 2 + i * 2, len, 1, a);
+    }
+    c.globalAlpha = 0.18; R(c, x - 1, y - 1, w + 2, h + 2, a); c.globalAlpha = 1;
+  },
+  crate(c, x, y, w, h) {
+    slab(c, x, y, w, h, '#5a4a32', '#3d3222');
+    R(c, x + 1, y + 2, w - 2, 1, '#241d13');
+    R(c, x + 1, y + h - 3, w - 2, 1, '#241d13');
+  },
+  cable(c, x, y, w, h, a, t) {
+    for (let i = 0; i < h; i += 2) {
+      R(c, x + (Math.sin(i * 0.5 + t) > 0 ? 0 : 1), y + i, w, 2, '#1d2430');
+    }
+  },
+  plant(c, x, y, w, h) {
+    R(c, x + w / 4, y + h - 4, w / 2, 4, '#4a3a2a');
+    R(c, x + 1, y, w - 2, h - 4, '#2f6b45');
+    R(c, x + 2, y + 1, 2, 2, '#48a06a');
+    R(c, x + w - 4, y + 2, 2, 2, '#48a06a');
+  },
+
+  /* ---- broadcast ---- */
+  dish(c, x, y, w, h, a, t) {
+    const cx = x + w / 2, cy = y + h / 2;
+    c.fillStyle = '#1e1e2c';
+    c.beginPath(); c.arc(cx, cy, w / 2, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#12121c';
+    c.beginPath(); c.arc(cx, cy, w / 2 - 2, 0, Math.PI * 2); c.fill();
+    for (let i = 1; i <= 3; i++) {
+      const r = (w / 2 - 2) * ((t * 0.5 + i / 3) % 1);
+      c.globalAlpha = 0.5 * (1 - ((t * 0.5 + i / 3) % 1));
+      c.strokeStyle = a; c.lineWidth = 1;
+      c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+    }
+    c.globalAlpha = 1;
+    R(c, cx - 1, cy - 1, 2, 2, a);
+  },
+  desk(c, x, y, w, h) { slab(c, x, y, w, h, '#3e3a4e', '#282436'); },
+  mic(c, x, y, w, h, a, t) {
+    R(c, x + w / 2 - 1, y + 2, 2, h - 2, '#33333f');
+    R(c, x, y, w, 3, blink(t, 3, 1.1) ? PX.breach : '#4a2830');
+  },
+
+  /* ---- lab ---- */
+  fridge(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#3c4a5a', '#1e2733');
+    R(c, x + 2, y + 3, w - 4, h - 8, '#0d1a24');
+    for (let i = 0; i < 3; i++) R(c, x + 3, y + 5 + i * 4, w - 6, 2, blink(t, i, 0.7) ? PX.cyan : '#17384a');
+    R(c, x + w - 3, y + h / 2, 2, 4, '#5a6a7a');
+  },
+  vat(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#1a1a26');
+    R(c, x + 1, y + 1, w - 2, h - 2, '#0d0d16');
+    const lvl = h * (0.45 + Math.sin(t * 0.8 + x) * 0.06);
+    c.globalAlpha = 0.8;
+    R(c, x + 1, y + h - 1 - lvl, w - 2, lvl, a);
+    c.globalAlpha = 1;
+    R(c, x, y, w, 2, '#3a3a4e');
+    R(c, x + 2, y + h - 3 - lvl, 1, 1, '#ffffff');
+  },
+  vials(c, x, y, w, h, a, t) {
+    for (let i = 0; i < w; i += 4) {
+      R(c, x + i, y, 2, h, i % 8 === 0 ? a : PX.cyan);
+      R(c, x + i, y, 2, 1, '#cfd6ff');
+    }
+  },
+  centrifuge(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#4a4a5e', '#24242f');
+    const cx = x + w / 2, cy = y + h / 2;
+    const ang = t * 6;
+    R(c, cx + Math.cos(ang) * 3 - 1, cy + Math.sin(ang) * 3 - 1, 2, 2, a);
+    R(c, cx - Math.cos(ang) * 3 - 1, cy - Math.sin(ang) * 3 - 1, 2, 2, a);
+  },
+  conveyor(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#16161f');
+    const off = (t * 9) % 6;
+    for (let i = -6; i < w; i += 6) R(c, x + i + off, y + 1, 3, h - 2, '#262634');
+    R(c, x, y, w, 1, '#31313f');
+  },
+
+
+  /* ---- lab: racks, instruments, distribution ---- */
+  vialrack(c, x, y, w, h, a, t, opt) {
+    // GHK-Cu really is blue; most other lyophilised compounds read clear/straw.
+    const liquid = opt === 'ghk' ? '#2f7fd6' : opt === 'amber' ? '#c98f3a' : '#9fb4c8';
+    const cap = opt === 'ghk' ? '#5fa8f0' : '#d8dde8';
+    R(c, x, y + h - 3, w, 3, '#2a2a38');
+    R(c, x, y + h - 3, w, 1, '#3c3c50');
+    for (let i = 1; i < w - 2; i += 4) {
+      const vh = h - 5;
+      R(c, x + i, y + 2, 3, vh, '#0e1520');
+      R(c, x + i, y + 2 + vh * 0.38, 3, vh * 0.62, liquid);
+      R(c, x + i, y + 2 + vh * 0.38, 3, 1, cap);
+      R(c, x + i, y, 3, 2, cap);
+      R(c, x + i, y + 3 + vh * 0.4, 1, 1, '#ffffff');
+    }
+    c.globalAlpha = 0.12 + Math.sin(t * 1.4 + x) * 0.04;
+    R(c, x - 1, y - 1, w + 2, h + 2, liquid);
+    c.globalAlpha = 1;
+  },
+  microscope(c, x, y, w, h, a, t) {
+    R(c, x, y + h - 3, w, 3, '#33333f');
+    R(c, x + w / 2 - 1, y + 3, 3, h - 6, '#4a4a5c');
+    R(c, x + 1, y + 1, w - 4, 4, '#2a2a36');
+    R(c, x + 2, y + h - 6, w - 4, 2, '#1a1a24');
+    R(c, x + w / 2, y + h - 6, 1, 1, blink(t, 2, 1.2) ? a : '#26263a');
+  },
+  scales(c, x, y, w, h, a, t) {
+    R(c, x, y + h - 3, w, 3, '#3a3a48');
+    R(c, x + 1, y + 1, w - 2, h - 4, '#1e1e2a');
+    const v = (Math.sin(t * 1.7 + x) * 0.5 + 0.5);
+    for (let i = 0; i < 3; i++) R(c, x + 2 + i * 3, y + 3, 2, 1, i / 3 < v ? a : '#2c2c3c');
+  },
+  autoclave(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#4a4a5e', '#22222e');
+    const cx = x + w / 2, cy = y + h / 2 - 1;
+    c.fillStyle = '#0c1218';
+    c.beginPath(); c.arc(cx, cy, w / 3, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 0.5 + Math.sin(t * 1.1) * 0.25;
+    c.fillStyle = a;
+    c.beginPath(); c.arc(cx, cy, w / 5, 0, Math.PI * 2); c.fill();
+    c.globalAlpha = 1;
+    R(c, x + 2, y + h - 3, w - 4, 1, blink(t, 5, 0.9) ? PX.vital : '#243a30');
+  },
+  packstation(c, x, y, w, h, a, t) {
+    slab(c, x, y + h - 8, w, 8, '#4a4436', '#332f26');
+    R(c, x + 2, y + h - 16, 8, 8, '#5a4a32');
+    R(c, x + 2, y + h - 16, 8, 1, '#7a663f');
+    R(c, x + 3, y + h - 14, 6, 1, '#241d13');
+    R(c, x + 13, y + h - 13, 6, 5, '#d8d4c4');
+    R(c, x + w - 7, y + h - 15, 5, 7, '#2a2a38');
+    R(c, x + w - 6, y + h - 14, 3, 2, blink(t, 1, 1.4) ? a : '#1c2230');
+  },
+  shipbox(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#6a5636', '#43361f');
+    R(c, x + 1, y + 2, w - 2, 1, '#2a2113');
+    R(c, x + 2, y + h - 5, w - 5, 3, '#d8d4c4');
+    R(c, x + 3, y + h - 4, w - 7, 1, '#60594a');
+  },
+
+  /* ---- library ---- */
+  tallshelf(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#3e3222', '#241d14');
+    const rows = Math.floor((h - 4) / 5);
+    for (let r = 0; r < rows; r++) {
+      const ry = y + 2 + r * 5;
+      for (let i = 1; i < w - 2; i += 2) {
+        const seed = (i * 5 + r * 11 + x) % 6;
+        const col = ['#6a4a7a', '#4a5a7a', '#7a4a4a', '#4a7a5a', '#7a6a3a', '#5a4a6a'][seed];
+        const tall = (i + r) % 4 === 0 ? 4 : 3;
+        R(c, x + i, ry + (4 - tall), 2, tall, col);
+      }
+      R(c, x + 1, ry + 4, w - 2, 1, '#171009');
+    }
+  },
+  ladder(c, x, y, w, h) {
+    R(c, x, y, 2, h, '#5a4630');
+    R(c, x + w - 2, y, 2, h, '#5a4630');
+    for (let i = 3; i < h; i += 5) R(c, x, y + i, w, 1, '#6d553a');
+  },
+  readingdesk(c, x, y, w, h, a, t) {
+    slab(c, x, y + h - 7, w, 7, '#4a3a2a', '#2c2218');
+    // an open book, pages catching the lamp
+    R(c, x + 4, y + h - 13, w / 2 - 2, 6, '#e8e2cf');
+    R(c, x + w / 2 + 2, y + h - 13, w / 2 - 6, 6, '#d8d2bf');
+    R(c, x + w / 2, y + h - 13, 1, 6, '#9a937f');
+    R(c, x + w - 7, y + h - 16, 2, 9, '#3a3a48');
+    R(c, x + w - 9, y + h - 18, 6, 3, PX.flare);
+    c.globalAlpha = 0.16 + Math.sin(t * 1.2) * 0.05;
+    R(c, x + w - 14, y + h - 16, 14, 10, PX.flare);
+    c.globalAlpha = 1;
+  },
+  printer(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h - 5, '#3c3c4c', '#20202c');
+    R(c, x + 2, y + 2, w - 4, 3, '#12121a');
+    R(c, x + 3, y + 3, (w - 6) * (0.3 + 0.7 * Math.abs(Math.sin(t * 0.9))), 1, a);
+    // sheet easing out of the tray
+    const out = 3 + Math.abs(Math.sin(t * 0.6)) * 4;
+    R(c, x + 3, y + h - 5, w - 6, out, '#e4e0d2');
+    R(c, x + 4, y + h - 4, w - 9, 1, '#b3ae9e');
+  },
+  pdfstack(c, x, y, w, h, a, t) {
+    for (let i = 0; i < 4; i++) {
+      const oy = y + h - 4 - i * 3;
+      R(c, x + i, oy, w - 8, 3, i === 3 ? '#f0ece0' : '#cfc9ba');
+      R(c, x + i, oy, w - 8, 1, '#ffffff');
+    }
+    R(c, x + w - 9, y + 1, 8, h - 8, '#0c1018');
+    for (let i = 0; i < 3; i++) {
+      R(c, x + w - 8, y + 3 + i * 3, 6 * (0.4 + 0.6 * Math.abs(Math.sin(i + t))), 1, a);
+    }
+  },
+
+  /* ---- medical ---- */
+  bed(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#cdd3e0', '#7e8494');
+    R(c, x + 1, y + 2, w - 2, h - 4, '#aeb6c6');
+    R(c, x + 2, y + 3, 6, h - 6, '#dfe4ee');
+    c.globalAlpha = 0.25 + Math.sin(t * 1.4 + y) * 0.1;
+    R(c, x, y + h - 1, w, 1, a);
+    c.globalAlpha = 1;
+  },
+  monitor(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#0c1014');
+    R(c, x + 1, y + 1, w - 2, h - 2, '#060a0c');
+    const mid = y + h / 2;
+    for (let i = 0; i < w - 2; i++) {
+      const p = ((i + t * 10) % (w - 2)) / (w - 2);
+      const beat = p < 0.12 ? Math.sin(p * 26) * 3 : 0;
+      R(c, x + 1 + i, mid - beat, 1, 1, a);
+    }
+  },
+  chart(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#0a0e12');
+    R(c, x, y, w, 1, '#1e2630');
+    for (let i = 0; i < w - 2; i += 2) {
+      const v = (Math.sin(i * 0.3) + Math.sin(i * 0.11 + t * 0.3)) * 0.25 + 0.5;
+      R(c, x + 1 + i, y + h - 1 - v * (h - 3), 2, v * (h - 3), a);
+    }
+  },
+
+  /* ---- treasury ---- */
+  safe(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#4e4636', '#2a261c');
+    R(c, x + 2, y + 3, w - 4, h - 6, '#1c1912');
+    const cx = x + w / 2, cy = y + h / 2;
+    c.strokeStyle = PX.gold; c.lineWidth = 1;
+    c.beginPath(); c.arc(cx, cy, 4, 0, Math.PI * 2); c.stroke();
+    R(c, cx + Math.cos(t * 0.7) * 3 - 0.5, cy + Math.sin(t * 0.7) * 3 - 0.5, 1, 1, PX.gold);
+  },
+  bullion(c, x, y, w, h) {
+    slab(c, x, y, w, h, '#f0cd77', PX.gold, '#8a6420');
+  },
+  ledgerdesk(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#4a4034', '#2e2820');
+    for (let i = 0; i < 4; i++) R(c, x + 3 + i * 4, y + 3, 3, h - 7, '#d9cba8');
+    R(c, x + 2, y + h - 3, w - 4, 1, PX.gold);
+  },
+  pillar(c, x, y, w, h) {
+    slab(c, x, y, w, h, PX.wallTop, PX.wall, '#090910');
+  },
+
+  /* ---- archive & press ---- */
+  shelf(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#3a3020', '#241d14');
+    for (let r = 0; r < (h - 4) / 6; r++) {
+      const ry = y + 2 + r * 6;
+      for (let i = 1; i < w - 2; i += 2) {
+        const seed = (i * 7 + r * 13 + x) % 5;
+        const col = ['#6a4a7a', '#4a5a7a', '#7a4a4a', '#4a7a5a', '#7a6a3a'][seed];
+        R(c, x + i, ry, 2, 4, col);
+      }
+      R(c, x + 1, ry + 4, w - 2, 1, '#171009');
+    }
+  },
+  papers(c, x, y, w, h) {
+    for (let i = 0; i < w; i += 5) {
+      R(c, x + i, y + (i % 3), 4, h, '#d8d4c4');
+      R(c, x + i, y + (i % 3), 4, 1, '#f2eee0');
+    }
+  },
+  press(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#4a3a3a', '#2c2222');
+    R(c, x + 2, y + 3, w - 4, 4, '#141010');
+    const p = (t * 0.8) % 1;
+    R(c, x + 3, y + h - 6, (w - 6) * p, 3, a);
+    R(c, x + 2, y + h - 2, w - 4, 1, '#6a4a4a');
+  },
+  candle(c, x, y, w, h, a, t) {
+    R(c, x, y + 2, w, h - 2, '#d8d0b8');
+    const f = Math.sin(t * 9) > 0 ? 0 : 1;
+    R(c, x + 1, y - f, w - 2, 2 + f, PX.flare);
+    c.globalAlpha = 0.2; R(c, x - 2, y - 3, w + 4, h + 4, PX.flare); c.globalAlpha = 1;
+  },
+
+  /* ---- sanctum ---- */
+  rig(c, x, y, w, h, a, t) {
+    R(c, x, y + h - 3, w, 3, '#22222e');
+    R(c, x + 2, y, 3, h - 3, '#2e2e3c');
+    R(c, x + w - 5, y, 3, h - 3, '#2e2e3c');
+    R(c, x + 2, y + 3, w - 4, 2, '#4a4a5a');
+    R(c, x, y + 6, 4, 4, '#1a1a24'); R(c, x + w - 4, y + 6, 4, 4, '#1a1a24');
+  },
+  mat(c, x, y, w, h, a) {
+    R(c, x, y, w, h, '#1e3a30');
+    R(c, x + 1, y + 1, w - 2, h - 2, '#24483a');
+    R(c, x + w / 2 - 1, y + 2, 2, h - 4, '#2f6b45');
+  },
+};
+
+function paintProp(ctx, type, x, y, w, h, accent, t, opt) {
+  const fn = PROPS[type];
+  if (fn) fn(ctx, x, y, w, h, accent, t, opt);
+  else slab(ctx, x, y, w, h, PX.wallTop, PX.wall);
+}
+
+/* ==== src/render/sprites.js ==== */
+/**
+ * Pixel sprites. Each is a character matrix baked once into a tiny
+ * canvas and then blitted, so a crowded room costs almost nothing.
+ *
+ *   o outline   c main colour   d shade   l highlight   e visor glow
+ *   . transparent
+ */
+
+/** Crew: 7 x 11, two-frame walk. */
+const CREW_A = [
+  '..ooo..',
+  '..ooo..',
+  '..eee..',
+  '..ccc..',
+  '.ccccc.',
+  'occccco',
+  '.ccccc.',
+  '..ddd..',
+  '..d.d..',
+  '..o.o..',
+  '.oo.oo.',
+];
+
+const CREW_B = [
+  '..ooo..',
+  '..ooo..',
+  '..eee..',
+  '..ccc..',
+  '.ccccc.',
+  'occccco',
+  '.ccccc.',
+  '..ddd..',
+  '..dd...',
+  '..o.oo.',
+  '.oo..o.',
+];
+
+/** ARCANE: 9 x 13, cloaked, a head taller than the crew. */
+const ARCANE_A = [
+  '...ooo...',
+  '..olllo..',
+  '..oeeeo..',
+  '...lll...',
+  '..ccccc..',
+  '.ccccccc.',
+  'lcccccccl',
+  'lcccccccl',
+  '.lcccccl.',
+  '..ddddd..',
+  '..dd.dd..',
+  '..o...o..',
+  '.oo...oo.',
+];
+
+const ARCANE_B = [
+  '...ooo...',
+  '..olllo..',
+  '..oeeeo..',
+  '...lll...',
+  '..ccccc..',
+  '.ccccccc.',
+  'lcccccccl',
+  'lcccccccl',
+  '.lcccccl.',
+  '..ddddd..',
+  '..dddd...',
+  '..o..o...',
+  '.oo..oo..',
+];
+
+const cache = new Map();
+
+function shade(hex, mul) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v) => Math.max(0, Math.min(255, Math.round(v * mul)));
+  return `rgb(${f((n >> 16) & 255)}, ${f((n >> 8) & 255)}, ${f(n & 255)})`;
+}
+
+function bake(matrix, colour, visor) {
+  const w = matrix[0].length;
+  const h = matrix.length;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const c = cv.getContext('2d');
+  const pal = {
+    o: '#07070c',
+    c: colour,
+    d: shade(colour, 0.62),
+    l: shade(colour, 1.45),
+    e: visor,
+  };
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const ch = matrix[y][x];
+      if (ch === '.' || !pal[ch]) continue;
+      c.fillStyle = pal[ch];
+      c.fillRect(x, y, 1, 1);
+    }
+  }
+  return cv;
+}
+
+/** A baked sprite canvas for this colour + frame. */
+function sprite(kind, colour, frame) {
+  const key = `${kind}|${colour}|${frame}`;
+  let cv = cache.get(key);
+  if (cv) return cv;
+  const matrix = kind === 'arcane'
+    ? (frame ? ARCANE_B : ARCANE_A)
+    : (frame ? CREW_B : CREW_A);
+  const visor = kind === 'arcane' ? '#ffffff' : shade(colour, 1.9);
+  cv = bake(matrix, colour, visor);
+  cache.set(key, cv);
+  return cv;
+}
+
+const SPRITE_SIZE = {
+  crew: { w: 7, h: 11 },
+  arcane: { w: 9, h: 13 },
+};
+
+/**
+ * Draw a sprite centred on its feet at (x, y) in pixel space.
+ * `phase` drives the two-frame walk; pass 0 to stand still.
+ */
+function drawSprite(ctx, kind, colour, x, y, phase, opts = {}) {
+  const size = SPRITE_SIZE[kind] || SPRITE_SIZE.crew;
+  const frame = phase > 0 && Math.floor(phase) % 2 === 1 ? 1 : 0;
+  const cv = sprite(kind, colour, frame);
+  const px = Math.round(x - size.w / 2);
+  const py = Math.round(y - size.h);
+
+  if (opts.glow) {
+    ctx.globalAlpha = opts.glow;
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.ellipse(Math.round(x), Math.round(y) - 1, size.w * 0.9, size.h * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // contact shadow keeps the figure on the floor instead of floating
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(px + 1, Math.round(y) - 1, size.w - 2, 1);
+  ctx.globalAlpha = 1;
+
+  ctx.drawImage(cv, px, py);
+}
+
+/* ==== src/render/factory.js ==== */
+/**
+ * THE FACTORY — the pixel view.
+ *
+ * Everything is painted into a 240x360 offscreen buffer at 1:1, then
+ * blitted to the visible canvas at an integer scale with smoothing off.
+ * That is what makes the pixels crisp instead of soupy. Text labels are
+ * drawn afterwards at display resolution so they stay readable.
+ */
+
+
+
+
+const ACCENT = {
+  arcane: PX.arcane, cyan: PX.cyan, vital: PX.vital,
+  flare: PX.flare, breach: PX.breach, gold: PX.gold, rose: PX.rose,
+};
+const accentOf = (name) => ACCENT[name] || PX.arcane;
+
+const fill = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x | 0, y | 0, Math.max(1, w | 0), Math.max(1, h | 0)); };
+
+class Factory {
   constructor(canvas, sim, store) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.sim = sim;
     this.store = store;
-    this.selected = null;      // deck id
-    this.selectedAgent = null; // agent id
-    this.hover = null;         // {kind, id, sx, sy}
-    this.sweep = 0;
+
+    this.buf = document.createElement('canvas');
+    this.buf.width = PW;
+    this.buf.height = PH;
+    this.bctx = this.buf.getContext('2d');
+
+    this.selected = null;
+    this.hover = null;
     this.t = 0;
-    this.stars = Array.from({ length: 150 }, () => ({
-      x: Math.random() * 140 - 20,
-      y: Math.random() * 210 - 20,
-      r: Math.random() * 0.55 + 0.12,
-      a: Math.random() * 0.5 + 0.12,
-      drift: Math.random() * 0.5 + 0.2,
+    this.stars = Array.from({ length: 90 }, () => ({
+      x: Math.random() * PW, y: Math.random() * PH,
+      a: Math.random() * 0.6 + 0.15, s: Math.random() * 0.4 + 0.1,
     }));
     this.resize();
   }
@@ -1256,538 +2217,996 @@ class ShipView {
     this.dpr = dpr;
     this.w = w;
     this.h = h;
-    const pad = 16;
-    this.scale = Math.min((w - pad * 2) / 100, (h - pad * 2) / 170);
-    this.ox = (w - 100 * this.scale) / 2;
-    this.oy = (h - 170 * this.scale) / 2;
+    // integer scale keeps every pixel square
+    this.scale = Math.max(1, Math.floor(Math.min((w - 16) / PW, (h - 16) / PH) * dpr) / dpr);
+    this.ox = (w - PW * this.scale) / 2;
+    this.oy = (h - PH * this.scale) / 2;
   }
 
-  sx(x) { return this.ox + x * this.scale; }
-  sy(y) { return this.oy + y * this.scale; }
-  /** Canvas coordinates (CSS pixels) back into ship space. */
-  toShip(px, py) {
-    return { x: (px - this.ox) / this.scale, y: (py - this.oy) / this.scale };
+  /** Display (CSS px, canvas-relative) -> pixel space. */
+  toPixel(cx, cy) {
+    return { x: (cx - this.ox) / this.scale, y: (cy - this.oy) / this.scale };
+  }
+
+  roomAt(x, y) {
+    return ROOMS.find((r) => {
+      const [x1, y1, x2, y2] = r.rect;
+      return x >= x1 - 2 && x <= x2 + 2 && y >= y1 - 2 && y <= y2 + 2;
+    }) || null;
   }
 
   draw(dt) {
-    const ctx = this.ctx;
     this.t += dt;
-    this.sweep = (this.sweep + dt * 0.42) % (Math.PI * 2);
+    const b = this.bctx;
 
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.clearRect(0, 0, this.w, this.h);
-    ctx.fillStyle = PAL.void;
-    ctx.fillRect(0, 0, this.w, this.h);
+    b.clearRect(0, 0, PW, PH);
+    fill(b, 0, 0, PW, PH, PX.space);
+    this.drawStars(b);
+    this.drawShell(b);
+    this.drawCorridors(b);
+    for (const room of ROOMS) this.drawRoom(b, room);
+    this.drawCrew(b);
 
-    this.drawStars();
-    this.drawHull();
-    this.drawEngines();
-    this.drawCorridors();
-    for (const deck of DECKS) this.drawDeck(deck);
-    this.drawSweep();
-    this.drawWakes();
-    for (const agent of this.sim.agents) this.drawAgent(agent);
+    // blit
+    const c = this.ctx;
+    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    c.clearRect(0, 0, this.w, this.h);
+    c.fillStyle = PX.space;
+    c.fillRect(0, 0, this.w, this.h);
+    c.imageSmoothingEnabled = false;
+    c.drawImage(this.buf, this.ox, this.oy, PW * this.scale, PH * this.scale);
+
+    this.drawLabels(c);
   }
 
-  drawStars() {
-    const ctx = this.ctx;
+  drawStars(b) {
     for (const s of this.stars) {
-      const y = ((s.y + this.t * s.drift) % 210) - 20;
-      const tw = 0.75 + Math.sin(this.t * s.drift * 3 + s.x) * 0.25;
-      ctx.globalAlpha = s.a * tw;
-      ctx.fillStyle = '#c9c4e8';
-      ctx.beginPath();
-      ctx.arc(this.sx(s.x), this.sy(y), s.r * this.scale * 0.5, 0, Math.PI * 2);
-      ctx.fill();
+      const y = (s.y + this.t * s.s) % PH;
+      b.globalAlpha = s.a * (0.7 + Math.sin(this.t * 2 + s.x) * 0.3);
+      fill(b, s.x, y, 1, 1, '#b9b4dd');
     }
-    ctx.globalAlpha = 1;
+    b.globalAlpha = 1;
   }
 
-  hullPath() {
-    const ctx = this.ctx;
-    ctx.beginPath();
-    SHIP.hull.forEach(([x, y], i) => {
-      const px = this.sx(x);
-      const py = this.sy(y);
-      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    });
-    ctx.closePath();
-  }
-
-  drawHull() {
-    const ctx = this.ctx;
-
-    // outer bloom
-    ctx.save();
-    this.hullPath();
-    ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
-    ctx.shadowBlur = 34;
-    ctx.fillStyle = 'rgba(20, 20, 29, 0.95)';
-    ctx.fill();
-    ctx.restore();
-
-    // deck plating gradient
-    const g = ctx.createLinearGradient(0, this.sy(0), 0, this.sy(170));
-    g.addColorStop(0, 'rgba(32, 28, 52, 0.95)');
-    g.addColorStop(0.55, 'rgba(17, 17, 26, 0.95)');
-    g.addColorStop(1, 'rgba(12, 12, 19, 0.95)');
-    this.hullPath();
-    ctx.fillStyle = g;
-    ctx.fill();
-
-    // plating seams
-    ctx.save();
-    this.hullPath();
-    ctx.clip();
-    ctx.strokeStyle = 'rgba(255,255,255,0.028)';
-    ctx.lineWidth = 1;
-    for (let y = 10; y < 170; y += 8) {
-      ctx.beginPath();
-      ctx.moveTo(this.sx(0), this.sy(y));
-      ctx.lineTo(this.sx(100), this.sy(y));
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // hull line
-    this.hullPath();
-    ctx.strokeStyle = 'rgba(139, 92, 246, 0.55)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-
-  drawEngines() {
-    const ctx = this.ctx;
-    const pulse = 0.55 + Math.sin(this.t * 2.1) * 0.18;
-    for (const x of [44, 50, 56]) {
-      const px = this.sx(x);
-      const py = this.sy(158);
-      const r = this.scale * (x === 50 ? 4.6 : 3.2);
-      const g = ctx.createRadialGradient(px, py, 0, px, py, r * 2.4);
-      g.addColorStop(0, `rgba(169, 139, 255, ${0.75 * pulse})`);
-      g.addColorStop(0.4, `rgba(139, 92, 246, ${0.32 * pulse})`);
-      g.addColorStop(1, 'rgba(139, 92, 246, 0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(px, py, r * 2.4, 0, Math.PI * 2);
-      ctx.fill();
+  /** The station's outer plating. */
+  drawShell(b) {
+    fill(b, 6, 4, PW - 12, PH - 8, PX.hullDark);
+    fill(b, 6, 4, PW - 12, 2, PX.hullLit);
+    fill(b, 6, PH - 6, PW - 12, 2, '#08080e');
+    fill(b, 6, 4, 2, PH - 8, PX.hull);
+    fill(b, PW - 8, 4, 2, PH - 8, PX.hull);
+    // corner bolts
+    for (const [x, y] of [[9, 7], [PW - 13, 7], [9, PH - 11], [PW - 13, PH - 11]]) {
+      fill(b, x, y, 2, 2, PX.wallTop);
     }
   }
 
-  drawCorridors() {
-    const ctx = this.ctx;
-    const spine = SHIP.spine;
-    ctx.lineCap = 'round';
-
-    // corridor floor
-    ctx.strokeStyle = 'rgba(139, 92, 246, 0.10)';
-    ctx.lineWidth = this.scale * 3.4;
-    ctx.beginPath();
-    ctx.moveTo(this.sx(spine[0][0]), this.sy(spine[0][1]));
-    for (const [x, y] of spine.slice(1)) ctx.lineTo(this.sx(x), this.sy(y));
-    ctx.stroke();
-    for (const d of DECKS) {
-      const node = spine[d.spine];
-      ctx.beginPath();
-      ctx.moveTo(this.sx(d.door[0]), this.sy(d.door[1]));
-      ctx.lineTo(this.sx(node[0]), this.sy(node[1]));
-      ctx.stroke();
+  drawCorridors(b) {
+    for (const [x1, y1, x2, y2] of corridors()) {
+      fill(b, x1, y1, x2 - x1, y2 - y1, PX.floor);
+      // grating
+      for (let y = y1; y < y2; y += 4) fill(b, x1, y, x2 - x1, 1, PX.grate);
+      fill(b, x1, y1, 1, y2 - y1, '#24243a');
+      fill(b, x2 - 1, y1, 1, y2 - y1, '#24243a');
     }
+    // centre guide line down the spine, pulsing toward the bridge
+    for (let y = 50; y < 344; y += 6) {
+      const p = ((this.t * 14 + y) % 90) / 90;
+      b.globalAlpha = 0.25 + (1 - p) * 0.5;
+      fill(b, SPINE_X - 1, y, 2, 3, PX.arcane);
+    }
+    b.globalAlpha = 1;
 
-    // centre guide
-    ctx.strokeStyle = 'rgba(139, 92, 246, 0.30)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([this.scale * 1.6, this.scale * 2.4]);
-    ctx.beginPath();
-    ctx.moveTo(this.sx(spine[0][0]), this.sy(spine[0][1]));
-    for (const [x, y] of spine.slice(1)) ctx.lineTo(this.sx(x), this.sy(y));
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // junction nodes
-    for (const [x, y] of spine) {
-      ctx.fillStyle = 'rgba(169, 139, 255, 0.45)';
-      ctx.beginPath();
-      ctx.arc(this.sx(x), this.sy(y), Math.max(1.5, this.scale * 0.6), 0, Math.PI * 2);
-      ctx.fill();
+    for (const r of ROOMS) {
+      if (r.door[0] === SPINE_X) continue;
+      const x = r.door[0] < SPINE_X ? r.door[0] : r.door[0] - 2;
+      b.globalAlpha = 0.55 + Math.sin(this.t * 2 + r.door[1]) * 0.2;
+      fill(b, x, r.door[1] - 6, 2, 12, ACCENT[r.accent] || PX.arcane);
+      b.globalAlpha = 1;
     }
   }
 
-  drawDeck(deck) {
-    const ctx = this.ctx;
-    const [x1, y1, x2, y2] = deck.rect;
-    const accent = accentOf(deck.accent);
-    const act = this.sim.activity(deck.id);
-    const isSel = this.selected === deck.id;
-    const isHover = this.hover?.kind === 'deck' && this.hover.id === deck.id;
+  drawRoom(b, room) {
+    const [x1, y1, x2, y2] = room.rect;
+    const w = x2 - x1;
+    const h = y2 - y1;
+    const accent = accentOf(room.accent);
+    const sel = this.selected === room.id;
+    const hov = this.hover === room.id;
+    const act = this.sim.activity(room.id);
 
-    // sweep lighting — compartments brighten as the scan passes over them
-    const cx = (x1 + x2) / 2;
-    const cy = (y1 + y2) / 2;
-    let ang = Math.atan2(cy - 88, cx - 50) - this.sweep;
-    ang = Math.atan2(Math.sin(ang), Math.cos(ang));
-    const lit = Math.max(0, 1 - Math.abs(ang) / 0.85) * 0.5;
+    // floor
+    fill(b, x1, y1, w, h, PX.floor);
+    this.paintFloor(b, room, x1, y1, w, h, accent);
 
-    const px1 = this.sx(x1), py1 = this.sy(y1), px2 = this.sx(x2), py2 = this.sy(y2);
+    // ambient light from the room's own colour
+    b.globalAlpha = 0.05 + act * 0.10 + (sel ? 0.09 : 0);
+    fill(b, x1, y1, w, h, accent);
+    b.globalAlpha = 1;
 
-    ctx.save();
-    if (isSel) {
-      ctx.shadowColor = accent;
-      ctx.shadowBlur = 22;
+    // props
+    b.save();
+    b.beginPath();
+    b.rect(x1, y1, w, h);
+    b.clip();
+    for (const [type, px, py, pw, ph, opt] of room.props) {
+      paintProp(b, type, x1 + px, y1 + py, pw, ph, accent, this.t, opt);
     }
-    chamferPath(ctx, px1, py1, px2, py2, CHAMFER * this.scale);
-    ctx.fillStyle = `rgba(11, 11, 18, ${0.86 + act * 0.06})`;
-    ctx.fill();
-    ctx.restore();
+    b.restore();
 
-    // activity wash
-    chamferPath(ctx, px1, py1, px2, py2, CHAMFER * this.scale);
-    ctx.fillStyle = hexA(accent, 0.05 + act * 0.16 + lit * 0.06);
-    ctx.fill();
+    // walls, with a gap where the door is
+    this.drawWalls(b, room, accent, sel || hov);
+  }
 
-    // walls
-    chamferPath(ctx, px1, py1, px2, py2, CHAMFER * this.scale);
-    ctx.strokeStyle = isSel ? accent
-      : isHover ? hexA(accent, 0.8)
-      : hexA(accent, 0.3 + act * 0.3 + lit * 0.25);
-    ctx.lineWidth = isSel ? 2 : 1.2;
-    ctx.stroke();
-
-    // door notch
-    ctx.strokeStyle = hexA(accent, 0.85);
-    ctx.lineWidth = 2.5;
-    const dv = deck.door[0] === 50; // bridge opens along the spine
-    ctx.beginPath();
-    if (dv) {
-      ctx.moveTo(this.sx(deck.door[0] - 2.4), this.sy(deck.door[1]));
-      ctx.lineTo(this.sx(deck.door[0] + 2.4), this.sy(deck.door[1]));
+  paintFloor(b, room, x1, y1, w, h, accent) {
+    if (room.floor === 'grid') {
+      for (let x = 0; x < w; x += 8) fill(b, x1 + x, y1, 1, h, '#181824');
+      for (let y = 0; y < h; y += 8) fill(b, x1, y1 + y, w, 1, '#181824');
+    } else if (room.floor === 'plate') {
+      for (let y = 0; y < h; y += 6) {
+        for (let x = (y / 6) % 2 ? 0 : 6; x < w; x += 12) {
+          fill(b, x1 + x, y1 + y, 5, 5, '#171722');
+        }
+      }
     } else {
-      ctx.moveTo(this.sx(deck.door[0]), this.sy(deck.door[1] - 2.4));
-      ctx.lineTo(this.sx(deck.door[0]), this.sy(deck.door[1] + 2.4));
-    }
-    ctx.stroke();
-
-    // label + open-order count
-    const pad = this.scale * 2.6;
-    const open = this.store.openCount(deck.id);
-    const countText = open ? String(open).padStart(2, '0') : '--';
-    let fs = Math.max(7, Math.min(11, this.scale * 1.55));
-
-    ctx.textBaseline = 'top';
-    ctx.font = `${Math.max(7, fs * 0.92)}px 'IBM Plex Mono', monospace`;
-    const countW = ctx.measureText(countText).width;
-
-    // The narrow aft compartments have long names — shrink to fit the wall.
-    const room = (px2 - px1) - pad * 2 - countW - this.scale * 1.6;
-    ctx.font = `600 ${fs}px 'Chakra Petch', sans-serif`;
-    while (fs > 6 && ctx.measureText(deck.name).width > room) {
-      fs -= 0.5;
-      ctx.font = `600 ${fs}px 'Chakra Petch', sans-serif`;
-    }
-
-    ctx.textAlign = 'left';
-    ctx.fillStyle = isSel ? PAL.ink : hexA(PAL.ink, 0.72);
-    ctx.fillText(deck.name, px1 + pad, py1 + pad);
-
-    ctx.textAlign = 'right';
-    ctx.font = `${Math.max(7, fs * 0.92)}px 'IBM Plex Mono', monospace`;
-    ctx.fillStyle = open ? hexA(accent, 0.95) : hexA(PAL.faint, 0.9);
-    ctx.fillText(countText, px2 - pad, py1 + pad);
-
-    // crew count along the bottom wall
-    const crew = this.sim.inDeck(deck.id).length;
-    if (crew && this.scale > 1.3) {
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'bottom';
-      ctx.font = `${Math.max(6.5, fs * 0.82)}px 'IBM Plex Mono', monospace`;
-      ctx.fillStyle = hexA(PAL.ash, 0.85);
-      ctx.fillText(`${crew} crew`, px1 + pad, py2 - pad * 0.8);
+      fill(b, x1, y1, w, h, '#141420');
+      for (let y = 0; y < h; y += 10) fill(b, x1, y1 + y, w, 1, '#1a1a28');
     }
   }
 
-  drawSweep() {
-    const ctx = this.ctx;
-    const cx = this.sx(50);
-    const cy = this.sy(88);
-    const r = this.scale * 105;
-    ctx.save();
-    this.hullPath();
-    ctx.clip();
-    const g = ctx.createConicGradient
-      ? ctx.createConicGradient(this.sweep, cx, cy)
-      : null;
-    if (g) {
-      g.addColorStop(0, 'rgba(139, 92, 246, 0.16)');
-      g.addColorStop(0.06, 'rgba(139, 92, 246, 0.0)');
-      g.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fill();
+  drawWalls(b, room, accent, lit) {
+    const [x1, y1, x2, y2] = room.rect;
+    const [dx, dy] = room.door;
+    const gap = 14;
+    const wallCol = lit ? accent : PX.wall;
+    const topCol = lit ? accent : PX.wallTop;
+
+    const seg = (x, y, w, h, col) => fill(b, x, y, w, h, col);
+
+    // top / bottom
+    if (dy === y1 || dy === y2) {
+      const half = (x2 - x1 - gap) / 2;
+      const yy = dy === y1 ? y1 - 2 : y2;
+      seg(x1 - 2, yy, half + 2, 2, wallCol);
+      seg(dx + gap / 2, yy, half + 2, 2, wallCol);
+      seg(x1 - 2, dy === y1 ? y1 : y2 - 2, x2 - x1 + 4, 2, dy === y1 ? wallCol : topCol);
     }
-    ctx.strokeStyle = 'rgba(169, 139, 255, 0.22)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(this.sweep) * r, cy + Math.sin(this.sweep) * r);
-    ctx.stroke();
-    ctx.restore();
+    seg(x1 - 2, y1 - 2, x2 - x1 + 4, 2, topCol);
+    seg(x1 - 2, y2, x2 - x1 + 4, 2, wallCol);
+
+    // left / right, opening for a side door
+    const sideGap = (yy) => yy > dy - gap / 2 && yy < dy + gap / 2;
+    for (let yy = y1 - 2; yy < y2 + 2; yy++) {
+      if (dx === x1 && sideGap(yy)) { /* doorway */ } else seg(x1 - 2, yy, 2, 1, wallCol);
+      if (dx === x2 && sideGap(yy)) { /* doorway */ } else seg(x2, yy, 2, 1, wallCol);
+    }
+
+    // re-cut a top doorway after the horizontal passes
+    if (dy === y1 || dy === y2) {
+      const yy = dy === y1 ? y1 - 2 : y2;
+      fill(b, dx - gap / 2, yy, gap, 2, PX.floor);
+    }
+
+    // door frame lights
+    const lx = dx === x1 ? x1 - 2 : dx === x2 ? x2 : dx - gap / 2;
+    if (dx === x1 || dx === x2) {
+      fill(b, lx, dy - gap / 2 - 1, 2, 1, accent);
+      fill(b, lx, dy + gap / 2, 2, 1, accent);
+    } else {
+      fill(b, dx - gap / 2 - 1, dy === y1 ? y1 - 2 : y2, 1, 2, accent);
+      fill(b, dx + gap / 2, dy === y1 ? y1 - 2 : y2, 1, 2, accent);
+    }
   }
 
-  drawWakes() {
-    const ctx = this.ctx;
+  drawCrew(b) {
+    // trails first so sprites sit on top
     for (const a of this.sim.agents) {
-      if (a.wake.length < 2) continue;
+      if (a.state !== 'transit') continue;
       for (let i = 1; i < a.wake.length; i++) {
-        const p = a.wake[i - 1];
-        const q = a.wake[i];
-        ctx.strokeStyle = hexA(PAL.arcaneLift, (i / a.wake.length) * 0.24);
-        ctx.lineWidth = Math.max(0.8, this.scale * 0.38);
-        ctx.beginPath();
-        ctx.moveTo(this.sx(p.x), this.sy(p.y));
-        ctx.lineTo(this.sx(q.x), this.sy(q.y));
-        ctx.stroke();
+        b.globalAlpha = (i / a.wake.length) * 0.18;
+        fill(b, a.wake[i].x, a.wake[i].y - 1, 1, 1, a.colour);
       }
     }
-  }
+    b.globalAlpha = 1;
 
-  drawAgent(agent) {
-    const ctx = this.ctx;
-    const px = this.sx(agent.x);
-    const py = this.sy(agent.y);
-    const r = Math.max(2.4, this.scale * 1.05);
-    const sel = this.selectedAgent === agent.id;
-    const hov = this.hover?.kind === 'agent' && this.hover.id === agent.id;
-    const colour = agent.state === 'transit' ? PAL.arcaneLift : PAL.ink;
+    const all = [...this.sim.agents];
+    if (this.sim.arcane) all.push(this.sim.arcane);
+    all.sort((p, q) => p.y - q.y);
 
-    // halo
-    const g = ctx.createRadialGradient(px, py, 0, px, py, r * 4);
-    g.addColorStop(0, hexA(PAL.arcaneLift, 0.5));
-    g.addColorStop(1, 'rgba(139, 92, 246, 0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(px, py, r * 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // body
-    ctx.fillStyle = colour;
-    ctx.beginPath();
-    ctx.arc(px, py, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // heading pip
-    ctx.strokeStyle = hexA(PAL.arcaneLift, 0.9);
-    ctx.lineWidth = Math.max(1, this.scale * 0.3);
-    ctx.beginPath();
-    ctx.moveTo(px, py);
-    ctx.lineTo(px + Math.cos(agent.heading) * r * 2.1, py + Math.sin(agent.heading) * r * 2.1);
-    ctx.stroke();
-
-    if (sel || hov) {
-      ctx.strokeStyle = PAL.arcaneLift;
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.arc(px, py, r * 3, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.font = `${Math.max(7.5, this.scale * 1.25)}px 'IBM Plex Mono', monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillStyle = PAL.ink;
-      ctx.fillText(agent.name, px, py - r * 3.4);
+    for (const a of all) {
+      const moving = a.state === 'transit';
+      drawSprite(
+        b,
+        a.kind || 'crew',
+        a.colour,
+        a.x,
+        a.y,
+        moving ? this.t * 7 : 0,
+        { glow: a.kind === 'arcane' ? 0.20 : (moving ? 0.10 : 0.06) },
+      );
     }
   }
-}
 
-/** #rrggbb + alpha → rgba() */
-function hexA(hex, a) {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+  /** Name plates, drawn crisp on top of the blitted pixels. */
+  drawLabels(c) {
+    const all = [...this.sim.agents];
+    if (this.sim.arcane) all.push(this.sim.arcane);
+
+    c.textAlign = 'center';
+    c.textBaseline = 'bottom';
+
+    for (const a of all) {
+      const isArcane = a.kind === 'arcane';
+      const show = isArcane || this.hover === a.deck || this.selected === a.deck
+        || this.sim.selectedAgent === a.id || this.scale >= 3;
+      if (!show) continue;
+
+      const x = this.ox + a.x * this.scale;
+      const y = this.oy + (a.y - (isArcane ? 15 : 13)) * this.scale;
+      const size = Math.max(8, Math.min(12, this.scale * 2.6));
+      c.font = `600 ${size}px 'Chakra Petch', sans-serif`;
+      const label = `${isArcane ? '◆' : '•'} ${a.name}`;
+      const tw = c.measureText(label).width;
+
+      c.fillStyle = 'rgba(7, 7, 12, 0.82)';
+      c.fillRect(x - tw / 2 - 5, y - size - 3, tw + 10, size + 6);
+      c.fillStyle = a.colour;
+      c.fillRect(x - tw / 2 - 5, y + 2, tw + 10, 1);
+      c.fillStyle = isArcane ? '#ffffff' : a.colour;
+      c.fillText(label, x, y + 1);
+    }
+
+    // every room wears its name, so the floor reads without hovering
+    const focus = this.hover || this.selected;
+    const plate = Math.max(7, Math.min(10, this.scale * 2.2));
+    c.textAlign = 'left';
+    c.font = `600 ${plate}px 'Chakra Petch', sans-serif`;
+    c.letterSpacing = '1px';
+    for (const r of ROOMS) {
+      if (r.id === focus) continue;
+      const [x1, y1] = r.rect;
+      const x = this.ox + (x1 + 3) * this.scale;
+      const y = this.oy + (y1 + 3) * this.scale + plate;
+      const tw = c.measureText(r.name).width;
+      c.fillStyle = 'rgba(7, 7, 12, 0.62)';
+      c.fillRect(x - 2, y - plate - 1, tw + 5, plate + 4);
+      c.fillStyle = accentOf(r.accent);
+      c.globalAlpha = 0.72;
+      c.fillText(r.name, x, y);
+      c.globalAlpha = 1;
+    }
+    c.letterSpacing = '0px';
+    c.textAlign = 'center';
+
+    // the focused room gets the full plate
+    const room = ROOMS.find((r) => r.id === focus);
+    if (room) {
+      const [x1, y1, x2] = room.rect;
+      const x = this.ox + ((x1 + x2) / 2) * this.scale;
+      const y = this.oy + (y1 - 5) * this.scale;
+      const size = Math.max(9, Math.min(13, this.scale * 2.8));
+      c.font = `700 ${size}px 'Chakra Petch', sans-serif`;
+      c.letterSpacing = '2px';
+      const tw = c.measureText(room.name).width;
+      c.fillStyle = 'rgba(7, 7, 12, 0.88)';
+      c.fillRect(x - tw / 2 - 7, y - size - 4, tw + 14, size + 7);
+      c.fillStyle = accentOf(room.accent);
+      c.fillText(room.name, x, y);
+      c.letterSpacing = '0px';
+    }
+  }
 }
 
 /* ==== src/render/ui.js ==== */
 /**
- * The panels — deck rail, readouts, dashboard, inspectors, counsel.
- * Pure DOM. The canvas owns the ship; this owns everything around it.
+ * The panels — navigation, screens, room dashboards, telemetry.
+ * The canvas owns the floor; this owns everything around and over it.
  */
 
 
+
+
 const $ = (sel, root = document) => root.querySelector(sel);
-const deckById = Object.fromEntries(DECKS.map((d) => [d.id, d]));
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
 ));
 
+const money = (n, dp = 0) => `£${Number(n || 0).toLocaleString('en-GB', {
+  minimumFractionDigits: dp, maximumFractionDigits: dp,
+})}`;
+
+const num = (n) => Number(n || 0).toLocaleString('en-GB');
+const clockTime = (ts) => new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+const stamp = (d = new Date()) => `${String(d.getDate()).padStart(2, '0')} ${
+  d.toLocaleString('en-GB', { month: 'short' }).toUpperCase()} · ${
+  d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+
 const PLATFORM_CLASS = {
   TikTok: 'breach', Threads: 'arcane', X: 'ash',
   Instagram: 'arcane', Email: 'flare', Thread: 'arcane', Short: 'breach',
 };
-const platformClass = (p) => PLATFORM_CLASS[p] || 'ash';
 
-const money = (n) => `£${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
-
-const clockTime = (ts) => new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-/** Ship's date — a real, readable stamp, not a sci-fi gimmick. */
-function stardate(d = new Date()) {
-  const day = String(d.getDate()).padStart(2, '0');
-  const mon = d.toLocaleString('en-GB', { month: 'short' }).toUpperCase();
-  return `${day} ${mon} ${d.getFullYear()} · ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+/** A labelled progress bar. `pct` is 0–1. */
+function meter(pct, accent) {
+  const w = Math.round(Math.max(0, Math.min(1, pct)) * 100);
+  return `<div class="meter"><div class="meter-fill is-${accent}" style="width:${w}%"></div></div>`;
 }
 
 class UI {
-  constructor(store, sim, shipView) {
+  constructor(store, sim, factory) {
     this.store = store;
     this.sim = sim;
-    this.ship = shipView;
-    this.view = { kind: 'overview' };
+    this.factory = factory;
+    this.screen = 'factory';
+    this.room = null;
+    this.agent = null;
     this.counsel = [];
     this.counselBusy = false;
     this.sampler = null;
     this.mount();
   }
 
-  /* ---------------- structure ---------------- */
+  /* ================= structure ================= */
 
   mount() {
-    $('#brandName').textContent = SHIP.name;
-    $('#brandVer').textContent = SHIP.designation;
+    $('#brandName').textContent = OPERATOR.brand;
+    $('#brandVer').textContent = OPERATOR.system;
+
     this.railEl = $('#rail');
+    this.stageEl = $('#stageScreen');
+    this.canvasWrap = $('#stageCanvas');
+    this.overlayEl = $('#roomOverlay');
     this.dashEl = $('#dash');
     this.tickerEl = $('#tickerLine');
     this.tickerTime = $('#tickerTime');
+
     this.buildRail();
 
-    this.dashEl.addEventListener('click', (e) => this.onDashClick(e));
-    this.dashEl.addEventListener('submit', (e) => this.onDashSubmit(e));
-    this.dashEl.addEventListener('change', (e) => this.onDashChange(e));
-    this.dashEl.addEventListener('focusout', () => {
-      if (this.dashDirty) setTimeout(() => this.renderDash(), 0);
-    });
+    for (const el of [this.stageEl, this.dashEl, this.overlayEl]) {
+      el.addEventListener('click', (e) => this.onClick(e));
+      el.addEventListener('submit', (e) => this.onSubmit(e));
+      el.addEventListener('change', (e) => this.onChange(e));
+      el.addEventListener('focusout', () => {
+        if (this.dirty) setTimeout(() => this.render(), 0);
+      });
+    }
   }
 
   buildRail() {
-    const head = `
-      <div class="rail-head">
-        <span class="eyebrow">Deck manifest</span>
-        <span class="eyebrow" id="railOpen"></span>
+    this.railEl.innerHTML = `
+      <div class="rail-head"><span class="eyebrow">Navigation</span></div>
+      ${SCREENS.map((s) => `
+        <button class="nav-btn" type="button" data-screen="${s.id}">
+          <span class="nav-no mono">${s.no}</span>
+          <span>
+            <span class="nav-name">${esc(s.name)}</span><br>
+            <span class="nav-sub">${esc(s.sub)}</span>
+          </span>
+        </button>`).join('')}
+
+      <div class="rail-block">
+        <span class="eyebrow">Commander</span>
+        <button class="commander" type="button" data-commander="1">
+          <span class="commander-mark">◆</span>
+          <span>
+            <span class="commander-name">ARCANE</span><br>
+            <span class="commander-where mono" id="arcaneWhere">—</span>
+          </span>
+        </button>
+      </div>
+
+      <div class="rail-block">
+        <div class="rail-row"><span class="eyebrow">Orders complete</span>
+          <span class="mono" id="integrityPct"></span></div>
+        <div class="meter"><div class="meter-fill is-arcane" id="integrityFill" style="width:0%"></div></div>
+      </div>
+
+      <div class="rail-block">
+        <div class="rail-row"><span class="eyebrow">Sync</span>
+          <span class="mono" id="syncMode" style="color:var(--ash)">—</span></div>
       </div>`;
-    const rows = DECKS.map((d) => `
-      <button class="deck-btn" type="button" data-deck="${d.id}">
-        <span class="dot is-${d.accent}"></span>
-        <span>
-          <span class="deck-btn-name">${esc(d.name)}</span><br>
-          <span class="deck-btn-sub">${esc(d.sub)}</span>
-        </span>
-        <span class="deck-btn-count mono" data-count="${d.id}">--</span>
-      </button>`).join('');
-    const foot = `
-      <div class="rail-foot">
-        <div style="display:flex;justify-content:space-between;align-items:baseline">
-          <span class="eyebrow">Orders complete</span>
-          <span class="mono" id="integrityPct" style="font-size:11px;color:var(--ash)"></span>
-        </div>
-        <div class="integrity-bar"><div class="integrity-fill" id="integrityFill" style="width:0%"></div></div>
-      </div>`;
-    this.railEl.innerHTML = head + rows + foot;
+
     this.railEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-deck]');
-      if (btn) this.selectDeck(btn.dataset.deck);
+      const nav = e.target.closest('[data-screen]');
+      if (nav) { this.setScreen(nav.dataset.screen); return; }
+      if (e.target.closest('[data-commander]')) this.openRoom(this.sim.arcane.deck);
     });
   }
 
-  /* ---------------- selection ---------------- */
+  /* ================= navigation ================= */
 
-  selectDeck(id) {
-    this.view = { kind: 'deck', id };
-    this.ship.selected = id;
-    this.ship.selectedAgent = null;
+  setScreen(id) {
+    this.screen = id;
+    this.agent = null;
+    const isFactory = id === 'factory';
+    this.canvasWrap.hidden = !isFactory;
+    this.stageEl.hidden = isFactory;
+    if (!isFactory) this.closeRoom();
     this.render();
-    this.dashEl.scrollTop = 0;
+    this.stageEl.scrollTop = 0;
+    if (isFactory) this.factory.resize();
+  }
+
+  /** Open a room: the commander walks there and its dashboard comes up. */
+  openRoom(id) {
+    if (!ROOM_BY_ID[id]) return;
+    this.room = id;
+    this.factory.selected = id;
+    this.sim.commandTo(id);
+    if (this.screen !== 'factory') this.setScreen('factory');
+    else this.render();
+  }
+
+  closeRoom() {
+    this.room = null;
+    this.factory.selected = null;
+    this.overlayEl.hidden = true;
+    this.overlayEl.innerHTML = '';
   }
 
   selectAgent(id) {
-    const agent = this.sim.agents.find((a) => a.id === id);
-    if (!agent) return;
-    this.view = { kind: 'agent', id };
-    this.ship.selectedAgent = id;
-    this.ship.selected = agent.deck;
-    this.render();
-    this.dashEl.scrollTop = 0;
+    const a = this.sim.everyone().find((x) => x.id === id);
+    if (!a) return;
+    this.agent = id;
+    this.setScreen('agents');
   }
 
-  clearSelection() {
-    this.view = { kind: 'overview' };
-    this.ship.selected = null;
-    this.ship.selectedAgent = null;
-    this.render();
-  }
-
-  /* ---------------- render ---------------- */
+  /* ================= render ================= */
 
   render() {
+    const active = document.activeElement;
+    if (active && active.tagName === 'INPUT'
+      && (this.stageEl.contains(active) || this.dashEl.contains(active) || this.overlayEl.contains(active))) {
+      this.dirty = true;
+      return;
+    }
+    this.dirty = false;
+
     this.renderRail();
     this.renderTop();
-    this.renderDash();
+    this.renderTelemetry();
+
+    if (this.screen === 'factory') {
+      this.renderOverlay();
+    } else {
+      this.stageEl.innerHTML = this.screenBody();
+    }
   }
 
   renderRail() {
-    for (const d of DECKS) {
-      const open = this.store.openCount(d.id);
-      const el = this.railEl.querySelector(`[data-count="${d.id}"]`);
-      if (el) {
-        el.textContent = open ? String(open).padStart(2, '0') : 'CLEAR';
-        el.classList.toggle('is-clear', open === 0);
-      }
-      const btn = this.railEl.querySelector(`[data-deck="${d.id}"]`);
-      if (btn) btn.setAttribute('aria-current', String(this.ship.selected === d.id));
+    for (const s of SCREENS) {
+      const btn = this.railEl.querySelector(`[data-screen="${s.id}"]`);
+      if (btn) btn.setAttribute('aria-current', String(this.screen === s.id));
     }
     const total = DECKS.reduce((n, d) => n + this.store.tasks(d.id).length, 0);
     const done = DECKS.reduce((n, d) => n + this.store.tasks(d.id).filter((t) => t.done).length, 0);
-    const pct = total ? Math.round((done / total) * 100) : 100;
-    $('#railOpen').textContent = `${this.store.totalOpen()} open`;
+    const pct = total ? Math.round((done / total) * 100) : 0;
     $('#integrityFill').style.width = `${pct}%`;
     $('#integrityPct').textContent = `${pct}%`;
+
+    const a = this.sim.arcane;
+    $('#arcaneWhere').textContent = a.state === 'transit'
+      ? `→ ${ROOM_BY_ID[a.deck].name}`
+      : ROOM_BY_ID[a.deck].name;
+
+    const mode = this.store.mode;
+    const el = $('#syncMode');
+    el.textContent = mode === 'synced' ? 'SYNCED' : mode === 'local' ? 'LOCAL' : 'MEMORY';
+    el.style.color = mode === 'synced' ? 'var(--vital)' : mode === 'local' ? 'var(--flare)' : 'var(--breach)';
   }
 
   renderTop() {
-    $('#roStardate').textContent = stardate();
+    $('#roStamp').textContent = stamp();
     $('#roOrders').textContent = String(this.store.totalOpen()).padStart(2, '0');
-    const moving = this.sim.agents.filter((a) => a.state === 'transit').length;
+    const moving = this.sim.agents.filter((x) => x.state === 'transit').length;
     $('#roCrew').textContent = `${this.sim.agents.length - moving}/${this.sim.agents.length}`;
-    const total = this.store.monthlyTotal();
-    $('#roRevenue').textContent = this.store.ledgerCalibrated() ? money(total) : '—';
+    const rev = this.store.monthlyRevenue();
+    $('#roRevenue').textContent = this.store.ledgerCalibrated() ? money(rev) : '—';
+    const run = this.store.runwayMonths();
+    $('#roRunway').textContent = run === null ? '—' : `${run.toFixed(1)} mo`;
+    $('#roDrafts').textContent = String(this.store.postCount()).padStart(2, '0');
   }
 
-  renderDash() {
-    // Never rebuild the panel out from under a field Leo is typing in.
-    const active = document.activeElement;
-    if (active && active.tagName === 'INPUT' && this.dashEl.contains(active)) {
-      this.dashDirty = true;
-      return;
+  /* ================= room dashboard ================= */
+
+  renderOverlay() {
+    if (!this.room) { this.overlayEl.hidden = true; this.overlayEl.innerHTML = ''; return; }
+    const room = ROOM_BY_ID[this.room];
+    const tasks = this.store.tasks(room.id);
+    const open = tasks.filter((t) => !t.done);
+    const crew = this.sim.agents.filter((a) => a.deck === room.id);
+    const venture = VENTURES.find((v) => v.id === room.venture);
+    const goals = GOALS.filter((g) => g.room === room.id);
+    const elsewhere = this.sim.agents.filter((a) => a.deck !== room.id);
+
+    this.overlayEl.hidden = false;
+    this.overlayEl.innerHTML = `
+      <div class="room-head is-${room.accent}">
+        <div>
+          <span class="eyebrow">Room dashboard</span>
+          <h2 class="room-title">${esc(room.name)}</h2>
+          <p class="room-sub">${esc(room.sub)}</p>
+        </div>
+        <button class="icon-btn" type="button" data-close="1" aria-label="Close room dashboard">✕</button>
+      </div>
+
+      <p class="room-blurb">${esc(room.blurb)}</p>
+
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono">${String(open.length).padStart(2, '0')}</span><span class="stat-l">Open orders</span></div>
+        <div class="stat"><span class="stat-n mono">${crew.length}</span><span class="stat-l">Crew present</span></div>
+        <div class="stat"><span class="stat-n mono">${goals.length}</span><span class="stat-l">Goals anchored</span></div>
+        ${venture ? `<div class="stat"><span class="stat-n mono is-${venture.accent}">${
+          this.store.state.ledger[venture.id]?.calibrated ? money(this.store.state.ledger[venture.id].mrr) : '—'
+        }</span><span class="stat-l">${esc(venture.name)} / mo</span></div>` : ''}
+      </div>
+
+      ${goals.length ? `
+        <h3 class="sub-title">Targets</h3>
+        ${goals.map((g) => this.goalRow(g)).join('')}` : ''}
+
+      ${this.roomWidget(room.id)}
+
+      <h3 class="sub-title">Orders</h3>
+      ${tasks.length
+        ? `<div class="orders">${[...open, ...tasks.filter((t) => t.done)].map((t) => this.orderRow(room.id, t)).join('')}</div>`
+        : '<p class="muted-note">Nothing standing on this deck.</p>'}
+      <form class="order-add" data-add="${room.id}">
+        <input type="text" id="add-${room.id}" placeholder="Issue an order to ${esc(room.name)}…" autocomplete="off">
+        <button type="submit">Issue</button>
+      </form>
+
+      <h3 class="sub-title">Crew</h3>
+      <div class="crew-chips">
+        ${crew.length ? crew.map((a) => `
+          <button class="crew-chip is-here" type="button" data-agent="${a.id}">
+            <span class="dot" style="background:${a.colour};box-shadow:0 0 7px ${a.colour}"></span>${esc(a.name)}
+          </button>`).join('') : '<span class="muted-note">Empty. Send someone.</span>'}
+      </div>
+      <p class="eyebrow" style="margin:12px 0 6px">Dispatch here</p>
+      <div class="crew-chips">
+        ${elsewhere.map((a) => `
+          <button class="crew-chip" type="button" data-send="${a.id}" data-to="${room.id}">
+            <span class="dot" style="background:${a.colour}"></span>${esc(a.name)}
+          </button>`).join('')}
+      </div>`;
+  }
+
+
+  /* ================= room widgets ================= */
+
+  /** The room-specific dashboard. Each room does a different job. */
+  roomWidget(roomId) {
+    switch (ROOM_WIDGET[roomId]) {
+      case 'lab': return this.wLab();
+      case 'library': return this.wLibrary();
+      case 'cohorts': return this.wCohorts();
+      case 'build': return this.wBuild();
+      case 'manuscripts': return this.wManuscripts();
+      case 'protocol': return this.wProtocol();
+      case 'signals': return this.wSignals();
+      case 'treasury': return this.wTreasury();
+      case 'doctrine': return this.wDoctrine();
+      default: return '';
     }
-    this.dashDirty = false;
-    const v = this.view;
-    const body = v.kind === 'deck' ? this.deckPanel(v.id)
-      : v.kind === 'agent' ? this.agentPanel(v.id)
-      : this.overviewPanels();
-    this.dashEl.innerHTML = body + this.counselPanel() + this.syncNote();
   }
 
-  /* ---------------- panels ---------------- */
+  srcNote(text) { return `<p class="src-note"><span class="chip is-seed">placeholder</span> ${esc(text)}</p>`; }
 
+  wLab() {
+    const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
+    const coaWord = { published: 'published', pending: 'pending', none: 'none' };
+    const low = INVENTORY.rows.filter((r) => r.vials > 0 && r.vials < 12).length;
+    return `
+      <h3 class="sub-title">Stock</h3>
+      ${this.srcNote(INVENTORY.source)}
+      <div class="tbl">
+        <div class="tbl-head">${INVENTORY.columns.map((c) => `<span>${esc(c)}</span>`).join('')}</div>
+        ${INVENTORY.rows.map((r) => `
+          <div class="tbl-row">
+            <span class="tbl-code"><i class="vial is-${r.tint}"></i>${esc(r.code)}</span>
+            <span class="mono dim">${esc(r.size)}</span>
+            <span class="mono ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}">${r.vials || '—'}</span>
+            <span class="mono dim">${esc(r.batch)}</span>
+            <span class="chip ${coaChip[r.coa] || ''}">${esc(coaWord[r.coa] || r.coa)}</span>
+          </div>`).join('')}
+      </div>
+      ${low ? `<p class="warn-note">${low} line${low === 1 ? '' : 's'} under two weeks of cover.</p>` : ''}
 
-  signalPanel(compact) {
-    const drafts = this.store.drafts();
-    const body = drafts.length
-      ? drafts.slice(0, compact ? 3 : 12).map((d) => `
+      <h3 class="sub-title">Dispatch</h3>
+      ${this.srcNote(DISPATCH.source)}
+      <p class="muted-note">${esc(DISPATCH.note)}</p>
+      <div class="tbl">
+        ${DISPATCH.rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span class="mono dim">${esc(r.ref)}</span>
+            <span>${esc(r.items)}</span>
+            <span class="chip">${esc(r.stage)}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  wLibrary() {
+    const stageChip = { live: 'is-vital', draft: 'is-flare', idea: '' };
+    const live = PDF_PRODUCTS.rows.filter((r) => r.stage === 'live');
+    const potential = PDF_PRODUCTS.rows.reduce((n, r) => n + (r.price || 0), 0);
+    return `
+      <h3 class="sub-title">PDF products</h3>
+      ${this.srcNote(PDF_PRODUCTS.source)}
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-vital">${live.length}</span><span class="stat-l">Live</span></div>
+        <div class="stat"><span class="stat-n mono">${PDF_PRODUCTS.rows.length}</span><span class="stat-l">In the catalogue</span></div>
+        <div class="stat"><span class="stat-n mono is-arcane">${money(potential, 2)}</span><span class="stat-l">Full set price</span></div>
+      </div>
+      <div class="tbl" style="margin-top:12px">
+        ${PDF_PRODUCTS.rows.map((r) => `
+          <div class="tbl-row is-pdf">
+            <span>
+              <span class="tbl-title">${esc(r.title)}</span><br>
+              <span class="tbl-from">from ${esc(r.from)} · ${r.pages}pp</span>
+            </span>
+            <span class="mono">${r.price ? money(r.price, 2) : '—'}</span>
+            <span class="chip ${stageChip[r.stage] || ''}">${esc(r.stage)}</span>
+          </div>`).join('')}
+      </div>
+      <p class="muted-note" style="margin-top:10px">Every title above is cut from a module you already wrote. The Signal Forge picks the modules; this is where they become something to sell.</p>`;
+  }
+
+  wCohorts() {
+    return `
+      <h3 class="sub-title">Members</h3>
+      ${this.srcNote(COHORTS.source)}
+      <div class="tbl">
+        ${COHORTS.rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span>${esc(r.label)}</span>
+            <span class="muted-note">${esc(r.note)}</span>
+            <span class="mono ${r.count ? '' : 'dim'}">${r.count || '—'}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  wBuild() {
+    const chip = { building: 'is-arcane', queued: 'is-flare', shipped: 'is-vital', idea: '' };
+    return `
+      <h3 class="sub-title">Build queue</h3>
+      ${this.srcNote(BUILD_QUEUE.source)}
+      <div class="tbl">
+        ${BUILD_QUEUE.rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span>${esc(r.item)}</span>
+            <span class="muted-note">${esc(r.target)}</span>
+            <span class="chip ${chip[r.stage] || ''}">${esc(r.stage)}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  wManuscripts() {
+    const chip = { live: 'is-vital', proofing: 'is-flare', drafting: '' };
+    return `
+      <h3 class="sub-title">The Codex</h3>
+      ${MANUSCRIPTS.rows.map((r) => `
+        <div class="goal">
+          <div class="goal-top">
+            <span class="goal-name">${esc(r.title)}${r.price ? ` <span class="mono dim">${money(r.price, 2)}</span>` : ''}</span>
+            <span class="chip ${chip[r.stage] || ''}">${esc(r.stage)}</span>
+          </div>
+          ${meter(r.pct / 100, r.stage === 'live' ? 'vital' : 'breach')}
+        </div>`).join('')}`;
+  }
+
+  wProtocol() {
+    return `
+      <h3 class="sub-title">Daily protocol</h3>
+      <p class="muted-note">${esc(PROTOCOL.source)}</p>
+      <div class="tbl" style="margin-top:10px">
+        ${PROTOCOL.rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span>${esc(r.item)}</span>
+            <span class="muted-note">${esc(r.unit)}</span>
+            <span class="mono is-vital">${num(r.target)}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  wSignals() {
+    const drafts = this.store.drafts().slice(0, 3);
+    return `
+      <h3 class="sub-title">Signal queue</h3>
+      ${drafts.length ? drafts.map((d) => `
         <article class="signal-card">
           <div class="signal-card-top">
-            <span class="chip is-${platformClass(d.platform)}">${esc(d.platform)}</span>
-            <span class="signal-card-src">${esc(d.course)}</span>
+            <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
+            <span class="signal-card-src">${esc(d.course || '')}</span>
           </div>
           <p class="signal-card-hook">${esc(d.hook)}</p>
           <pre class="signal-card-body">${esc(d.post)}</pre>
+          <div class="signal-card-acts">
+            <button class="act is-primary" type="button" data-copy="${d.id}">Copy</button>
+            <span class="signal-card-spacer"></span>
+            <button class="act" type="button" data-posted="${d.id}">Posted</button>
+            <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
+          </div>
+        </article>`).join('')
+        : '<p class="muted-note">No drafts standing. The Signal Forge writes three every morning.</p>'}`;
+  }
+
+  wTreasury() {
+    const allocs = this.store.allocations();
+    const run = this.store.runwayMonths();
+    return `
+      <h3 class="sub-title">This month</h3>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${money(this.store.monthlyRevenue())}</span><span class="stat-l">Revenue</span></div>
+        <div class="stat"><span class="stat-n mono is-breach">${money(this.store.monthlyFixed())}</span><span class="stat-l">Fixed</span></div>
+        <div class="stat"><span class="stat-n mono is-gold">${run === null ? '—' : run.toFixed(1)}</span><span class="stat-l">Runway (mo)</span></div>
+      </div>
+      <h3 class="sub-title">The split</h3>
+      ${allocs.map((a) => `
+        <div class="mini-alloc">
+          <span class="mini-name">${esc(a.name)} <span class="dim mono">${a.pct}%</span></span>
+          <span class="mini-amt mono is-${a.accent}">${money(a.amount)}</span>
+        </div>`).join('')}
+      <button class="back-btn" type="button" data-goscreen="ledger" style="margin-top:12px">Open the full Ledger →</button>`;
+  }
+
+  wDoctrine() {
+    return `
+      <h3 class="sub-title">Standing doctrine</h3>
+      ${DOCTRINE.map((d) => `<p class="doctrine">${esc(d)}</p>`).join('')}
+      <button class="back-btn" type="button" data-goscreen="goals" style="margin-top:10px">Open all goals →</button>`;
+  }
+
+  goalRow(g) {
+    const val = this.store.goalValue(g);
+    const pct = this.store.goalPct(g);
+    const room = ROOM_BY_ID[g.room];
+    const shown = g.unit === '£' ? money(val) : `${num(Math.round(val * 10) / 10)} ${g.unit}`;
+    const target = g.unit === '£' ? money(g.target) : `${num(g.target)} ${g.unit}`;
+    return `
+      <div class="goal">
+        <div class="goal-top">
+          <span class="goal-name">${esc(g.name)}</span>
+          <span class="goal-val mono">${esc(shown)} <span class="goal-target">/ ${esc(target)}</span></span>
+        </div>
+        ${meter(pct, room?.accent || 'arcane')}
+        <div class="goal-foot">
+          <span class="chip ${g.kind === 'money' ? 'is-flare' : ''}">${g.kind}</span>
+          ${g.auto ? '<span class="chip">auto</span>'
+            : `<input class="goal-input mono" type="text" inputmode="decimal"
+                 id="goal-${g.id}" data-goal="${g.id}" value="${val || ''}"
+                 placeholder="0" aria-label="Progress for ${esc(g.name)}">`}
+          <span class="goal-pct mono">${Math.round(pct * 100)}%</span>
+        </div>
+      </div>`;
+  }
+
+  orderRow(roomId, task, prefix) {
+    return `
+      <button class="order ${task.done ? 'is-done' : ''}" type="button"
+              data-toggle="${task.id}" data-deck="${roomId}" aria-pressed="${task.done}">
+        <span class="order-box"><svg class="order-tick" viewBox="0 0 8 8" aria-hidden="true">
+          <path d="M1 4.2 L3 6.2 L7 1.6" fill="none" stroke="#07070a" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="order-text">${prefix ? `<span class="mono order-pre">${esc(prefix)}</span> ` : ''}${esc(task.t)}</span>
+        <span class="order-pri p${task.p}">P${task.p}</span>
+      </button>`;
+  }
+
+  /* ================= screens ================= */
+
+  screenBody() {
+    switch (this.screen) {
+      case 'agents': return this.screenAgents();
+      case 'orders': return this.screenOrders();
+      case 'ventures': return this.screenVentures();
+      case 'ledger': return this.screenLedger();
+      case 'goals': return this.screenGoals();
+      case 'signals': return this.screenSignals();
+      case 'system': return this.screenSystem();
+      default: return '';
+    }
+  }
+
+  head(title, note) {
+    return `<div class="screen-head"><h2 class="screen-title">${esc(title)}</h2>
+      ${note ? `<span class="chip">${esc(note)}</span>` : ''}</div>`;
+  }
+
+  screenAgents() {
+    const sel = this.agent ? this.sim.everyone().find((a) => a.id === this.agent) : null;
+    if (sel) {
+      const room = ROOM_BY_ID[sel.deck];
+      const home = ROOM_BY_ID[sel.home];
+      return `
+        ${this.head(sel.name, sel.role)}
+        <button class="back-btn" type="button" data-agentback="1">← All crew</button>
+        <p class="room-blurb" style="margin-top:12px">${esc(sel.brief || '')}</p>
+        <div class="stat-row">
+          <div class="stat"><span class="stat-n" style="color:${sel.colour};font-size:15px">${esc(room.name)}</span><span class="stat-l">${sel.state === 'transit' ? 'In transit to' : 'Working in'}</span></div>
+          <div class="stat"><span class="stat-n" style="font-size:15px">${esc(home.name)}</span><span class="stat-l">Home station</span></div>
+        </div>
+        <h3 class="sub-title">Current order</h3>
+        <p class="muted-note">${sel.order ? esc(sel.order) : 'Awaiting orders on this deck.'}</p>
+        <h3 class="sub-title">Send to</h3>
+        <div class="crew-chips">
+          ${DECKS.map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
+             data-send="${sel.id}" data-to="${d.id}">${esc(d.name)}</button>`).join('')}
+        </div>`;
+    }
+
+    return `
+      ${this.head('Agents', `${CREW.length} crew + commander`)}
+      <div class="card-grid">
+        ${[this.sim.arcane, ...this.sim.agents].map((a) => {
+          const room = ROOM_BY_ID[a.deck];
+          return `
+          <button class="agent-card ${a.kind === 'arcane' ? 'is-commander' : ''}" type="button" data-agent="${a.id}">
+            <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
+            <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
+            <span class="agent-role">${esc(a.role)}</span>
+            <span class="agent-where mono">${a.state === 'transit' ? '→ ' : ''}${esc(room.name)}</span>
+            <span class="agent-brief">${esc(a.brief || '')}</span>
+          </button>`;
+        }).join('')}
+      </div>`;
+  }
+
+  screenOrders() {
+    const groups = DECKS.map((d) => ({ deck: d, tasks: this.store.tasks(d.id) }))
+      .filter((g) => g.tasks.length);
+    return `
+      ${this.head('Orders', `${this.store.totalOpen()} open`)}
+      ${groups.map(({ deck, tasks }) => {
+        const open = tasks.filter((t) => !t.done);
+        return `
+          <section class="block">
+            <div class="block-head">
+              <button class="block-title" type="button" data-room="${deck.id}">
+                <span class="dot is-${deck.accent}"></span>${esc(deck.name)}
+              </button>
+              <span class="chip mono">${open.length} open</span>
+            </div>
+            <div class="orders">${[...open, ...tasks.filter((t) => t.done)].map((t) => this.orderRow(deck.id, t)).join('')}</div>
+            <form class="order-add" data-add="${deck.id}">
+              <input type="text" id="ord-${deck.id}" placeholder="Issue an order…" autocomplete="off">
+              <button type="submit">Issue</button>
+            </form>
+          </section>`;
+      }).join('')}`;
+  }
+
+  screenVentures() {
+    return `
+      ${this.head('Ventures', `${VENTURES.length} businesses`)}
+      ${VENTURES.map((v) => {
+        const row = this.store.state.ledger[v.id] || {};
+        const titles = CATALOGUE.filter((c) => c.venture === v.id);
+        return `
+        <section class="block">
+          <div class="block-head">
+            <button class="block-title" type="button" data-room="${v.room}">
+              <span class="dot is-${v.accent}"></span>${esc(v.name)}
+            </button>
+            <span class="chip">${esc(v.model)}</span>
+          </div>
+          <p class="muted-note">${esc(v.kind)}</p>
+          <div class="fact-row">${v.facts.map((f) => `<span class="fact">${esc(f)}</span>`).join('')}</div>
+          <div class="field-row">
+            <label class="field">
+              <span class="field-l">Revenue / month</span>
+              <input class="field-i mono" type="text" inputmode="decimal" id="v-mrr-${v.id}"
+                     data-ledger="${v.id}" data-field="mrr" value="${row.mrr || ''}" placeholder="0">
+            </label>
+            <label class="field">
+              <span class="field-l">${esc(v.unitLabel)}</span>
+              <input class="field-i mono" type="text" inputmode="numeric" id="v-u-${v.id}"
+                     data-ledger="${v.id}" data-field="units" value="${row.units || ''}" placeholder="0">
+            </label>
+          </div>
+          ${titles.length ? `<div class="fact-row">${titles.map((t) => `
+            <span class="fact">${esc(t.title)}${t.price ? ` · ${money(t.price, 2)}` : ''}</span>`).join('')}</div>` : ''}
+        </section>`;
+      }).join('')}`;
+  }
+
+  screenLedger() {
+    const rev = this.store.monthlyRevenue();
+    const fixed = this.store.monthlyFixed();
+    const net = this.store.monthlyNet();
+    const run = this.store.runwayMonths();
+    const allocs = this.store.allocations();
+    const splitTotal = this.store.splitTotal();
+
+    return `
+      ${this.head('Ledger', this.store.ledgerCalibrated() ? 'live' : 'uncalibrated')}
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${money(rev)}</span><span class="stat-l">Revenue / month</span></div>
+        <div class="stat"><span class="stat-n mono is-breach">${money(fixed)}</span><span class="stat-l">Fixed costs</span></div>
+        <div class="stat"><span class="stat-n mono ${net >= 0 ? 'is-vital' : 'is-breach'}">${money(net)}</span><span class="stat-l">Net / month</span></div>
+        <div class="stat"><span class="stat-n mono is-gold">${run === null ? '—' : `${run.toFixed(1)}`}</span><span class="stat-l">Months runway</span></div>
+      </div>
+
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Cash on hand</h3></div>
+        <label class="field">
+          <span class="field-l">Bank balance, everything included</span>
+          <input class="field-i mono" type="text" inputmode="decimal" id="cash"
+                 data-budget="cash" value="${this.store.state.budget.cash || ''}" placeholder="0">
+        </label>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <h3 class="sub-title" style="margin:0">Fixed costs</h3>
+          <span class="chip mono">${money(fixed)} / mo</span>
+        </div>
+        ${BUDGET.fixed.map((f) => `
+          <div class="cost-row">
+            <button class="cost-name" type="button" data-room="${f.room}">
+              <span class="dot is-${ROOM_BY_ID[f.room]?.accent || 'arcane'}"></span>${esc(f.name)}
+            </button>
+            <input class="field-i mono" type="text" inputmode="decimal" id="fx-${f.id}"
+                   data-budget="fixed" data-id="${f.id}"
+                   value="${this.store.state.budget.fixed[f.id] || ''}" placeholder="0">
+          </div>`).join('')}
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <h3 class="sub-title" style="margin:0">The split</h3>
+          <span class="chip ${splitTotal === 100 ? '' : 'is-seed'} mono">${splitTotal}%</span>
+        </div>
+        <p class="muted-note">Every pound of net profit gets an envelope before it gets spent.</p>
+        ${allocs.map((a) => `
+          <div class="alloc">
+            <div class="alloc-top">
+              <span class="alloc-name">${esc(a.name)}</span>
+              <span class="alloc-amt mono is-${a.accent}">${money(a.amount)}</span>
+            </div>
+            ${meter(a.pct / 100, a.accent)}
+            <div class="alloc-foot">
+              <span class="muted-note">${esc(a.note)}</span>
+              <input class="pct-input mono" type="text" inputmode="numeric" id="sp-${a.id}"
+                     data-budget="split" data-id="${a.id}" value="${a.pct}" aria-label="${esc(a.name)} percentage">
+            </div>
+          </div>`).join('')}
+        ${splitTotal !== 100 ? `<p class="warn-note">The split is at ${splitTotal}%. Make it 100 or the envelopes lie.</p>` : ''}
+      </section>`;
+  }
+
+  screenGoals() {
+    const moneyGoals = GOALS.filter((g) => g.kind === 'money');
+    const workGoals = GOALS.filter((g) => g.kind === 'work');
+    const done = GOALS.filter((g) => this.store.goalPct(g) >= 1).length;
+    return `
+      ${this.head('Goals', `${done} / ${GOALS.length} hit`)}
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Money</h3></div>
+        ${moneyGoals.map((g) => this.goalRow(g)).join('')}
+      </section>
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Work</h3></div>
+        ${workGoals.map((g) => this.goalRow(g)).join('')}
+      </section>`;
+  }
+
+  screenSignals() {
+    const drafts = this.store.drafts();
+    return `
+      ${this.head('Signals', `${drafts.length} draft${drafts.length === 1 ? '' : 's'}`)}
+      <p class="muted-note">The Signal Forge reads a module from the Archives each morning and drafts a post from it. Notion is never written to.</p>
+      ${drafts.length ? drafts.map((d) => `
+        <article class="signal-card">
+          <div class="signal-card-top">
+            <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
+            <span class="signal-card-src">${esc(d.course || '')}</span>
+          </div>
+          <p class="signal-card-hook">${esc(d.hook)}</p>
+          <pre class="signal-card-body">${esc(d.post)}</pre>
+          ${d.angle ? `<p class="muted-note">${esc(d.angle)}</p>` : ''}
           <div class="signal-card-acts">
             <button class="act is-primary" type="button" data-copy="${d.id}">Copy</button>
             ${d.sourceUrl ? `<a class="act" href="${esc(d.sourceUrl)}" target="_blank" rel="noopener">Source</a>` : ''}
@@ -1796,302 +3215,198 @@ class UI {
             <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
           </div>
         </article>`).join('')
-      : `<p class="counsel-empty">No drafts standing. The Signal Forge writes three every morning from a module in the Archives.</p>`;
+        : '<p class="muted-note">No drafts standing.</p>'}`;
+  }
 
+  screenSystem() {
+    const mode = this.store.mode;
+    const modeCopy = mode === 'synced'
+      ? 'Synced. Orders, money and goals follow you across every device signed in here.'
+      : mode === 'local'
+        ? 'Local only. State is saved in this browser.'
+        : 'Memory only. Storage is blocked here, so nothing survives a reload.';
     return `
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title">Signal queue</h2>
-          <span class="chip mono">${drafts.length} draft${drafts.length === 1 ? '' : 's'}</span>
+      ${this.head('System', OPERATOR.system)}
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Storage</h3>
+          <span class="chip">${mode}</span></div>
+        <p class="muted-note">${esc(modeCopy)}</p>
+      </section>
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Signal Forge</h3>
+          <span class="chip">06:00 daily</span></div>
+        <p class="muted-note">Reads The Arcane Archives, drafts three posts, writes them into this system. Notion is read-only — the agent never creates, edits or deletes anything there.</p>
+      </section>
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">The floor</h3></div>
+        <p class="muted-note">${DECKS.length} rooms, ${CREW.length} crew and one commander. Click a room to open its dashboard — ARCANE walks there and the crew drift toward wherever the attention is.</p>
+        <div class="crew-chips">
+          ${DECKS.map((d) => `<button class="crew-chip" type="button" data-room="${d.id}">
+            <span class="dot is-${d.accent}"></span>${esc(d.name)}</button>`).join('')}
         </div>
-        ${body}
       </section>`;
   }
 
-  overviewPanels() {
-    return this.signalPanel(true) + this.directivesPanel() + this.ledgerPanel()
-      + this.signalsPanel() + this.rosterPanel();
-  }
+  /* ================= right rail ================= */
 
-  directivesPanel() {
-    const items = [];
-    for (const d of DECKS) {
-      for (const t of this.store.tasks(d.id)) {
-        if (!t.done && t.p === 1) items.push({ deck: d, task: t });
-      }
-    }
-    items.sort((a, b) => a.deck.name.localeCompare(b.deck.name));
-    const top = items.slice(0, 6);
-    const list = top.length
-      ? `<div class="orders">${top.map(({ deck, task }) => this.orderRow(deck.id, task, deck.name)).join('')}</div>`
-      : `<p class="counsel-empty">No priority-one orders standing. Set the next one from any deck.</p>`;
-    return `
+  renderTelemetry() {
+    const rev = this.store.monthlyRevenue();
+    const allocs = this.store.allocations();
+    const hot = DECKS.map((d) => ({ d, open: this.store.openCount(d.id) }))
+      .sort((a, b) => b.open - a.open).slice(0, 4);
+
+    this.dashEl.innerHTML = `
       <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title">Standing directives</h2>
-          <span class="chip">P1 · ${items.length}</span>
-        </div>
-        ${list}
-      </section>`;
-  }
-
-  ledgerPanel() {
-    const rows = VENTURES.map((v) => {
-      const row = this.store.state.ledger[v.id] || {};
-      return `
-        <div class="ledger-row">
-          <span class="dot is-${v.accent}"></span>
-          <span>
-            <span class="ledger-name">${esc(v.name)}</span><br>
-            <span class="ledger-kind">${esc(v.kind)}</span>
-          </span>
-          <input class="ledger-val mono" type="text" inputmode="numeric"
-                 id="ledger-${v.id}" data-ledger="${v.id}"
-                 value="${row.mrr ? money(row.mrr) : '—'}"
-                 aria-label="Monthly revenue for ${esc(v.name)}">
-        </div>`;
-    }).join('');
-    const calibrated = this.store.ledgerCalibrated();
-    return `
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title">Ledger · monthly</h2>
-          ${calibrated
-            ? `<span class="chip mono">${money(this.store.monthlyTotal())}</span>`
-            : '<span class="chip is-seed">Uncalibrated</span>'}
-        </div>
-        <div class="ledger">${rows}</div>
-        ${calibrated ? '' : '<p class="counsel-empty" style="margin:10px 0 0">Figures are blank until you set them. Type into any row — it saves and syncs.</p>'}
-      </section>`;
-  }
-
-  signalsPanel() {
-    const signals = [];
-    for (const d of DECKS) {
-      const tasks = this.store.tasks(d.id);
-      const p1 = tasks.filter((t) => !t.done && t.p === 1).length;
-      if (p1 >= 3) signals.push({ level: 'breach', text: `${d.name} is carrying ${p1} priority-one orders. Something here needs delegating or cutting.`, src: d.name });
-      else if (tasks.length && tasks.every((t) => t.done)) signals.push({ level: 'vital', text: `${d.name} is clear. Every order complete.`, src: d.name });
-    }
-    if (!this.store.ledgerCalibrated()) {
-      signals.push({ level: 'flare', text: 'Ledger has never been calibrated. Without real numbers the Vault readout is blind.', src: 'VAULT' });
-    }
-    const priced = CATALOGUE.filter((c) => c.price).length;
-    signals.push({ level: 'vital', text: `${CATALOGUE.length} titles in the catalogue, ${priced} with a price on file.`, src: 'SCRIPTORIUM' });
-
-    const order = { breach: 0, flare: 1, vital: 2 };
-    signals.sort((a, b) => order[a.level] - order[b.level]);
-
-    return `
-      <section class="panel">
-        <div class="panel-head"><h2 class="panel-title">Signals</h2>
-          <span class="chip">${signals.length}</span></div>
-        ${signals.slice(0, 5).map((s) => `
-          <div class="signal">
-            <span class="signal-stripe is-${s.level}"></span>
+        <div class="panel-head"><h2 class="panel-title">Floor</h2>
+          <span class="chip mono">${this.store.totalOpen()} open</span></div>
+        ${hot.map(({ d, open }) => `
+          <button class="floor-row" type="button" data-room="${d.id}">
+            <span class="dot is-${d.accent}"></span>
             <span>
-              <span class="signal-text">${esc(s.text)}</span><br>
-              <span class="signal-src">${esc(s.src)}</span>
+              <span class="floor-name">${esc(d.name)}</span><br>
+              <span class="floor-sub">${esc(d.sub)}</span>
             </span>
+            <span class="mono ${open ? '' : 'is-clear'}">${open ? String(open).padStart(2, '0') : 'CLEAR'}</span>
+          </button>`).join('')}
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2 class="panel-title">Month</h2>
+          <span class="chip mono">${this.store.ledgerCalibrated() ? money(rev) : 'not set'}</span></div>
+        ${allocs.map((a) => `
+          <div class="mini-alloc">
+            <span class="mini-name">${esc(a.name)}</span>
+            <span class="mini-amt mono is-${a.accent}">${money(a.amount)}</span>
           </div>`).join('')}
-      </section>`;
-  }
+        ${!this.store.ledgerCalibrated()
+          ? '<p class="muted-note" style="margin-top:8px">Open the Ledger and put real numbers in. Nothing is guessed for you.</p>' : ''}
+      </section>
 
-  rosterPanel() {
-    const rows = this.sim.agents.map((a) => {
-      const deck = deckById[a.deck];
-      const state = a.state === 'transit' ? `→ ${deck.name}` : deck.name;
-      return `
-        <button class="crew-row" type="button" data-agent="${a.id}">
-          <span class="dot is-${deck.accent}"></span>
-          <span>
-            <span class="crew-name">${esc(a.name)}</span><br>
-            <span class="crew-role">${esc(a.role)}</span>
-          </span>
-          <span class="crew-state mono ${a.state === 'transit' ? 'is-transit' : ''}">${esc(state)}</span>
-        </button>`;
-    }).join('');
-    return `
-      <section class="panel">
-        <div class="panel-head"><h2 class="panel-title">Crew</h2>
-          <span class="chip">${CREW.length} aboard</span></div>
-        <div class="roster">${rows}</div>
-      </section>`;
-  }
-
-  orderRow(deckId, task, prefix) {
-    return `
-      <button class="order ${task.done ? 'is-done' : ''}" type="button"
-              data-toggle="${task.id}" data-deck="${deckId}"
-              aria-pressed="${task.done}">
-        <span class="order-box">
-          <svg class="order-tick" viewBox="0 0 8 8" aria-hidden="true">
-            <path d="M1 4.2 L3 6.2 L7 1.6" fill="none" stroke="#07070a" stroke-width="1.6"
-                  stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </span>
-        <span class="order-text">${prefix ? `<span class="mono" style="color:var(--faint);font-size:10px">${esc(prefix)} </span>` : ''}${esc(task.t)}</span>
-        <span class="order-pri p${task.p}">P${task.p}</span>
-      </button>`;
-  }
-
-  signalPanelInline() {
-    return `<div class="inline-queue">${this.signalPanel(false)}</div>`;
-  }
-
-  deckPanel(id) {
-    const deck = deckById[id];
-    const tasks = this.store.tasks(id);
-    const open = tasks.filter((t) => !t.done);
-    const done = tasks.filter((t) => t.done);
-    const crew = this.sim.agents.filter((a) => a.deck === id);
-    const venture = VENTURES.find((v) => v.id === deck.venture);
-
-    const list = tasks.length
-      ? `<div class="orders">${[...open, ...done].map((t) => this.orderRow(id, t)).join('')}</div>`
-      : '<p class="counsel-empty">No orders on this deck.</p>';
-
-    return `
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title"><span class="dot is-${deck.accent}" style="display:inline-block;margin-right:6px"></span>${esc(deck.name)}</h2>
-          <button class="back-btn" type="button" data-back="1">← All decks</button>
-        </div>
-        <p class="ledger-kind" style="margin:0 0 12px">${esc(deck.sub)}${venture ? ` · ${esc(venture.name)}` : ''}</p>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-          <span class="chip mono">${open.length} open</span>
-          <span class="chip mono">${done.length} done</span>
-          <span class="chip mono">${crew.length} crew</span>
-        </div>
-        ${list}
-        ${id === 'beacon' ? this.signalPanelInline() : ''}
-        <form class="order-add" data-add="${id}">
-          <input type="text" id="add-${id}" placeholder="Issue an order to ${esc(deck.name)}…" autocomplete="off">
-          <button type="submit">Issue</button>
-        </form>
-      </section>`;
-  }
-
-  agentPanel(id) {
-    const a = this.sim.agents.find((x) => x.id === id);
-    if (!a) return this.overviewPanels();
-    const deck = deckById[a.deck];
-    const home = deckById[a.home];
-    return `
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title">${esc(a.name)}</h2>
-          <button class="back-btn" type="button" data-back="1">← All decks</button>
-        </div>
-        <p class="ledger-kind" style="margin:0 0 12px">${esc(a.role)} · station ${esc(home.name)}</p>
-        <div class="ledger">
-          <div class="ledger-row"><span class="dot is-${deck.accent}"></span>
-            <span><span class="ledger-name">Position</span><br>
-            <span class="ledger-kind">${a.state === 'transit' ? 'In transit' : 'Working'}</span></span>
-            <span class="mono" style="font-size:12px">${esc(deck.name)}</span></div>
-          <div class="ledger-row"><span class="dot"></span>
-            <span><span class="ledger-name">Current order</span><br>
-            <span class="ledger-kind">${a.order ? esc(a.order) : 'Awaiting orders on this deck'}</span></span>
-            <span></span></div>
-        </div>
-        <button class="back-btn" type="button" data-goto="${a.deck}" style="margin-top:12px">Open ${esc(deck.name)} →</button>
-      </section>`;
-  }
-
-  counselPanel() {
-    const log = this.counsel.length
-      ? this.counsel.map((turn) => `<p class="counsel-turn is-${turn.who}">${turn.who === 'leo' ? '&gt; ' : ''}${esc(turn.text)}</p>`).join('')
-      : `<p class="counsel-empty">Ask the ship anything about the empire — where to spend the next hour, what to cut, how to price a launch. It reads the current state of every deck before it answers.</p>`;
-    return `
       <section class="panel">
         <div class="panel-head"><h2 class="panel-title">Counsel</h2>
-          <span class="chip">${this.sampler === null ? 'Standby' : 'Online'}</span></div>
-        <div class="counsel-log" id="counselLog">${log}</div>
+          <span class="chip">${this.sampler ? 'Online' : 'Standby'}</span></div>
+        <div class="counsel-log" id="counselLog">
+          ${this.counsel.length
+            ? this.counsel.map((t) => `<p class="counsel-turn is-${t.who}">${t.who === 'leo' ? '&gt; ' : ''}${esc(t.text)}</p>`).join('')
+            : '<p class="muted-note">Ask the ship anything — where the next hour goes, what to cut, what the numbers say. It reads the whole floor before it answers.</p>'}
+        </div>
         <form class="counsel-form" data-counsel="1">
-          <input type="text" id="counselInput" placeholder="Put a question to the ship…" autocomplete="off" ${this.counselBusy ? 'disabled' : ''}>
+          <input type="text" id="counselInput" placeholder="Speak to the network…" autocomplete="off" ${this.counselBusy ? 'disabled' : ''}>
           <button type="submit" ${this.counselBusy ? 'disabled' : ''}>${this.counselBusy ? '···' : 'Ask'}</button>
         </form>
       </section>`;
   }
 
-  syncNote() {
-    const mode = this.store.mode;
-    const label = mode === 'synced' ? '<b>Synced.</b> Orders and ledger follow you across every device signed in to this artifact.'
-      : mode === 'local' ? '<b>Local.</b> Orders are saved in this browser only.'
-      : '<b>Memory only.</b> Storage is blocked here, so changes will not survive a reload.';
-    return `<p class="sync-note">${label}</p>`;
+  renderTicker() {
+    const e = this.store.state.log[0];
+    this.tickerEl.textContent = e ? e.text : 'All systems nominal. Crew at station.';
+    this.tickerTime.textContent = e ? clockTime(e.ts) : '';
   }
 
-  /* ---------------- events ---------------- */
+  /* ================= events ================= */
 
-  onDashClick(e) {
-    const toggle = e.target.closest('[data-toggle]');
-    if (toggle) {
-      this.store.toggleTask(toggle.dataset.deck, toggle.dataset.toggle);
+  onClick(e) {
+    const t = (sel) => e.target.closest(sel);
+
+    if (t('[data-close]')) { this.closeRoom(); return; }
+    const toggle = t('[data-toggle]');
+    if (toggle) { this.store.toggleTask(toggle.dataset.deck, toggle.dataset.toggle); return; }
+    const room = t('[data-room]');
+    if (room) { this.openRoom(room.dataset.room); return; }
+    const send = t('[data-send]');
+    if (send) {
+      const agent = this.sim.everyone().find((a) => a.id === send.dataset.send);
+      if (this.sim.dispatch(agent, send.dataset.to)) {
+        this.store.trace(`${agent.name} dispatched to ${ROOM_BY_ID[send.dataset.to].name}`);
+      }
+      this.render();
       return;
     }
-    if (e.target.closest('[data-back]')) { this.clearSelection(); return; }
-    const goto = e.target.closest('[data-goto]');
-    if (goto) { this.selectDeck(goto.dataset.goto); return; }
-    const copy = e.target.closest('[data-copy]');
+    const go = t('[data-goscreen]');
+    if (go) { this.setScreen(go.dataset.goscreen); return; }
+    if (t('[data-agentback]')) { this.agent = null; this.render(); return; }
+    const agent = t('[data-agent]');
+    if (agent) { this.selectAgent(agent.dataset.agent); return; }
+    const copy = t('[data-copy]');
     if (copy) { this.copyPost(copy.dataset.copy, copy); return; }
-    const posted = e.target.closest('[data-posted]');
+    const posted = t('[data-posted]');
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
-    const kill = e.target.closest('[data-kill]');
-    if (kill) { this.store.markPost(kill.dataset.kill, 'killed'); return; }
-    const agent = e.target.closest('[data-agent]');
-    if (agent) { this.selectAgent(agent.dataset.agent); }
+    const kill = t('[data-kill]');
+    if (kill) { this.store.markPost(kill.dataset.kill, 'killed'); }
   }
 
-  onDashSubmit(e) {
+  onSubmit(e) {
     const add = e.target.closest('[data-add]');
     if (add) {
       e.preventDefault();
-      const deckId = add.dataset.add;
+      const id = add.dataset.add;
       const input = add.querySelector('input');
-      const issued = this.store.addTask(deckId, input.value);
-      // addTask re-renders the panel synchronously, so re-find the field.
-      const fresh = this.dashEl.querySelector(`[data-add="${deckId}"] input`);
-      if (fresh) {
-        if (issued) fresh.value = '';
-        fresh.focus();
-      }
+      const issued = this.store.addTask(id, input.value);
+      const fresh = document.querySelector(`[data-add="${id}"] input`);
+      if (fresh) { if (issued) fresh.value = ''; fresh.focus(); }
       return;
     }
     if (e.target.closest('[data-counsel]')) {
       e.preventDefault();
       const input = $('#counselInput');
-      this.ask(input.value);
+      const q = input.value;
       input.value = '';
+      this.ask(q);
     }
   }
 
-  onDashChange(e) {
+  onChange(e) {
+    const numOf = (el) => {
+      const n = Number(String(el.value).replace(/[^0-9.\-]/g, ''));
+      return Number.isFinite(n) ? n : 0;
+    };
     const led = e.target.closest('[data-ledger]');
-    if (!led) return;
-    const n = Number(String(led.value).replace(/[^0-9.]/g, ''));
-    this.store.setLedger(led.dataset.ledger, 'mrr', Number.isFinite(n) ? n : 0);
+    if (led) { this.store.setLedger(led.dataset.ledger, led.dataset.field, numOf(led)); return; }
+    const bud = e.target.closest('[data-budget]');
+    if (bud) { this.store.setBudget(bud.dataset.budget, bud.dataset.id, numOf(bud)); return; }
+    const goal = e.target.closest('[data-goal]');
+    if (goal) this.store.setGoal(goal.dataset.goal, numOf(goal));
   }
 
-  /* ---------------- counsel ---------------- */
-
-  attachSampler(sample) {
-    this.sampler = sample;
-    this.renderDash();
+  async copyPost(id, btn) {
+    const post = (this.store.state.posts || []).find((p) => p.id === id);
+    if (!post) return;
+    let ok = false;
+    try { await navigator.clipboard.writeText(post.post); ok = true; } catch { /* blocked */ }
+    if (!ok) {
+      const ta = document.createElement('textarea');
+      ta.value = post.post;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      ta.remove();
+    }
+    if (btn) {
+      btn.textContent = ok ? 'Copied' : 'Select below';
+      btn.classList.toggle('is-done', ok);
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('is-done'); }, 1800);
+    }
   }
 
-  /** A compact brief of the whole ship, so answers are grounded in real state. */
+  /* ================= counsel ================= */
+
+  attachSampler(fn) { this.sampler = fn; this.renderTelemetry(); }
+
   brief() {
-    const decks = DECKS.map((d) => {
+    const rooms = DECKS.map((d) => {
       const open = this.store.tasks(d.id).filter((t) => !t.done);
       return `${d.name} (${d.sub}): ${open.length ? open.map((t) => `[P${t.p}] ${t.t}`).join('; ') : 'clear'}`;
     }).join('\n');
-    const ledger = VENTURES.map((v) => {
-      const row = this.store.state.ledger[v.id] || {};
-      return `${v.name} — ${v.kind} — monthly: ${row.mrr ? money(row.mrr) : 'not set'}`;
+    const led = VENTURES.map((v) => {
+      const r = this.store.state.ledger[v.id] || {};
+      return `${v.name} — ${v.kind} — ${r.mrr ? money(r.mrr) + '/mo' : 'revenue not set'}${r.units ? `, ${r.units} ${v.unitLabel}` : ''}`;
     }).join('\n');
-    const cat = CATALOGUE.map((c) => `${c.title}${c.price ? ` £${c.price}` : ''}`).join('; ');
-    return `VENTURES\n${ledger}\n\nCATALOGUE\n${cat}\n\nDECKS AND OPEN ORDERS\n${decks}`;
+    const gl = GOALS.map((g) => `${g.name}: ${Math.round(this.store.goalPct(g) * 100)}% of ${g.target}${g.unit === '£' ? '' : ' ' + g.unit}`).join('\n');
+    const run = this.store.runwayMonths();
+    const fin = `Revenue ${money(this.store.monthlyRevenue())}/mo, fixed costs ${money(this.store.monthlyFixed())}/mo, net ${money(this.store.monthlyNet())}/mo, cash ${money(this.store.state.budget.cash)}, runway ${run === null ? 'unknown' : run.toFixed(1) + ' months'}.`;
+    return `VENTURES\n${led}\n\nMONEY\n${fin}\n\nGOALS\n${gl}\n\nROOMS AND OPEN ORDERS\n${rooms}`;
   }
 
   async ask(question) {
@@ -2100,28 +3415,26 @@ class UI {
     if (!this.sampler) {
       this.counsel.push({ who: 'leo', text: q });
       this.counsel.push({ who: 'ship', text: 'Counsel is offline in this view — it needs the published page on claude.ai.' });
-      this.renderDash();
+      this.renderTelemetry();
       return;
     }
     this.counsel.push({ who: 'leo', text: q });
     this.counselBusy = true;
-    this.renderDash();
-
     const turn = { who: 'ship', text: 'Thinking…' };
     this.counsel.push(turn);
-    this.renderDash();
+    this.renderTelemetry();
 
     const prompt = [
       'You are the intelligence aboard THE ARCANE, the operating system of Leo, who runs the Arcane brand:',
       'Arcane Peptides (UK research compounds, HPLC verified, COA per batch), Arcane Track (skin healing tracker, £11.99/mo or £70/yr),',
-      'Arcane Archives (£128/mo education platform), and The Codex (books and masterclasses).',
+      'Arcane Archives (£128/mo education platform, ~3,300 modules), and The Codex (books and masterclasses).',
       '',
-      'Answer Leo directly and concretely. Be short — six sentences at most, or a tight list.',
-      'Reference the real state below when it is relevant. Never invent numbers that are not given;',
-      'if a figure is missing, say it is missing and say what it would take to know it.',
-      'Speak plainly. No preamble, no flattery.',
+      'Answer Leo directly. Six sentences at most, or a tight list. Use the state below when relevant.',
+      'Never invent a number that is not given — if a figure is missing, say so and say what it would take to know it.',
+      'Peptides are research compounds: never give medical, dosing or treatment advice.',
+      'Plain speech. No preamble, no flattery.',
       '',
-      'SHIP STATE',
+      'SYSTEM STATE',
       this.brief(),
       '',
       `QUESTION: ${q}`,
@@ -2133,41 +3446,26 @@ class UI {
         onText: ({ text }) => {
           turn.text = text;
           const el = $('#counselLog');
-          if (el) el.lastElementChild.textContent = text;
+          if (el?.lastElementChild) el.lastElementChild.textContent = text;
         },
       });
       turn.text = res.text || turn.text;
     } catch (err) {
-      turn.text = err?.code === 'rate_limited'
-        ? 'Counsel is rate limited. Try again shortly.'
-        : err?.code === 'not_granted'
-          ? 'Counsel needs permission from this view to reach Claude.'
-          : `Counsel could not answer (${esc(err?.code || 'unknown')}).`;
+      turn.text = err?.code === 'rate_limited' ? 'Counsel is rate limited. Try again shortly.'
+        : err?.code === 'not_granted' ? 'Counsel needs permission from this view to reach Claude.'
+        : `Counsel could not answer (${err?.code || 'unknown'}).`;
     } finally {
       this.counselBusy = false;
-      this.renderDash();
+      this.renderTelemetry();
       $('#counselInput')?.focus();
     }
-  }
-
-  /* ---------------- ticker ---------------- */
-
-  renderTicker() {
-    const entry = this.store.state.log[0];
-    if (!entry) {
-      this.tickerEl.textContent = 'All systems nominal. Crew at station.';
-      this.tickerTime.textContent = '';
-      return;
-    }
-    this.tickerEl.textContent = entry.text;
-    this.tickerTime.textContent = clockTime(entry.ts);
   }
 }
 
 /* ==== src/app.js ==== */
 /**
- * LEOOS boot — wires the store, the simulation, the hull and the panels,
- * then runs one animation loop for the whole ship.
+ * LEOOS boot — store, simulation, the pixel floor, and the panels,
+ * driven by one animation loop.
  */
 
 
@@ -2180,23 +3478,19 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
 const store = new Store();
 const sim = new Sim(store);
 const canvas = document.getElementById('hull');
-const view = new ShipView(canvas, sim, store);
-const ui = new UI(store, sim, view);
+const factory = new Factory(canvas, sim, store);
+const ui = new UI(store, sim, factory);
 const tooltip = document.getElementById('tooltip');
 
-/* ---------- state changes repaint the panels ---------- */
-
 store.onChange(() => {
-  ui.renderRail();
-  ui.renderTop();
+  ui.render();
   ui.renderTicker();
-  ui.renderDash();
 });
 
 ui.render();
 ui.renderTicker();
 
-/* ---------- the loop ---------- */
+/* ---------- loop ---------- */
 
 let last = performance.now();
 let sinceUi = 0;
@@ -2206,65 +3500,67 @@ function frame(now) {
   last = now;
 
   if (!reduceMotion && sim.speed > 0) sim.tick(dt);
-  view.draw(reduceMotion ? 0 : dt);
+  factory.draw(reduceMotion ? 0 : dt);
 
   sinceUi += dt;
-  if (sinceUi > 0.8) {
+  if (sinceUi > 1) {
     sinceUi = 0;
     ui.renderTop();
     ui.renderRail();
-    if (ui.view.kind === 'agent' || ui.view.kind === 'overview') ui.renderDash();
+    if (ui.screen === 'agents' || ui.room) ui.render();
   }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-/* ---------- pointer on the hull ---------- */
+/* ---------- pointer on the floor ---------- */
+
+function atEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  return factory.toPixel(e.clientX - rect.left, e.clientY - rect.top);
+}
 
 canvas.addEventListener('pointermove', (e) => {
+  const { x, y } = atEvent(e);
+  const agent = sim.agentAt(x, y);
+  const room = agent ? null : factory.roomAt(x, y);
+
+  factory.hover = room ? room.id : (agent ? agent.deck : null);
+
   const rect = canvas.getBoundingClientRect();
   const px = e.clientX - rect.left;
   const py = e.clientY - rect.top;
-  const { x, y } = view.toShip(px, py);
-
-  const agent = sim.agentAt(x, y);
-  const deck = agent ? null : deckAt(x, y);
-
-  view.hover = agent ? { kind: 'agent', id: agent.id }
-    : deck ? { kind: 'deck', id: deck.id }
-    : null;
 
   if (agent) {
     showTip(px, py, agent.name, `${agent.role} · ${agent.state === 'transit' ? 'in transit' : 'working'}`);
-  } else if (deck) {
-    const open = store.openCount(deck.id);
-    showTip(px, py, deck.name, `${deck.sub} — ${open ? `${open} open` : 'clear'}`);
+  } else if (room) {
+    const open = store.openCount(room.id);
+    showTip(px, py, room.name, `${room.sub} — ${open ? `${open} open` : 'clear'}`);
   } else {
     tooltip.hidden = true;
   }
-  canvas.style.cursor = agent || deck ? 'pointer' : 'crosshair';
+  canvas.style.cursor = agent || room ? 'pointer' : 'default';
 });
 
 canvas.addEventListener('pointerleave', () => {
-  view.hover = null;
+  factory.hover = null;
   tooltip.hidden = true;
 });
 
 canvas.addEventListener('click', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const { x, y } = view.toShip(e.clientX - rect.left, e.clientY - rect.top);
+  const { x, y } = atEvent(e);
   const agent = sim.agentAt(x, y);
   if (agent) { ui.selectAgent(agent.id); return; }
-  const deck = deckAt(x, y);
-  if (deck) ui.selectDeck(deck.id);
-  else ui.clearSelection();
+  const room = factory.roomAt(x, y);
+  if (room) ui.openRoom(room.id);
+  else ui.closeRoom();
 });
 
 function showTip(px, py, title, body) {
   tooltip.hidden = false;
   tooltip.style.left = `${px}px`;
   tooltip.style.top = `${py}px`;
-  tooltip.innerHTML = `<div class="tooltip-title"></div><div class="tooltip-body"></div>`;
+  tooltip.innerHTML = '<div class="tooltip-title"></div><div class="tooltip-body"></div>';
   tooltip.firstElementChild.textContent = title;
   tooltip.lastElementChild.textContent = body;
 }
@@ -2284,27 +3580,24 @@ document.getElementById('transport').addEventListener('click', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
-  if (e.key === 'Escape') { ui.clearSelection(); return; }
+  if (e.key === 'Escape') { ui.closeRoom(); return; }
   const n = Number(e.key);
-  if (n >= 1 && n <= DECKS.length) ui.selectDeck(DECKS[n - 1].id);
+  if (n >= 1 && n <= DECKS.length) ui.openRoom(DECKS[n - 1].id);
 });
 
 /* ---------- layout ---------- */
 
-const ro = new ResizeObserver(() => view.resize());
+const ro = new ResizeObserver(() => factory.resize());
 ro.observe(canvas.parentElement);
-window.addEventListener('resize', () => view.resize());
+window.addEventListener('resize', () => factory.resize());
 
-/* ---------- late-arriving capabilities ---------- */
+/* ---------- late capabilities ---------- */
 
-store.connect().then(() => {
-  ui.renderDash();
-});
+store.connect().then(() => ui.render());
 
-window.claude?.use?.('sample').then((sample) => {
-  if (sample) ui.attachSampler(sample);
+window.claude?.use?.('sample').then((s) => {
+  if (s) ui.attachSampler(s);
 }).catch(() => { /* counsel stays on standby */ });
 
-/* Fonts land after first paint; redraw so canvas labels pick them up. */
-document.fonts?.ready?.then(() => view.resize());
+document.fonts?.ready?.then(() => factory.resize());
 </script>

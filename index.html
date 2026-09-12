@@ -1,4 +1,4 @@
-<title>LEOOS Command Deck</title>
+<title>Arcane Command Deck</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -16,27 +16,17 @@
     </svg>
     <span>
       <span class="brand-name" id="brandName">THE ARCANE</span><br>
-      <span class="brand-ver" id="brandVer">LEOOS v1.0</span>
+      <span class="brand-ver" id="brandVer">LEOOS v2.0</span>
     </span>
   </header>
 
   <div class="topbar">
-    <div class="readout">
-      <span class="readout-label">Ship's date</span>
-      <span class="readout-value" id="roStardate">—</span>
-    </div>
-    <div class="readout">
-      <span class="readout-label">Open orders</span>
-      <span class="readout-value is-flare" id="roOrders">--</span>
-    </div>
-    <div class="readout">
-      <span class="readout-label">Crew at station</span>
-      <span class="readout-value is-vital" id="roCrew">--</span>
-    </div>
-    <div class="readout">
-      <span class="readout-label">Monthly</span>
-      <span class="readout-value is-arcane" id="roRevenue">—</span>
-    </div>
+    <div class="readout"><span class="readout-label">Stamp</span><span class="readout-value mono" id="roStamp">—</span></div>
+    <div class="readout"><span class="readout-label">Open orders</span><span class="readout-value mono is-flare" id="roOrders">--</span></div>
+    <div class="readout"><span class="readout-label">Crew</span><span class="readout-value mono is-vital" id="roCrew">--</span></div>
+    <div class="readout"><span class="readout-label">Revenue / mo</span><span class="readout-value mono is-arcane" id="roRevenue">—</span></div>
+    <div class="readout"><span class="readout-label">Runway</span><span class="readout-value mono is-gold" id="roRunway">—</span></div>
+    <div class="readout"><span class="readout-label">Drafts</span><span class="readout-value mono" id="roDrafts">--</span></div>
 
     <span class="topbar-spacer"></span>
 
@@ -47,17 +37,20 @@
     </div>
   </div>
 
-  <nav class="rail" id="rail" aria-label="Deck manifest"></nav>
+  <nav class="rail" id="rail" aria-label="Navigation"></nav>
 
   <main class="stage">
-    <div style="position:relative;min-height:0">
-      <canvas id="hull" aria-label="Top-down view of the ship, with crew moving between decks"></canvas>
-      <div class="stage-tag">
-        <span class="stage-tag-name">HULL · TOP-DOWN</span>
-        <span class="eyebrow">Click a deck or a crew member</span>
+    <div class="stage-body">
+      <div class="stage-canvas" id="stageCanvas">
+        <canvas id="hull" aria-label="Top-down view of the facility, with crew moving between rooms"></canvas>
+        <div class="stage-tag">
+          <span class="stage-tag-name">THE FACTORY</span>
+          <span class="eyebrow">Click a room to open its dashboard</span>
+        </div>
+        <div class="tooltip" id="tooltip" hidden></div>
       </div>
-      <div class="stage-hint">Keys 1–9 jump decks · ESC returns to overview</div>
-      <div class="tooltip" id="tooltip" hidden></div>
+      <div class="stage-screen" id="stageScreen" hidden></div>
+      <aside class="room-overlay" id="roomOverlay" hidden></aside>
     </div>
     <div class="ticker">
       <span class="eyebrow ticker-label">Log</span>
@@ -66,7 +59,7 @@
     </div>
   </main>
 
-  <aside class="dash" id="dash" aria-label="Command dashboard"></aside>
+  <aside class="dash" id="dash" aria-label="Telemetry"></aside>
 
 </div>
 

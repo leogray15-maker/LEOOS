@@ -1,12 +1,12 @@
 /**
- * LEOOS boot — wires the store, the simulation, the hull and the panels,
- * then runs one animation loop for the whole ship.
+ * LEOOS boot — store, simulation, the pixel floor, and the panels,
+ * driven by one animation loop.
  */
 
 import { DECKS } from './config/empire.js';
 import { Store } from './core/store.js';
-import { Sim, deckAt } from './core/sim.js';
-import { ShipView } from './render/ship.js';
+import { Sim } from './core/sim.js';
+import { Factory } from './render/factory.js';
 import { UI } from './render/ui.js';
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -14,23 +14,19 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
 const store = new Store();
 const sim = new Sim(store);
 const canvas = document.getElementById('hull');
-const view = new ShipView(canvas, sim, store);
-const ui = new UI(store, sim, view);
+const factory = new Factory(canvas, sim, store);
+const ui = new UI(store, sim, factory);
 const tooltip = document.getElementById('tooltip');
 
-/* ---------- state changes repaint the panels ---------- */
-
 store.onChange(() => {
-  ui.renderRail();
-  ui.renderTop();
+  ui.render();
   ui.renderTicker();
-  ui.renderDash();
 });
 
 ui.render();
 ui.renderTicker();
 
-/* ---------- the loop ---------- */
+/* ---------- loop ---------- */
 
 let last = performance.now();
 let sinceUi = 0;
@@ -40,65 +36,67 @@ function frame(now) {
   last = now;
 
   if (!reduceMotion && sim.speed > 0) sim.tick(dt);
-  view.draw(reduceMotion ? 0 : dt);
+  factory.draw(reduceMotion ? 0 : dt);
 
   sinceUi += dt;
-  if (sinceUi > 0.8) {
+  if (sinceUi > 1) {
     sinceUi = 0;
     ui.renderTop();
     ui.renderRail();
-    if (ui.view.kind === 'agent' || ui.view.kind === 'overview') ui.renderDash();
+    if (ui.screen === 'agents' || ui.room) ui.render();
   }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-/* ---------- pointer on the hull ---------- */
+/* ---------- pointer on the floor ---------- */
+
+function atEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  return factory.toPixel(e.clientX - rect.left, e.clientY - rect.top);
+}
 
 canvas.addEventListener('pointermove', (e) => {
+  const { x, y } = atEvent(e);
+  const agent = sim.agentAt(x, y);
+  const room = agent ? null : factory.roomAt(x, y);
+
+  factory.hover = room ? room.id : (agent ? agent.deck : null);
+
   const rect = canvas.getBoundingClientRect();
   const px = e.clientX - rect.left;
   const py = e.clientY - rect.top;
-  const { x, y } = view.toShip(px, py);
-
-  const agent = sim.agentAt(x, y);
-  const deck = agent ? null : deckAt(x, y);
-
-  view.hover = agent ? { kind: 'agent', id: agent.id }
-    : deck ? { kind: 'deck', id: deck.id }
-    : null;
 
   if (agent) {
     showTip(px, py, agent.name, `${agent.role} · ${agent.state === 'transit' ? 'in transit' : 'working'}`);
-  } else if (deck) {
-    const open = store.openCount(deck.id);
-    showTip(px, py, deck.name, `${deck.sub} — ${open ? `${open} open` : 'clear'}`);
+  } else if (room) {
+    const open = store.openCount(room.id);
+    showTip(px, py, room.name, `${room.sub} — ${open ? `${open} open` : 'clear'}`);
   } else {
     tooltip.hidden = true;
   }
-  canvas.style.cursor = agent || deck ? 'pointer' : 'crosshair';
+  canvas.style.cursor = agent || room ? 'pointer' : 'default';
 });
 
 canvas.addEventListener('pointerleave', () => {
-  view.hover = null;
+  factory.hover = null;
   tooltip.hidden = true;
 });
 
 canvas.addEventListener('click', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const { x, y } = view.toShip(e.clientX - rect.left, e.clientY - rect.top);
+  const { x, y } = atEvent(e);
   const agent = sim.agentAt(x, y);
   if (agent) { ui.selectAgent(agent.id); return; }
-  const deck = deckAt(x, y);
-  if (deck) ui.selectDeck(deck.id);
-  else ui.clearSelection();
+  const room = factory.roomAt(x, y);
+  if (room) ui.openRoom(room.id);
+  else ui.closeRoom();
 });
 
 function showTip(px, py, title, body) {
   tooltip.hidden = false;
   tooltip.style.left = `${px}px`;
   tooltip.style.top = `${py}px`;
-  tooltip.innerHTML = `<div class="tooltip-title"></div><div class="tooltip-body"></div>`;
+  tooltip.innerHTML = '<div class="tooltip-title"></div><div class="tooltip-body"></div>';
   tooltip.firstElementChild.textContent = title;
   tooltip.lastElementChild.textContent = body;
 }
@@ -118,26 +116,23 @@ document.getElementById('transport').addEventListener('click', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
-  if (e.key === 'Escape') { ui.clearSelection(); return; }
+  if (e.key === 'Escape') { ui.closeRoom(); return; }
   const n = Number(e.key);
-  if (n >= 1 && n <= DECKS.length) ui.selectDeck(DECKS[n - 1].id);
+  if (n >= 1 && n <= DECKS.length) ui.openRoom(DECKS[n - 1].id);
 });
 
 /* ---------- layout ---------- */
 
-const ro = new ResizeObserver(() => view.resize());
+const ro = new ResizeObserver(() => factory.resize());
 ro.observe(canvas.parentElement);
-window.addEventListener('resize', () => view.resize());
+window.addEventListener('resize', () => factory.resize());
 
-/* ---------- late-arriving capabilities ---------- */
+/* ---------- late capabilities ---------- */
 
-store.connect().then(() => {
-  ui.renderDash();
-});
+store.connect().then(() => ui.render());
 
-window.claude?.use?.('sample').then((sample) => {
-  if (sample) ui.attachSampler(sample);
+window.claude?.use?.('sample').then((s) => {
+  if (s) ui.attachSampler(s);
 }).catch(() => { /* counsel stays on standby */ });
 
-/* Fonts land after first paint; redraw so canvas labels pick them up. */
-document.fonts?.ready?.then(() => view.resize());
+document.fonts?.ready?.then(() => factory.resize());

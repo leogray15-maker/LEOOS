@@ -1,187 +1,718 @@
 /**
- * The panels — deck rail, readouts, dashboard, inspectors, counsel.
- * Pure DOM. The canvas owns the ship; this owns everything around it.
+ * The panels — navigation, screens, room dashboards, telemetry.
+ * The canvas owns the floor; this owns everything around and over it.
  */
 
-import { DECKS, VENTURES, CREW, SHIP, CATALOGUE } from '../config/empire.js';
+import {
+  DECKS, VENTURES, CREW, ARCANE, CATALOGUE, GOALS, BUDGET, SCREENS, OPERATOR,
+} from '../config/empire.js';
+import { ROOM_BY_ID } from '../config/facility.js';
+import {
+  INVENTORY, DISPATCH, PDF_PRODUCTS, COHORTS, BUILD_QUEUE,
+  MANUSCRIPTS, PROTOCOL, DOCTRINE, ROOM_WIDGET,
+} from '../config/roomdata.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
-const deckById = Object.fromEntries(DECKS.map((d) => [d.id, d]));
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
 ));
 
+const money = (n, dp = 0) => `£${Number(n || 0).toLocaleString('en-GB', {
+  minimumFractionDigits: dp, maximumFractionDigits: dp,
+})}`;
+
+const num = (n) => Number(n || 0).toLocaleString('en-GB');
+const clockTime = (ts) => new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+const stamp = (d = new Date()) => `${String(d.getDate()).padStart(2, '0')} ${
+  d.toLocaleString('en-GB', { month: 'short' }).toUpperCase()} · ${
+  d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+
 const PLATFORM_CLASS = {
   TikTok: 'breach', Threads: 'arcane', X: 'ash',
   Instagram: 'arcane', Email: 'flare', Thread: 'arcane', Short: 'breach',
 };
-const platformClass = (p) => PLATFORM_CLASS[p] || 'ash';
 
-const money = (n) => `£${Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 })}`;
-
-const clockTime = (ts) => new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-/** Ship's date — a real, readable stamp, not a sci-fi gimmick. */
-function stardate(d = new Date()) {
-  const day = String(d.getDate()).padStart(2, '0');
-  const mon = d.toLocaleString('en-GB', { month: 'short' }).toUpperCase();
-  return `${day} ${mon} ${d.getFullYear()} · ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+/** A labelled progress bar. `pct` is 0–1. */
+function meter(pct, accent) {
+  const w = Math.round(Math.max(0, Math.min(1, pct)) * 100);
+  return `<div class="meter"><div class="meter-fill is-${accent}" style="width:${w}%"></div></div>`;
 }
 
 export class UI {
-  constructor(store, sim, shipView) {
+  constructor(store, sim, factory) {
     this.store = store;
     this.sim = sim;
-    this.ship = shipView;
-    this.view = { kind: 'overview' };
+    this.factory = factory;
+    this.screen = 'factory';
+    this.room = null;
+    this.agent = null;
     this.counsel = [];
     this.counselBusy = false;
     this.sampler = null;
     this.mount();
   }
 
-  /* ---------------- structure ---------------- */
+  /* ================= structure ================= */
 
   mount() {
-    $('#brandName').textContent = SHIP.name;
-    $('#brandVer').textContent = SHIP.designation;
+    $('#brandName').textContent = OPERATOR.brand;
+    $('#brandVer').textContent = OPERATOR.system;
+
     this.railEl = $('#rail');
+    this.stageEl = $('#stageScreen');
+    this.canvasWrap = $('#stageCanvas');
+    this.overlayEl = $('#roomOverlay');
     this.dashEl = $('#dash');
     this.tickerEl = $('#tickerLine');
     this.tickerTime = $('#tickerTime');
+
     this.buildRail();
 
-    this.dashEl.addEventListener('click', (e) => this.onDashClick(e));
-    this.dashEl.addEventListener('submit', (e) => this.onDashSubmit(e));
-    this.dashEl.addEventListener('change', (e) => this.onDashChange(e));
-    this.dashEl.addEventListener('focusout', () => {
-      if (this.dashDirty) setTimeout(() => this.renderDash(), 0);
-    });
+    for (const el of [this.stageEl, this.dashEl, this.overlayEl]) {
+      el.addEventListener('click', (e) => this.onClick(e));
+      el.addEventListener('submit', (e) => this.onSubmit(e));
+      el.addEventListener('change', (e) => this.onChange(e));
+      el.addEventListener('focusout', () => {
+        if (this.dirty) setTimeout(() => this.render(), 0);
+      });
+    }
   }
 
   buildRail() {
-    const head = `
-      <div class="rail-head">
-        <span class="eyebrow">Deck manifest</span>
-        <span class="eyebrow" id="railOpen"></span>
+    this.railEl.innerHTML = `
+      <div class="rail-head"><span class="eyebrow">Navigation</span></div>
+      ${SCREENS.map((s) => `
+        <button class="nav-btn" type="button" data-screen="${s.id}">
+          <span class="nav-no mono">${s.no}</span>
+          <span>
+            <span class="nav-name">${esc(s.name)}</span><br>
+            <span class="nav-sub">${esc(s.sub)}</span>
+          </span>
+        </button>`).join('')}
+
+      <div class="rail-block">
+        <span class="eyebrow">Commander</span>
+        <button class="commander" type="button" data-commander="1">
+          <span class="commander-mark">◆</span>
+          <span>
+            <span class="commander-name">ARCANE</span><br>
+            <span class="commander-where mono" id="arcaneWhere">—</span>
+          </span>
+        </button>
+      </div>
+
+      <div class="rail-block">
+        <div class="rail-row"><span class="eyebrow">Orders complete</span>
+          <span class="mono" id="integrityPct"></span></div>
+        <div class="meter"><div class="meter-fill is-arcane" id="integrityFill" style="width:0%"></div></div>
+      </div>
+
+      <div class="rail-block">
+        <div class="rail-row"><span class="eyebrow">Sync</span>
+          <span class="mono" id="syncMode" style="color:var(--ash)">—</span></div>
       </div>`;
-    const rows = DECKS.map((d) => `
-      <button class="deck-btn" type="button" data-deck="${d.id}">
-        <span class="dot is-${d.accent}"></span>
-        <span>
-          <span class="deck-btn-name">${esc(d.name)}</span><br>
-          <span class="deck-btn-sub">${esc(d.sub)}</span>
-        </span>
-        <span class="deck-btn-count mono" data-count="${d.id}">--</span>
-      </button>`).join('');
-    const foot = `
-      <div class="rail-foot">
-        <div style="display:flex;justify-content:space-between;align-items:baseline">
-          <span class="eyebrow">Orders complete</span>
-          <span class="mono" id="integrityPct" style="font-size:11px;color:var(--ash)"></span>
-        </div>
-        <div class="integrity-bar"><div class="integrity-fill" id="integrityFill" style="width:0%"></div></div>
-      </div>`;
-    this.railEl.innerHTML = head + rows + foot;
+
     this.railEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-deck]');
-      if (btn) this.selectDeck(btn.dataset.deck);
+      const nav = e.target.closest('[data-screen]');
+      if (nav) { this.setScreen(nav.dataset.screen); return; }
+      if (e.target.closest('[data-commander]')) this.openRoom(this.sim.arcane.deck);
     });
   }
 
-  /* ---------------- selection ---------------- */
+  /* ================= navigation ================= */
 
-  selectDeck(id) {
-    this.view = { kind: 'deck', id };
-    this.ship.selected = id;
-    this.ship.selectedAgent = null;
+  setScreen(id) {
+    this.screen = id;
+    this.agent = null;
+    const isFactory = id === 'factory';
+    this.canvasWrap.hidden = !isFactory;
+    this.stageEl.hidden = isFactory;
+    if (!isFactory) this.closeRoom();
     this.render();
-    this.dashEl.scrollTop = 0;
+    this.stageEl.scrollTop = 0;
+    if (isFactory) this.factory.resize();
+  }
+
+  /** Open a room: the commander walks there and its dashboard comes up. */
+  openRoom(id) {
+    if (!ROOM_BY_ID[id]) return;
+    this.room = id;
+    this.factory.selected = id;
+    this.sim.commandTo(id);
+    if (this.screen !== 'factory') this.setScreen('factory');
+    else this.render();
+  }
+
+  closeRoom() {
+    this.room = null;
+    this.factory.selected = null;
+    this.overlayEl.hidden = true;
+    this.overlayEl.innerHTML = '';
   }
 
   selectAgent(id) {
-    const agent = this.sim.agents.find((a) => a.id === id);
-    if (!agent) return;
-    this.view = { kind: 'agent', id };
-    this.ship.selectedAgent = id;
-    this.ship.selected = agent.deck;
-    this.render();
-    this.dashEl.scrollTop = 0;
+    const a = this.sim.everyone().find((x) => x.id === id);
+    if (!a) return;
+    this.agent = id;
+    this.setScreen('agents');
   }
 
-  clearSelection() {
-    this.view = { kind: 'overview' };
-    this.ship.selected = null;
-    this.ship.selectedAgent = null;
-    this.render();
-  }
-
-  /* ---------------- render ---------------- */
+  /* ================= render ================= */
 
   render() {
+    const active = document.activeElement;
+    if (active && active.tagName === 'INPUT'
+      && (this.stageEl.contains(active) || this.dashEl.contains(active) || this.overlayEl.contains(active))) {
+      this.dirty = true;
+      return;
+    }
+    this.dirty = false;
+
     this.renderRail();
     this.renderTop();
-    this.renderDash();
+    this.renderTelemetry();
+
+    if (this.screen === 'factory') {
+      this.renderOverlay();
+    } else {
+      this.stageEl.innerHTML = this.screenBody();
+    }
   }
 
   renderRail() {
-    for (const d of DECKS) {
-      const open = this.store.openCount(d.id);
-      const el = this.railEl.querySelector(`[data-count="${d.id}"]`);
-      if (el) {
-        el.textContent = open ? String(open).padStart(2, '0') : 'CLEAR';
-        el.classList.toggle('is-clear', open === 0);
-      }
-      const btn = this.railEl.querySelector(`[data-deck="${d.id}"]`);
-      if (btn) btn.setAttribute('aria-current', String(this.ship.selected === d.id));
+    for (const s of SCREENS) {
+      const btn = this.railEl.querySelector(`[data-screen="${s.id}"]`);
+      if (btn) btn.setAttribute('aria-current', String(this.screen === s.id));
     }
     const total = DECKS.reduce((n, d) => n + this.store.tasks(d.id).length, 0);
     const done = DECKS.reduce((n, d) => n + this.store.tasks(d.id).filter((t) => t.done).length, 0);
-    const pct = total ? Math.round((done / total) * 100) : 100;
-    $('#railOpen').textContent = `${this.store.totalOpen()} open`;
+    const pct = total ? Math.round((done / total) * 100) : 0;
     $('#integrityFill').style.width = `${pct}%`;
     $('#integrityPct').textContent = `${pct}%`;
+
+    const a = this.sim.arcane;
+    $('#arcaneWhere').textContent = a.state === 'transit'
+      ? `→ ${ROOM_BY_ID[a.deck].name}`
+      : ROOM_BY_ID[a.deck].name;
+
+    const mode = this.store.mode;
+    const el = $('#syncMode');
+    el.textContent = mode === 'synced' ? 'SYNCED' : mode === 'local' ? 'LOCAL' : 'MEMORY';
+    el.style.color = mode === 'synced' ? 'var(--vital)' : mode === 'local' ? 'var(--flare)' : 'var(--breach)';
   }
 
   renderTop() {
-    $('#roStardate').textContent = stardate();
+    $('#roStamp').textContent = stamp();
     $('#roOrders').textContent = String(this.store.totalOpen()).padStart(2, '0');
-    const moving = this.sim.agents.filter((a) => a.state === 'transit').length;
+    const moving = this.sim.agents.filter((x) => x.state === 'transit').length;
     $('#roCrew').textContent = `${this.sim.agents.length - moving}/${this.sim.agents.length}`;
-    const total = this.store.monthlyTotal();
-    $('#roRevenue').textContent = this.store.ledgerCalibrated() ? money(total) : '—';
+    const rev = this.store.monthlyRevenue();
+    $('#roRevenue').textContent = this.store.ledgerCalibrated() ? money(rev) : '—';
+    const run = this.store.runwayMonths();
+    $('#roRunway').textContent = run === null ? '—' : `${run.toFixed(1)} mo`;
+    $('#roDrafts').textContent = String(this.store.postCount()).padStart(2, '0');
   }
 
-  renderDash() {
-    // Never rebuild the panel out from under a field Leo is typing in.
-    const active = document.activeElement;
-    if (active && active.tagName === 'INPUT' && this.dashEl.contains(active)) {
-      this.dashDirty = true;
-      return;
+  /* ================= room dashboard ================= */
+
+  renderOverlay() {
+    if (!this.room) { this.overlayEl.hidden = true; this.overlayEl.innerHTML = ''; return; }
+    const room = ROOM_BY_ID[this.room];
+    const tasks = this.store.tasks(room.id);
+    const open = tasks.filter((t) => !t.done);
+    const crew = this.sim.agents.filter((a) => a.deck === room.id);
+    const venture = VENTURES.find((v) => v.id === room.venture);
+    const goals = GOALS.filter((g) => g.room === room.id);
+    const elsewhere = this.sim.agents.filter((a) => a.deck !== room.id);
+
+    this.overlayEl.hidden = false;
+    this.overlayEl.innerHTML = `
+      <div class="room-head is-${room.accent}">
+        <div>
+          <span class="eyebrow">Room dashboard</span>
+          <h2 class="room-title">${esc(room.name)}</h2>
+          <p class="room-sub">${esc(room.sub)}</p>
+        </div>
+        <button class="icon-btn" type="button" data-close="1" aria-label="Close room dashboard">✕</button>
+      </div>
+
+      <p class="room-blurb">${esc(room.blurb)}</p>
+
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono">${String(open.length).padStart(2, '0')}</span><span class="stat-l">Open orders</span></div>
+        <div class="stat"><span class="stat-n mono">${crew.length}</span><span class="stat-l">Crew present</span></div>
+        <div class="stat"><span class="stat-n mono">${goals.length}</span><span class="stat-l">Goals anchored</span></div>
+        ${venture ? `<div class="stat"><span class="stat-n mono is-${venture.accent}">${
+          this.store.state.ledger[venture.id]?.calibrated ? money(this.store.state.ledger[venture.id].mrr) : '—'
+        }</span><span class="stat-l">${esc(venture.name)} / mo</span></div>` : ''}
+      </div>
+
+      ${goals.length ? `
+        <h3 class="sub-title">Targets</h3>
+        ${goals.map((g) => this.goalRow(g)).join('')}` : ''}
+
+      ${this.roomWidget(room.id)}
+
+      <h3 class="sub-title">Orders</h3>
+      ${tasks.length
+        ? `<div class="orders">${[...open, ...tasks.filter((t) => t.done)].map((t) => this.orderRow(room.id, t)).join('')}</div>`
+        : '<p class="muted-note">Nothing standing on this deck.</p>'}
+      <form class="order-add" data-add="${room.id}">
+        <input type="text" id="add-${room.id}" placeholder="Issue an order to ${esc(room.name)}…" autocomplete="off">
+        <button type="submit">Issue</button>
+      </form>
+
+      <h3 class="sub-title">Crew</h3>
+      <div class="crew-chips">
+        ${crew.length ? crew.map((a) => `
+          <button class="crew-chip is-here" type="button" data-agent="${a.id}">
+            <span class="dot" style="background:${a.colour};box-shadow:0 0 7px ${a.colour}"></span>${esc(a.name)}
+          </button>`).join('') : '<span class="muted-note">Empty. Send someone.</span>'}
+      </div>
+      <p class="eyebrow" style="margin:12px 0 6px">Dispatch here</p>
+      <div class="crew-chips">
+        ${elsewhere.map((a) => `
+          <button class="crew-chip" type="button" data-send="${a.id}" data-to="${room.id}">
+            <span class="dot" style="background:${a.colour}"></span>${esc(a.name)}
+          </button>`).join('')}
+      </div>`;
+  }
+
+
+  /* ================= room widgets ================= */
+
+  /** The room-specific dashboard. Each room does a different job. */
+  roomWidget(roomId) {
+    switch (ROOM_WIDGET[roomId]) {
+      case 'lab': return this.wLab();
+      case 'library': return this.wLibrary();
+      case 'cohorts': return this.wCohorts();
+      case 'build': return this.wBuild();
+      case 'manuscripts': return this.wManuscripts();
+      case 'protocol': return this.wProtocol();
+      case 'signals': return this.wSignals();
+      case 'treasury': return this.wTreasury();
+      case 'doctrine': return this.wDoctrine();
+      default: return '';
     }
-    this.dashDirty = false;
-    const v = this.view;
-    const body = v.kind === 'deck' ? this.deckPanel(v.id)
-      : v.kind === 'agent' ? this.agentPanel(v.id)
-      : this.overviewPanels();
-    this.dashEl.innerHTML = body + this.counselPanel() + this.syncNote();
   }
 
-  /* ---------------- panels ---------------- */
+  srcNote(text) { return `<p class="src-note"><span class="chip is-seed">placeholder</span> ${esc(text)}</p>`; }
 
+  wLab() {
+    const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
+    const coaWord = { published: 'published', pending: 'pending', none: 'none' };
+    const low = INVENTORY.rows.filter((r) => r.vials > 0 && r.vials < 12).length;
+    return `
+      <h3 class="sub-title">Stock</h3>
+      ${this.srcNote(INVENTORY.source)}
+      <div class="tbl">
+        <div class="tbl-head">${INVENTORY.columns.map((c) => `<span>${esc(c)}</span>`).join('')}</div>
+        ${INVENTORY.rows.map((r) => `
+          <div class="tbl-row">
+            <span class="tbl-code"><i class="vial is-${r.tint}"></i>${esc(r.code)}</span>
+            <span class="mono dim">${esc(r.size)}</span>
+            <span class="mono ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}">${r.vials || '—'}</span>
+            <span class="mono dim">${esc(r.batch)}</span>
+            <span class="chip ${coaChip[r.coa] || ''}">${esc(coaWord[r.coa] || r.coa)}</span>
+          </div>`).join('')}
+      </div>
+      ${low ? `<p class="warn-note">${low} line${low === 1 ? '' : 's'} under two weeks of cover.</p>` : ''}
 
-  signalPanel(compact) {
-    const drafts = this.store.drafts();
-    const body = drafts.length
-      ? drafts.slice(0, compact ? 3 : 12).map((d) => `
+      <h3 class="sub-title">Dispatch</h3>
+      ${this.srcNote(DISPATCH.source)}
+      <p class="muted-note">${esc(DISPATCH.note)}</p>
+      <div class="tbl">
+        ${DISPATCH.rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span class="mono dim">${esc(r.ref)}</span>
+            <span>${esc(r.items)}</span>
+            <span class="chip">${esc(r.stage)}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  wLibrary() {
+    const stageChip = { live: 'is-vital', draft: 'is-flare', idea: '' };
+    const live = PDF_PRODUCTS.rows.filter((r) => r.stage === 'live');
+    const potential = PDF_PRODUCTS.rows.reduce((n, r) => n + (r.price || 0), 0);
+    return `
+      <h3 class="sub-title">PDF products</h3>
+      ${this.srcNote(PDF_PRODUCTS.source)}
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-vital">${live.length}</span><span class="stat-l">Live</span></div>
+        <div class="stat"><span class="stat-n mono">${PDF_PRODUCTS.rows.length}</span><span class="stat-l">In the catalogue</span></div>
+        <div class="stat"><span class="stat-n mono is-arcane">${money(potential, 2)}</span><span class="stat-l">Full set price</span></div>
+      </div>
+      <div class="tbl" style="margin-top:12px">
+        ${PDF_PRODUCTS.rows.map((r) => `
+          <div class="tbl-row is-pdf">
+            <span>
+              <span class="tbl-title">${esc(r.title)}</span><br>
+              <span class="tbl-from">from ${esc(r.from)} · ${r.pages}pp</span>
+            </span>
+            <span class="mono">${r.price ? money(r.price, 2) : '—'}</span>
+            <span class="chip ${stageChip[r.stage] || ''}">${esc(r.stage)}</span>
+          </div>`).join('')}
+      </div>
+      <p class="muted-note" style="margin-top:10px">Every title above is cut from a module you already wrote. The Signal Forge picks the modules; this is where they become something to sell.</p>`;
+  }
+
+  wCohorts() {
+    return `
+      <h3 class="sub-title">Members</h3>
+      ${this.srcNote(COHORTS.source)}
+      <div class="tbl">
+        ${COHORTS.rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span>${esc(r.label)}</span>
+            <span class="muted-note">${esc(r.note)}</span>
+            <span class="mono ${r.count ? '' : 'dim'}">${r.count || '—'}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  wBuild() {
+    const chip = { building: 'is-arcane', queued: 'is-flare', shipped: 'is-vital', idea: '' };
+    return `
+      <h3 class="sub-title">Build queue</h3>
+      ${this.srcNote(BUILD_QUEUE.source)}
+      <div class="tbl">
+        ${BUILD_QUEUE.rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span>${esc(r.item)}</span>
+            <span class="muted-note">${esc(r.target)}</span>
+            <span class="chip ${chip[r.stage] || ''}">${esc(r.stage)}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  wManuscripts() {
+    const chip = { live: 'is-vital', proofing: 'is-flare', drafting: '' };
+    return `
+      <h3 class="sub-title">The Codex</h3>
+      ${MANUSCRIPTS.rows.map((r) => `
+        <div class="goal">
+          <div class="goal-top">
+            <span class="goal-name">${esc(r.title)}${r.price ? ` <span class="mono dim">${money(r.price, 2)}</span>` : ''}</span>
+            <span class="chip ${chip[r.stage] || ''}">${esc(r.stage)}</span>
+          </div>
+          ${meter(r.pct / 100, r.stage === 'live' ? 'vital' : 'breach')}
+        </div>`).join('')}`;
+  }
+
+  wProtocol() {
+    return `
+      <h3 class="sub-title">Daily protocol</h3>
+      <p class="muted-note">${esc(PROTOCOL.source)}</p>
+      <div class="tbl" style="margin-top:10px">
+        ${PROTOCOL.rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span>${esc(r.item)}</span>
+            <span class="muted-note">${esc(r.unit)}</span>
+            <span class="mono is-vital">${num(r.target)}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  wSignals() {
+    const drafts = this.store.drafts().slice(0, 3);
+    return `
+      <h3 class="sub-title">Signal queue</h3>
+      ${drafts.length ? drafts.map((d) => `
         <article class="signal-card">
           <div class="signal-card-top">
-            <span class="chip is-${platformClass(d.platform)}">${esc(d.platform)}</span>
-            <span class="signal-card-src">${esc(d.course)}</span>
+            <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
+            <span class="signal-card-src">${esc(d.course || '')}</span>
           </div>
           <p class="signal-card-hook">${esc(d.hook)}</p>
           <pre class="signal-card-body">${esc(d.post)}</pre>
+          <div class="signal-card-acts">
+            <button class="act is-primary" type="button" data-copy="${d.id}">Copy</button>
+            <span class="signal-card-spacer"></span>
+            <button class="act" type="button" data-posted="${d.id}">Posted</button>
+            <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
+          </div>
+        </article>`).join('')
+        : '<p class="muted-note">No drafts standing. The Signal Forge writes three every morning.</p>'}`;
+  }
+
+  wTreasury() {
+    const allocs = this.store.allocations();
+    const run = this.store.runwayMonths();
+    return `
+      <h3 class="sub-title">This month</h3>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${money(this.store.monthlyRevenue())}</span><span class="stat-l">Revenue</span></div>
+        <div class="stat"><span class="stat-n mono is-breach">${money(this.store.monthlyFixed())}</span><span class="stat-l">Fixed</span></div>
+        <div class="stat"><span class="stat-n mono is-gold">${run === null ? '—' : run.toFixed(1)}</span><span class="stat-l">Runway (mo)</span></div>
+      </div>
+      <h3 class="sub-title">The split</h3>
+      ${allocs.map((a) => `
+        <div class="mini-alloc">
+          <span class="mini-name">${esc(a.name)} <span class="dim mono">${a.pct}%</span></span>
+          <span class="mini-amt mono is-${a.accent}">${money(a.amount)}</span>
+        </div>`).join('')}
+      <button class="back-btn" type="button" data-goscreen="ledger" style="margin-top:12px">Open the full Ledger →</button>`;
+  }
+
+  wDoctrine() {
+    return `
+      <h3 class="sub-title">Standing doctrine</h3>
+      ${DOCTRINE.map((d) => `<p class="doctrine">${esc(d)}</p>`).join('')}
+      <button class="back-btn" type="button" data-goscreen="goals" style="margin-top:10px">Open all goals →</button>`;
+  }
+
+  goalRow(g) {
+    const val = this.store.goalValue(g);
+    const pct = this.store.goalPct(g);
+    const room = ROOM_BY_ID[g.room];
+    const shown = g.unit === '£' ? money(val) : `${num(Math.round(val * 10) / 10)} ${g.unit}`;
+    const target = g.unit === '£' ? money(g.target) : `${num(g.target)} ${g.unit}`;
+    return `
+      <div class="goal">
+        <div class="goal-top">
+          <span class="goal-name">${esc(g.name)}</span>
+          <span class="goal-val mono">${esc(shown)} <span class="goal-target">/ ${esc(target)}</span></span>
+        </div>
+        ${meter(pct, room?.accent || 'arcane')}
+        <div class="goal-foot">
+          <span class="chip ${g.kind === 'money' ? 'is-flare' : ''}">${g.kind}</span>
+          ${g.auto ? '<span class="chip">auto</span>'
+            : `<input class="goal-input mono" type="text" inputmode="decimal"
+                 id="goal-${g.id}" data-goal="${g.id}" value="${val || ''}"
+                 placeholder="0" aria-label="Progress for ${esc(g.name)}">`}
+          <span class="goal-pct mono">${Math.round(pct * 100)}%</span>
+        </div>
+      </div>`;
+  }
+
+  orderRow(roomId, task, prefix) {
+    return `
+      <button class="order ${task.done ? 'is-done' : ''}" type="button"
+              data-toggle="${task.id}" data-deck="${roomId}" aria-pressed="${task.done}">
+        <span class="order-box"><svg class="order-tick" viewBox="0 0 8 8" aria-hidden="true">
+          <path d="M1 4.2 L3 6.2 L7 1.6" fill="none" stroke="#07070a" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="order-text">${prefix ? `<span class="mono order-pre">${esc(prefix)}</span> ` : ''}${esc(task.t)}</span>
+        <span class="order-pri p${task.p}">P${task.p}</span>
+      </button>`;
+  }
+
+  /* ================= screens ================= */
+
+  screenBody() {
+    switch (this.screen) {
+      case 'agents': return this.screenAgents();
+      case 'orders': return this.screenOrders();
+      case 'ventures': return this.screenVentures();
+      case 'ledger': return this.screenLedger();
+      case 'goals': return this.screenGoals();
+      case 'signals': return this.screenSignals();
+      case 'system': return this.screenSystem();
+      default: return '';
+    }
+  }
+
+  head(title, note) {
+    return `<div class="screen-head"><h2 class="screen-title">${esc(title)}</h2>
+      ${note ? `<span class="chip">${esc(note)}</span>` : ''}</div>`;
+  }
+
+  screenAgents() {
+    const sel = this.agent ? this.sim.everyone().find((a) => a.id === this.agent) : null;
+    if (sel) {
+      const room = ROOM_BY_ID[sel.deck];
+      const home = ROOM_BY_ID[sel.home];
+      return `
+        ${this.head(sel.name, sel.role)}
+        <button class="back-btn" type="button" data-agentback="1">← All crew</button>
+        <p class="room-blurb" style="margin-top:12px">${esc(sel.brief || '')}</p>
+        <div class="stat-row">
+          <div class="stat"><span class="stat-n" style="color:${sel.colour};font-size:15px">${esc(room.name)}</span><span class="stat-l">${sel.state === 'transit' ? 'In transit to' : 'Working in'}</span></div>
+          <div class="stat"><span class="stat-n" style="font-size:15px">${esc(home.name)}</span><span class="stat-l">Home station</span></div>
+        </div>
+        <h3 class="sub-title">Current order</h3>
+        <p class="muted-note">${sel.order ? esc(sel.order) : 'Awaiting orders on this deck.'}</p>
+        <h3 class="sub-title">Send to</h3>
+        <div class="crew-chips">
+          ${DECKS.map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
+             data-send="${sel.id}" data-to="${d.id}">${esc(d.name)}</button>`).join('')}
+        </div>`;
+    }
+
+    return `
+      ${this.head('Agents', `${CREW.length} crew + commander`)}
+      <div class="card-grid">
+        ${[this.sim.arcane, ...this.sim.agents].map((a) => {
+          const room = ROOM_BY_ID[a.deck];
+          return `
+          <button class="agent-card ${a.kind === 'arcane' ? 'is-commander' : ''}" type="button" data-agent="${a.id}">
+            <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
+            <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
+            <span class="agent-role">${esc(a.role)}</span>
+            <span class="agent-where mono">${a.state === 'transit' ? '→ ' : ''}${esc(room.name)}</span>
+            <span class="agent-brief">${esc(a.brief || '')}</span>
+          </button>`;
+        }).join('')}
+      </div>`;
+  }
+
+  screenOrders() {
+    const groups = DECKS.map((d) => ({ deck: d, tasks: this.store.tasks(d.id) }))
+      .filter((g) => g.tasks.length);
+    return `
+      ${this.head('Orders', `${this.store.totalOpen()} open`)}
+      ${groups.map(({ deck, tasks }) => {
+        const open = tasks.filter((t) => !t.done);
+        return `
+          <section class="block">
+            <div class="block-head">
+              <button class="block-title" type="button" data-room="${deck.id}">
+                <span class="dot is-${deck.accent}"></span>${esc(deck.name)}
+              </button>
+              <span class="chip mono">${open.length} open</span>
+            </div>
+            <div class="orders">${[...open, ...tasks.filter((t) => t.done)].map((t) => this.orderRow(deck.id, t)).join('')}</div>
+            <form class="order-add" data-add="${deck.id}">
+              <input type="text" id="ord-${deck.id}" placeholder="Issue an order…" autocomplete="off">
+              <button type="submit">Issue</button>
+            </form>
+          </section>`;
+      }).join('')}`;
+  }
+
+  screenVentures() {
+    return `
+      ${this.head('Ventures', `${VENTURES.length} businesses`)}
+      ${VENTURES.map((v) => {
+        const row = this.store.state.ledger[v.id] || {};
+        const titles = CATALOGUE.filter((c) => c.venture === v.id);
+        return `
+        <section class="block">
+          <div class="block-head">
+            <button class="block-title" type="button" data-room="${v.room}">
+              <span class="dot is-${v.accent}"></span>${esc(v.name)}
+            </button>
+            <span class="chip">${esc(v.model)}</span>
+          </div>
+          <p class="muted-note">${esc(v.kind)}</p>
+          <div class="fact-row">${v.facts.map((f) => `<span class="fact">${esc(f)}</span>`).join('')}</div>
+          <div class="field-row">
+            <label class="field">
+              <span class="field-l">Revenue / month</span>
+              <input class="field-i mono" type="text" inputmode="decimal" id="v-mrr-${v.id}"
+                     data-ledger="${v.id}" data-field="mrr" value="${row.mrr || ''}" placeholder="0">
+            </label>
+            <label class="field">
+              <span class="field-l">${esc(v.unitLabel)}</span>
+              <input class="field-i mono" type="text" inputmode="numeric" id="v-u-${v.id}"
+                     data-ledger="${v.id}" data-field="units" value="${row.units || ''}" placeholder="0">
+            </label>
+          </div>
+          ${titles.length ? `<div class="fact-row">${titles.map((t) => `
+            <span class="fact">${esc(t.title)}${t.price ? ` · ${money(t.price, 2)}` : ''}</span>`).join('')}</div>` : ''}
+        </section>`;
+      }).join('')}`;
+  }
+
+  screenLedger() {
+    const rev = this.store.monthlyRevenue();
+    const fixed = this.store.monthlyFixed();
+    const net = this.store.monthlyNet();
+    const run = this.store.runwayMonths();
+    const allocs = this.store.allocations();
+    const splitTotal = this.store.splitTotal();
+
+    return `
+      ${this.head('Ledger', this.store.ledgerCalibrated() ? 'live' : 'uncalibrated')}
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${money(rev)}</span><span class="stat-l">Revenue / month</span></div>
+        <div class="stat"><span class="stat-n mono is-breach">${money(fixed)}</span><span class="stat-l">Fixed costs</span></div>
+        <div class="stat"><span class="stat-n mono ${net >= 0 ? 'is-vital' : 'is-breach'}">${money(net)}</span><span class="stat-l">Net / month</span></div>
+        <div class="stat"><span class="stat-n mono is-gold">${run === null ? '—' : `${run.toFixed(1)}`}</span><span class="stat-l">Months runway</span></div>
+      </div>
+
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Cash on hand</h3></div>
+        <label class="field">
+          <span class="field-l">Bank balance, everything included</span>
+          <input class="field-i mono" type="text" inputmode="decimal" id="cash"
+                 data-budget="cash" value="${this.store.state.budget.cash || ''}" placeholder="0">
+        </label>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <h3 class="sub-title" style="margin:0">Fixed costs</h3>
+          <span class="chip mono">${money(fixed)} / mo</span>
+        </div>
+        ${BUDGET.fixed.map((f) => `
+          <div class="cost-row">
+            <button class="cost-name" type="button" data-room="${f.room}">
+              <span class="dot is-${ROOM_BY_ID[f.room]?.accent || 'arcane'}"></span>${esc(f.name)}
+            </button>
+            <input class="field-i mono" type="text" inputmode="decimal" id="fx-${f.id}"
+                   data-budget="fixed" data-id="${f.id}"
+                   value="${this.store.state.budget.fixed[f.id] || ''}" placeholder="0">
+          </div>`).join('')}
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <h3 class="sub-title" style="margin:0">The split</h3>
+          <span class="chip ${splitTotal === 100 ? '' : 'is-seed'} mono">${splitTotal}%</span>
+        </div>
+        <p class="muted-note">Every pound of net profit gets an envelope before it gets spent.</p>
+        ${allocs.map((a) => `
+          <div class="alloc">
+            <div class="alloc-top">
+              <span class="alloc-name">${esc(a.name)}</span>
+              <span class="alloc-amt mono is-${a.accent}">${money(a.amount)}</span>
+            </div>
+            ${meter(a.pct / 100, a.accent)}
+            <div class="alloc-foot">
+              <span class="muted-note">${esc(a.note)}</span>
+              <input class="pct-input mono" type="text" inputmode="numeric" id="sp-${a.id}"
+                     data-budget="split" data-id="${a.id}" value="${a.pct}" aria-label="${esc(a.name)} percentage">
+            </div>
+          </div>`).join('')}
+        ${splitTotal !== 100 ? `<p class="warn-note">The split is at ${splitTotal}%. Make it 100 or the envelopes lie.</p>` : ''}
+      </section>`;
+  }
+
+  screenGoals() {
+    const moneyGoals = GOALS.filter((g) => g.kind === 'money');
+    const workGoals = GOALS.filter((g) => g.kind === 'work');
+    const done = GOALS.filter((g) => this.store.goalPct(g) >= 1).length;
+    return `
+      ${this.head('Goals', `${done} / ${GOALS.length} hit`)}
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Money</h3></div>
+        ${moneyGoals.map((g) => this.goalRow(g)).join('')}
+      </section>
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Work</h3></div>
+        ${workGoals.map((g) => this.goalRow(g)).join('')}
+      </section>`;
+  }
+
+  screenSignals() {
+    const drafts = this.store.drafts();
+    return `
+      ${this.head('Signals', `${drafts.length} draft${drafts.length === 1 ? '' : 's'}`)}
+      <p class="muted-note">The Signal Forge reads a module from the Archives each morning and drafts a post from it. Notion is never written to.</p>
+      ${drafts.length ? drafts.map((d) => `
+        <article class="signal-card">
+          <div class="signal-card-top">
+            <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
+            <span class="signal-card-src">${esc(d.course || '')}</span>
+          </div>
+          <p class="signal-card-hook">${esc(d.hook)}</p>
+          <pre class="signal-card-body">${esc(d.post)}</pre>
+          ${d.angle ? `<p class="muted-note">${esc(d.angle)}</p>` : ''}
           <div class="signal-card-acts">
             <button class="act is-primary" type="button" data-copy="${d.id}">Copy</button>
             ${d.sourceUrl ? `<a class="act" href="${esc(d.sourceUrl)}" target="_blank" rel="noopener">Source</a>` : ''}
@@ -190,302 +721,198 @@ export class UI {
             <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
           </div>
         </article>`).join('')
-      : `<p class="counsel-empty">No drafts standing. The Signal Forge writes three every morning from a module in the Archives.</p>`;
+        : '<p class="muted-note">No drafts standing.</p>'}`;
+  }
 
+  screenSystem() {
+    const mode = this.store.mode;
+    const modeCopy = mode === 'synced'
+      ? 'Synced. Orders, money and goals follow you across every device signed in here.'
+      : mode === 'local'
+        ? 'Local only. State is saved in this browser.'
+        : 'Memory only. Storage is blocked here, so nothing survives a reload.';
     return `
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title">Signal queue</h2>
-          <span class="chip mono">${drafts.length} draft${drafts.length === 1 ? '' : 's'}</span>
+      ${this.head('System', OPERATOR.system)}
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Storage</h3>
+          <span class="chip">${mode}</span></div>
+        <p class="muted-note">${esc(modeCopy)}</p>
+      </section>
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Signal Forge</h3>
+          <span class="chip">06:00 daily</span></div>
+        <p class="muted-note">Reads The Arcane Archives, drafts three posts, writes them into this system. Notion is read-only — the agent never creates, edits or deletes anything there.</p>
+      </section>
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">The floor</h3></div>
+        <p class="muted-note">${DECKS.length} rooms, ${CREW.length} crew and one commander. Click a room to open its dashboard — ARCANE walks there and the crew drift toward wherever the attention is.</p>
+        <div class="crew-chips">
+          ${DECKS.map((d) => `<button class="crew-chip" type="button" data-room="${d.id}">
+            <span class="dot is-${d.accent}"></span>${esc(d.name)}</button>`).join('')}
         </div>
-        ${body}
       </section>`;
   }
 
-  overviewPanels() {
-    return this.signalPanel(true) + this.directivesPanel() + this.ledgerPanel()
-      + this.signalsPanel() + this.rosterPanel();
-  }
+  /* ================= right rail ================= */
 
-  directivesPanel() {
-    const items = [];
-    for (const d of DECKS) {
-      for (const t of this.store.tasks(d.id)) {
-        if (!t.done && t.p === 1) items.push({ deck: d, task: t });
-      }
-    }
-    items.sort((a, b) => a.deck.name.localeCompare(b.deck.name));
-    const top = items.slice(0, 6);
-    const list = top.length
-      ? `<div class="orders">${top.map(({ deck, task }) => this.orderRow(deck.id, task, deck.name)).join('')}</div>`
-      : `<p class="counsel-empty">No priority-one orders standing. Set the next one from any deck.</p>`;
-    return `
+  renderTelemetry() {
+    const rev = this.store.monthlyRevenue();
+    const allocs = this.store.allocations();
+    const hot = DECKS.map((d) => ({ d, open: this.store.openCount(d.id) }))
+      .sort((a, b) => b.open - a.open).slice(0, 4);
+
+    this.dashEl.innerHTML = `
       <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title">Standing directives</h2>
-          <span class="chip">P1 · ${items.length}</span>
-        </div>
-        ${list}
-      </section>`;
-  }
-
-  ledgerPanel() {
-    const rows = VENTURES.map((v) => {
-      const row = this.store.state.ledger[v.id] || {};
-      return `
-        <div class="ledger-row">
-          <span class="dot is-${v.accent}"></span>
-          <span>
-            <span class="ledger-name">${esc(v.name)}</span><br>
-            <span class="ledger-kind">${esc(v.kind)}</span>
-          </span>
-          <input class="ledger-val mono" type="text" inputmode="numeric"
-                 id="ledger-${v.id}" data-ledger="${v.id}"
-                 value="${row.mrr ? money(row.mrr) : '—'}"
-                 aria-label="Monthly revenue for ${esc(v.name)}">
-        </div>`;
-    }).join('');
-    const calibrated = this.store.ledgerCalibrated();
-    return `
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title">Ledger · monthly</h2>
-          ${calibrated
-            ? `<span class="chip mono">${money(this.store.monthlyTotal())}</span>`
-            : '<span class="chip is-seed">Uncalibrated</span>'}
-        </div>
-        <div class="ledger">${rows}</div>
-        ${calibrated ? '' : '<p class="counsel-empty" style="margin:10px 0 0">Figures are blank until you set them. Type into any row — it saves and syncs.</p>'}
-      </section>`;
-  }
-
-  signalsPanel() {
-    const signals = [];
-    for (const d of DECKS) {
-      const tasks = this.store.tasks(d.id);
-      const p1 = tasks.filter((t) => !t.done && t.p === 1).length;
-      if (p1 >= 3) signals.push({ level: 'breach', text: `${d.name} is carrying ${p1} priority-one orders. Something here needs delegating or cutting.`, src: d.name });
-      else if (tasks.length && tasks.every((t) => t.done)) signals.push({ level: 'vital', text: `${d.name} is clear. Every order complete.`, src: d.name });
-    }
-    if (!this.store.ledgerCalibrated()) {
-      signals.push({ level: 'flare', text: 'Ledger has never been calibrated. Without real numbers the Vault readout is blind.', src: 'VAULT' });
-    }
-    const priced = CATALOGUE.filter((c) => c.price).length;
-    signals.push({ level: 'vital', text: `${CATALOGUE.length} titles in the catalogue, ${priced} with a price on file.`, src: 'SCRIPTORIUM' });
-
-    const order = { breach: 0, flare: 1, vital: 2 };
-    signals.sort((a, b) => order[a.level] - order[b.level]);
-
-    return `
-      <section class="panel">
-        <div class="panel-head"><h2 class="panel-title">Signals</h2>
-          <span class="chip">${signals.length}</span></div>
-        ${signals.slice(0, 5).map((s) => `
-          <div class="signal">
-            <span class="signal-stripe is-${s.level}"></span>
+        <div class="panel-head"><h2 class="panel-title">Floor</h2>
+          <span class="chip mono">${this.store.totalOpen()} open</span></div>
+        ${hot.map(({ d, open }) => `
+          <button class="floor-row" type="button" data-room="${d.id}">
+            <span class="dot is-${d.accent}"></span>
             <span>
-              <span class="signal-text">${esc(s.text)}</span><br>
-              <span class="signal-src">${esc(s.src)}</span>
+              <span class="floor-name">${esc(d.name)}</span><br>
+              <span class="floor-sub">${esc(d.sub)}</span>
             </span>
+            <span class="mono ${open ? '' : 'is-clear'}">${open ? String(open).padStart(2, '0') : 'CLEAR'}</span>
+          </button>`).join('')}
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2 class="panel-title">Month</h2>
+          <span class="chip mono">${this.store.ledgerCalibrated() ? money(rev) : 'not set'}</span></div>
+        ${allocs.map((a) => `
+          <div class="mini-alloc">
+            <span class="mini-name">${esc(a.name)}</span>
+            <span class="mini-amt mono is-${a.accent}">${money(a.amount)}</span>
           </div>`).join('')}
-      </section>`;
-  }
+        ${!this.store.ledgerCalibrated()
+          ? '<p class="muted-note" style="margin-top:8px">Open the Ledger and put real numbers in. Nothing is guessed for you.</p>' : ''}
+      </section>
 
-  rosterPanel() {
-    const rows = this.sim.agents.map((a) => {
-      const deck = deckById[a.deck];
-      const state = a.state === 'transit' ? `→ ${deck.name}` : deck.name;
-      return `
-        <button class="crew-row" type="button" data-agent="${a.id}">
-          <span class="dot is-${deck.accent}"></span>
-          <span>
-            <span class="crew-name">${esc(a.name)}</span><br>
-            <span class="crew-role">${esc(a.role)}</span>
-          </span>
-          <span class="crew-state mono ${a.state === 'transit' ? 'is-transit' : ''}">${esc(state)}</span>
-        </button>`;
-    }).join('');
-    return `
-      <section class="panel">
-        <div class="panel-head"><h2 class="panel-title">Crew</h2>
-          <span class="chip">${CREW.length} aboard</span></div>
-        <div class="roster">${rows}</div>
-      </section>`;
-  }
-
-  orderRow(deckId, task, prefix) {
-    return `
-      <button class="order ${task.done ? 'is-done' : ''}" type="button"
-              data-toggle="${task.id}" data-deck="${deckId}"
-              aria-pressed="${task.done}">
-        <span class="order-box">
-          <svg class="order-tick" viewBox="0 0 8 8" aria-hidden="true">
-            <path d="M1 4.2 L3 6.2 L7 1.6" fill="none" stroke="#07070a" stroke-width="1.6"
-                  stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </span>
-        <span class="order-text">${prefix ? `<span class="mono" style="color:var(--faint);font-size:10px">${esc(prefix)} </span>` : ''}${esc(task.t)}</span>
-        <span class="order-pri p${task.p}">P${task.p}</span>
-      </button>`;
-  }
-
-  signalPanelInline() {
-    return `<div class="inline-queue">${this.signalPanel(false)}</div>`;
-  }
-
-  deckPanel(id) {
-    const deck = deckById[id];
-    const tasks = this.store.tasks(id);
-    const open = tasks.filter((t) => !t.done);
-    const done = tasks.filter((t) => t.done);
-    const crew = this.sim.agents.filter((a) => a.deck === id);
-    const venture = VENTURES.find((v) => v.id === deck.venture);
-
-    const list = tasks.length
-      ? `<div class="orders">${[...open, ...done].map((t) => this.orderRow(id, t)).join('')}</div>`
-      : '<p class="counsel-empty">No orders on this deck.</p>';
-
-    return `
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title"><span class="dot is-${deck.accent}" style="display:inline-block;margin-right:6px"></span>${esc(deck.name)}</h2>
-          <button class="back-btn" type="button" data-back="1">← All decks</button>
-        </div>
-        <p class="ledger-kind" style="margin:0 0 12px">${esc(deck.sub)}${venture ? ` · ${esc(venture.name)}` : ''}</p>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-          <span class="chip mono">${open.length} open</span>
-          <span class="chip mono">${done.length} done</span>
-          <span class="chip mono">${crew.length} crew</span>
-        </div>
-        ${list}
-        ${id === 'beacon' ? this.signalPanelInline() : ''}
-        <form class="order-add" data-add="${id}">
-          <input type="text" id="add-${id}" placeholder="Issue an order to ${esc(deck.name)}…" autocomplete="off">
-          <button type="submit">Issue</button>
-        </form>
-      </section>`;
-  }
-
-  agentPanel(id) {
-    const a = this.sim.agents.find((x) => x.id === id);
-    if (!a) return this.overviewPanels();
-    const deck = deckById[a.deck];
-    const home = deckById[a.home];
-    return `
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title">${esc(a.name)}</h2>
-          <button class="back-btn" type="button" data-back="1">← All decks</button>
-        </div>
-        <p class="ledger-kind" style="margin:0 0 12px">${esc(a.role)} · station ${esc(home.name)}</p>
-        <div class="ledger">
-          <div class="ledger-row"><span class="dot is-${deck.accent}"></span>
-            <span><span class="ledger-name">Position</span><br>
-            <span class="ledger-kind">${a.state === 'transit' ? 'In transit' : 'Working'}</span></span>
-            <span class="mono" style="font-size:12px">${esc(deck.name)}</span></div>
-          <div class="ledger-row"><span class="dot"></span>
-            <span><span class="ledger-name">Current order</span><br>
-            <span class="ledger-kind">${a.order ? esc(a.order) : 'Awaiting orders on this deck'}</span></span>
-            <span></span></div>
-        </div>
-        <button class="back-btn" type="button" data-goto="${a.deck}" style="margin-top:12px">Open ${esc(deck.name)} →</button>
-      </section>`;
-  }
-
-  counselPanel() {
-    const log = this.counsel.length
-      ? this.counsel.map((turn) => `<p class="counsel-turn is-${turn.who}">${turn.who === 'leo' ? '&gt; ' : ''}${esc(turn.text)}</p>`).join('')
-      : `<p class="counsel-empty">Ask the ship anything about the empire — where to spend the next hour, what to cut, how to price a launch. It reads the current state of every deck before it answers.</p>`;
-    return `
       <section class="panel">
         <div class="panel-head"><h2 class="panel-title">Counsel</h2>
-          <span class="chip">${this.sampler === null ? 'Standby' : 'Online'}</span></div>
-        <div class="counsel-log" id="counselLog">${log}</div>
+          <span class="chip">${this.sampler ? 'Online' : 'Standby'}</span></div>
+        <div class="counsel-log" id="counselLog">
+          ${this.counsel.length
+            ? this.counsel.map((t) => `<p class="counsel-turn is-${t.who}">${t.who === 'leo' ? '&gt; ' : ''}${esc(t.text)}</p>`).join('')
+            : '<p class="muted-note">Ask the ship anything — where the next hour goes, what to cut, what the numbers say. It reads the whole floor before it answers.</p>'}
+        </div>
         <form class="counsel-form" data-counsel="1">
-          <input type="text" id="counselInput" placeholder="Put a question to the ship…" autocomplete="off" ${this.counselBusy ? 'disabled' : ''}>
+          <input type="text" id="counselInput" placeholder="Speak to the network…" autocomplete="off" ${this.counselBusy ? 'disabled' : ''}>
           <button type="submit" ${this.counselBusy ? 'disabled' : ''}>${this.counselBusy ? '···' : 'Ask'}</button>
         </form>
       </section>`;
   }
 
-  syncNote() {
-    const mode = this.store.mode;
-    const label = mode === 'synced' ? '<b>Synced.</b> Orders and ledger follow you across every device signed in to this artifact.'
-      : mode === 'local' ? '<b>Local.</b> Orders are saved in this browser only.'
-      : '<b>Memory only.</b> Storage is blocked here, so changes will not survive a reload.';
-    return `<p class="sync-note">${label}</p>`;
+  renderTicker() {
+    const e = this.store.state.log[0];
+    this.tickerEl.textContent = e ? e.text : 'All systems nominal. Crew at station.';
+    this.tickerTime.textContent = e ? clockTime(e.ts) : '';
   }
 
-  /* ---------------- events ---------------- */
+  /* ================= events ================= */
 
-  onDashClick(e) {
-    const toggle = e.target.closest('[data-toggle]');
-    if (toggle) {
-      this.store.toggleTask(toggle.dataset.deck, toggle.dataset.toggle);
+  onClick(e) {
+    const t = (sel) => e.target.closest(sel);
+
+    if (t('[data-close]')) { this.closeRoom(); return; }
+    const toggle = t('[data-toggle]');
+    if (toggle) { this.store.toggleTask(toggle.dataset.deck, toggle.dataset.toggle); return; }
+    const room = t('[data-room]');
+    if (room) { this.openRoom(room.dataset.room); return; }
+    const send = t('[data-send]');
+    if (send) {
+      const agent = this.sim.everyone().find((a) => a.id === send.dataset.send);
+      if (this.sim.dispatch(agent, send.dataset.to)) {
+        this.store.trace(`${agent.name} dispatched to ${ROOM_BY_ID[send.dataset.to].name}`);
+      }
+      this.render();
       return;
     }
-    if (e.target.closest('[data-back]')) { this.clearSelection(); return; }
-    const goto = e.target.closest('[data-goto]');
-    if (goto) { this.selectDeck(goto.dataset.goto); return; }
-    const copy = e.target.closest('[data-copy]');
+    const go = t('[data-goscreen]');
+    if (go) { this.setScreen(go.dataset.goscreen); return; }
+    if (t('[data-agentback]')) { this.agent = null; this.render(); return; }
+    const agent = t('[data-agent]');
+    if (agent) { this.selectAgent(agent.dataset.agent); return; }
+    const copy = t('[data-copy]');
     if (copy) { this.copyPost(copy.dataset.copy, copy); return; }
-    const posted = e.target.closest('[data-posted]');
+    const posted = t('[data-posted]');
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
-    const kill = e.target.closest('[data-kill]');
-    if (kill) { this.store.markPost(kill.dataset.kill, 'killed'); return; }
-    const agent = e.target.closest('[data-agent]');
-    if (agent) { this.selectAgent(agent.dataset.agent); }
+    const kill = t('[data-kill]');
+    if (kill) { this.store.markPost(kill.dataset.kill, 'killed'); }
   }
 
-  onDashSubmit(e) {
+  onSubmit(e) {
     const add = e.target.closest('[data-add]');
     if (add) {
       e.preventDefault();
-      const deckId = add.dataset.add;
+      const id = add.dataset.add;
       const input = add.querySelector('input');
-      const issued = this.store.addTask(deckId, input.value);
-      // addTask re-renders the panel synchronously, so re-find the field.
-      const fresh = this.dashEl.querySelector(`[data-add="${deckId}"] input`);
-      if (fresh) {
-        if (issued) fresh.value = '';
-        fresh.focus();
-      }
+      const issued = this.store.addTask(id, input.value);
+      const fresh = document.querySelector(`[data-add="${id}"] input`);
+      if (fresh) { if (issued) fresh.value = ''; fresh.focus(); }
       return;
     }
     if (e.target.closest('[data-counsel]')) {
       e.preventDefault();
       const input = $('#counselInput');
-      this.ask(input.value);
+      const q = input.value;
       input.value = '';
+      this.ask(q);
     }
   }
 
-  onDashChange(e) {
+  onChange(e) {
+    const numOf = (el) => {
+      const n = Number(String(el.value).replace(/[^0-9.\-]/g, ''));
+      return Number.isFinite(n) ? n : 0;
+    };
     const led = e.target.closest('[data-ledger]');
-    if (!led) return;
-    const n = Number(String(led.value).replace(/[^0-9.]/g, ''));
-    this.store.setLedger(led.dataset.ledger, 'mrr', Number.isFinite(n) ? n : 0);
+    if (led) { this.store.setLedger(led.dataset.ledger, led.dataset.field, numOf(led)); return; }
+    const bud = e.target.closest('[data-budget]');
+    if (bud) { this.store.setBudget(bud.dataset.budget, bud.dataset.id, numOf(bud)); return; }
+    const goal = e.target.closest('[data-goal]');
+    if (goal) this.store.setGoal(goal.dataset.goal, numOf(goal));
   }
 
-  /* ---------------- counsel ---------------- */
-
-  attachSampler(sample) {
-    this.sampler = sample;
-    this.renderDash();
+  async copyPost(id, btn) {
+    const post = (this.store.state.posts || []).find((p) => p.id === id);
+    if (!post) return;
+    let ok = false;
+    try { await navigator.clipboard.writeText(post.post); ok = true; } catch { /* blocked */ }
+    if (!ok) {
+      const ta = document.createElement('textarea');
+      ta.value = post.post;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      ta.remove();
+    }
+    if (btn) {
+      btn.textContent = ok ? 'Copied' : 'Select below';
+      btn.classList.toggle('is-done', ok);
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('is-done'); }, 1800);
+    }
   }
 
-  /** A compact brief of the whole ship, so answers are grounded in real state. */
+  /* ================= counsel ================= */
+
+  attachSampler(fn) { this.sampler = fn; this.renderTelemetry(); }
+
   brief() {
-    const decks = DECKS.map((d) => {
+    const rooms = DECKS.map((d) => {
       const open = this.store.tasks(d.id).filter((t) => !t.done);
       return `${d.name} (${d.sub}): ${open.length ? open.map((t) => `[P${t.p}] ${t.t}`).join('; ') : 'clear'}`;
     }).join('\n');
-    const ledger = VENTURES.map((v) => {
-      const row = this.store.state.ledger[v.id] || {};
-      return `${v.name} — ${v.kind} — monthly: ${row.mrr ? money(row.mrr) : 'not set'}`;
+    const led = VENTURES.map((v) => {
+      const r = this.store.state.ledger[v.id] || {};
+      return `${v.name} — ${v.kind} — ${r.mrr ? money(r.mrr) + '/mo' : 'revenue not set'}${r.units ? `, ${r.units} ${v.unitLabel}` : ''}`;
     }).join('\n');
-    const cat = CATALOGUE.map((c) => `${c.title}${c.price ? ` £${c.price}` : ''}`).join('; ');
-    return `VENTURES\n${ledger}\n\nCATALOGUE\n${cat}\n\nDECKS AND OPEN ORDERS\n${decks}`;
+    const gl = GOALS.map((g) => `${g.name}: ${Math.round(this.store.goalPct(g) * 100)}% of ${g.target}${g.unit === '£' ? '' : ' ' + g.unit}`).join('\n');
+    const run = this.store.runwayMonths();
+    const fin = `Revenue ${money(this.store.monthlyRevenue())}/mo, fixed costs ${money(this.store.monthlyFixed())}/mo, net ${money(this.store.monthlyNet())}/mo, cash ${money(this.store.state.budget.cash)}, runway ${run === null ? 'unknown' : run.toFixed(1) + ' months'}.`;
+    return `VENTURES\n${led}\n\nMONEY\n${fin}\n\nGOALS\n${gl}\n\nROOMS AND OPEN ORDERS\n${rooms}`;
   }
 
   async ask(question) {
@@ -494,28 +921,26 @@ export class UI {
     if (!this.sampler) {
       this.counsel.push({ who: 'leo', text: q });
       this.counsel.push({ who: 'ship', text: 'Counsel is offline in this view — it needs the published page on claude.ai.' });
-      this.renderDash();
+      this.renderTelemetry();
       return;
     }
     this.counsel.push({ who: 'leo', text: q });
     this.counselBusy = true;
-    this.renderDash();
-
     const turn = { who: 'ship', text: 'Thinking…' };
     this.counsel.push(turn);
-    this.renderDash();
+    this.renderTelemetry();
 
     const prompt = [
       'You are the intelligence aboard THE ARCANE, the operating system of Leo, who runs the Arcane brand:',
       'Arcane Peptides (UK research compounds, HPLC verified, COA per batch), Arcane Track (skin healing tracker, £11.99/mo or £70/yr),',
-      'Arcane Archives (£128/mo education platform), and The Codex (books and masterclasses).',
+      'Arcane Archives (£128/mo education platform, ~3,300 modules), and The Codex (books and masterclasses).',
       '',
-      'Answer Leo directly and concretely. Be short — six sentences at most, or a tight list.',
-      'Reference the real state below when it is relevant. Never invent numbers that are not given;',
-      'if a figure is missing, say it is missing and say what it would take to know it.',
-      'Speak plainly. No preamble, no flattery.',
+      'Answer Leo directly. Six sentences at most, or a tight list. Use the state below when relevant.',
+      'Never invent a number that is not given — if a figure is missing, say so and say what it would take to know it.',
+      'Peptides are research compounds: never give medical, dosing or treatment advice.',
+      'Plain speech. No preamble, no flattery.',
       '',
-      'SHIP STATE',
+      'SYSTEM STATE',
       this.brief(),
       '',
       `QUESTION: ${q}`,
@@ -527,33 +952,18 @@ export class UI {
         onText: ({ text }) => {
           turn.text = text;
           const el = $('#counselLog');
-          if (el) el.lastElementChild.textContent = text;
+          if (el?.lastElementChild) el.lastElementChild.textContent = text;
         },
       });
       turn.text = res.text || turn.text;
     } catch (err) {
-      turn.text = err?.code === 'rate_limited'
-        ? 'Counsel is rate limited. Try again shortly.'
-        : err?.code === 'not_granted'
-          ? 'Counsel needs permission from this view to reach Claude.'
-          : `Counsel could not answer (${esc(err?.code || 'unknown')}).`;
+      turn.text = err?.code === 'rate_limited' ? 'Counsel is rate limited. Try again shortly.'
+        : err?.code === 'not_granted' ? 'Counsel needs permission from this view to reach Claude.'
+        : `Counsel could not answer (${err?.code || 'unknown'}).`;
     } finally {
       this.counselBusy = false;
-      this.renderDash();
+      this.renderTelemetry();
       $('#counselInput')?.focus();
     }
-  }
-
-  /* ---------------- ticker ---------------- */
-
-  renderTicker() {
-    const entry = this.store.state.log[0];
-    if (!entry) {
-      this.tickerEl.textContent = 'All systems nominal. Crew at station.';
-      this.tickerTime.textContent = '';
-      return;
-    }
-    this.tickerEl.textContent = entry.text;
-    this.tickerTime.textContent = clockTime(entry.ts);
   }
 }

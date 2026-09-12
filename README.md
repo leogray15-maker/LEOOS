@@ -1,26 +1,50 @@
-# LEOOS
+# LEOOS v2
 
-The operating system of the Arcane empire — a ship you can see.
+The operating system of the Arcane empire, rendered as a facility you can walk.
 
-Nine compartments, one per real domain of the business and the life behind it.
-Nine crew who walk the corridors between them, drawn toward whichever deck is
-carrying the most open orders. A dashboard alongside that holds the standing
-directives, the ledger, the signals worth reacting to, and a counsel console
-that reads the whole ship before it answers.
+Nine rooms, one per real domain of the business and the life behind it. Nine
+crew sprites who walk the corridors between them, drawn toward whichever room
+is carrying the most open orders — and toward ARCANE, the commander you drive.
+Click a room and the commander walks there while its dashboard opens.
 
-## The decks
+## The rooms
 
-| Deck | What it holds |
-| --- | --- |
-| **BRIDGE** | Command. Targets, the north star, the kill list. |
-| **FORGE** | Build. The site, the ArcaneTrack app, automation. |
-| **BEACON** | Signal. Content, email, launches. |
-| **APOTHECARY** | Arcane Peptides — stock, COA, dispatch. |
-| **VITALS** | Arcane Track — members, dose logs, retention. |
-| **VAULT** | Treasury — cash, VAT, reconciliation. |
-| **ARCHIVES** | Arcane Archives — the £128/mo platform, curriculum. |
-| **SCRIPTORIUM** | The Codex — books and masterclasses. |
-| **SANCTUM** | Leo — body, sleep, focus. |
+| Room | What it holds | Its dashboard |
+| --- | --- | --- |
+| **BRIDGE** | Command. Targets and doctrine. | Standing doctrine, goals |
+| **FORGE** | Build — site, ArcaneTrack app, automation. | Build queue |
+| **BEACON** | Signal — content, email, launches. | The post queue |
+| **THE LAB** | Arcane Peptides — cold storage, vial racks, instruments, packing. | Stock by compound with COA state, dispatch queue |
+| **VITALS** | Arcane Track — members and dose logs. | Member cohorts |
+| **VAULT** | Treasury — cash, VAT, the split. | Month summary and allocations |
+| **THE LIBRARY** | Archives content, posts, PDF products. | PDF catalogue cut from real modules |
+| **SCRIPTORIUM** | The Codex — books and masterclasses. | Manuscript progress |
+| **SANCTUM** | Leo — body, sleep, focus. | Daily protocol |
+
+## The pixel renderer
+
+Everything is drawn into a 300x260 offscreen buffer at 1:1, then blitted to the
+visible canvas at an **integer** scale with `imageSmoothingEnabled = false`.
+That is what keeps the pixels square instead of soupy. The landscape shape is
+deliberate — it fills a widescreen stage at 3x rather than 2x.
+
+- `src/config/facility.js` — the floor plan and every hand-placed prop
+- `src/render/props.js` — 43 prop painters; no two rooms share furniture
+- `src/render/sprites.js` — character matrices, baked once and blitted
+- `src/render/factory.js` — buffer, blit, labels, hit testing
+
+Sprites are declared as character matrices (`o` outline, `c` colour, `d` shade,
+`l` highlight, `e` visor). ARCANE is 9x13 and cloaked; the crew are 7x11. Each
+is baked once per colour and frame into a tiny canvas, so a crowded room costs
+nothing.
+
+## Demo data
+
+`src/config/roomdata.js` holds the per-room dashboard rows — real structure,
+placeholder numbers — so every room opens as a working dashboard instead of an
+empty shell. Each set carries a `source` line naming what it will be wired to,
+and shows a `placeholder` chip in the interface. Nothing there is a claim about
+what any compound does: stock, batch and COA state only.
 
 ## Running it
 

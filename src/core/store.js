@@ -7,7 +7,7 @@
  * The rest of the app never knows which one it got.
  */
 
-import { DECKS, VENTURES, SEED_TASKS, SEED_POSTS } from '../config/empire.js';
+import { DECKS, VENTURES, SEED_TASKS, SEED_POSTS, GOALS, BUDGET } from '../config/empire.js';
 
 const LS_KEY = 'leoos.v1';
 
@@ -21,8 +21,13 @@ function seedState() {
     }));
   }
   const ledger = {};
-  for (const v of VENTURES) ledger[v.id] = { mrr: v.seedMrr, unit: v.seedUnit, calibrated: false };
-  return { decks, ledger, log: [], posts: SEED_POSTS.slice() };
+  for (const v of VENTURES) ledger[v.id] = { mrr: 0, units: 0, calibrated: false };
+  const goals = {};
+  for (const g of GOALS) goals[g.id] = { progress: 0 };
+  const budget = { cash: 0, fixed: {}, split: {} };
+  for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
+  for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
+  return { decks, ledger, goals, budget, log: [], posts: SEED_POSTS.slice() };
 }
 
 export class Store {
@@ -97,6 +102,19 @@ export class Store {
     }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
+    if (body.goals && typeof body.goals === 'object') {
+      for (const g of GOALS) if (body.goals[g.id]) this.state.goals[g.id] = body.goals[g.id];
+    }
+    if (body.budget && typeof body.budget === 'object') {
+      const b = body.budget;
+      if (Number.isFinite(b.cash)) this.state.budget.cash = b.cash;
+      for (const f of BUDGET.fixed) {
+        if (Number.isFinite(b.fixed?.[f.id])) this.state.budget.fixed[f.id] = b.fixed[f.id];
+      }
+      for (const sp of BUDGET.split) {
+        if (Number.isFinite(b.split?.[sp.id])) this.state.budget.split[sp.id] = b.split[sp.id];
+      }
+    }
   }
 
   /** Persist — debounced, so a burst of ticks becomes one write. */
@@ -112,6 +130,8 @@ export class Store {
       ledger: this.state.ledger,
       log: this.state.log.slice(0, 50),
       posts: this.state.posts.slice(0, 60),
+      goals: this.state.goals,
+      budget: this.state.budget,
     };
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
@@ -156,7 +176,46 @@ export class Store {
     this.save();
   }
 
-  /* ---------- ledger ---------- */
+  /* ---------- money ---------- */
+
+  monthlyRevenue() {
+    return VENTURES.reduce((n, v) => n + (Number(this.state.ledger[v.id]?.mrr) || 0), 0);
+  }
+
+  monthlyFixed() {
+    return BUDGET.fixed.reduce((n, f) => n + (Number(this.state.budget.fixed[f.id]) || 0), 0);
+  }
+
+  /** What survives the month before anything is allocated. */
+  monthlyNet() { return this.monthlyRevenue() - this.monthlyFixed(); }
+
+  /** Months of cover at the current burn. Infinite burn-free is reported as null. */
+  runwayMonths() {
+    const burn = this.monthlyFixed();
+    if (burn <= 0) return null;
+    return (Number(this.state.budget.cash) || 0) / burn;
+  }
+
+  /** Net profit split into its envelopes. */
+  allocations() {
+    const net = Math.max(0, this.monthlyNet());
+    return BUDGET.split.map((sp) => ({
+      ...sp,
+      pct: Number(this.state.budget.split[sp.id]) || 0,
+      amount: net * ((Number(this.state.budget.split[sp.id]) || 0) / 100),
+    }));
+  }
+
+  splitTotal() {
+    return BUDGET.split.reduce((n, sp) => n + (Number(this.state.budget.split[sp.id]) || 0), 0);
+  }
+
+  setBudget(field, id, value) {
+    const n = Number.isFinite(value) ? value : 0;
+    if (field === 'cash') this.state.budget.cash = n;
+    else this.state.budget[field][id] = n;
+    this.save();
+  }
 
   setLedger(ventureId, field, value) {
     const row = this.state.ledger[ventureId] || (this.state.ledger[ventureId] = {});
@@ -169,8 +228,23 @@ export class Store {
     return VENTURES.some((v) => this.state.ledger[v.id]?.calibrated);
   }
 
-  monthlyTotal() {
-    return VENTURES.reduce((n, v) => n + (Number(this.state.ledger[v.id]?.mrr) || 0), 0);
+  /* ---------- goals ---------- */
+
+  /** A goal's live value: auto-derived where it can be, stored otherwise. */
+  goalValue(goal) {
+    if (goal.auto === 'mrr') return this.monthlyRevenue();
+    if (goal.auto === 'runway') return this.runwayMonths() ?? 0;
+    return Number(this.state.goals[goal.id]?.progress) || 0;
+  }
+
+  goalPct(goal) {
+    if (!goal.target) return 0;
+    return Math.max(0, Math.min(1, this.goalValue(goal) / goal.target));
+  }
+
+  setGoal(id, progress) {
+    this.state.goals[id] = { progress: Number.isFinite(progress) ? progress : 0 };
+    this.save();
   }
 
   /* ---------- signal queue ---------- */
