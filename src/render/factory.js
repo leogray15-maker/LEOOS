@@ -7,7 +7,7 @@
  * drawn afterwards at display resolution so they stay readable.
  */
 
-import { PW, PH, PX, ROOMS, SPINE_X, corridors } from '../config/facility.js';
+import { PW, PH, PX, ROOMS, SPINE_X, corridors, roomsOn } from '../config/facility.js';
 import { paintProp } from './props.js';
 import { drawSprite, facingFor } from './sprites.js';
 import { paintFloorTiles } from './tiles.js';
@@ -44,6 +44,7 @@ export class Factory {
     this.buf.height = PH;
     this.bctx = this.buf.getContext('2d');
 
+    this.deck = 1;
     this.selected = null;
     this.hover = null;
     this.t = 0;
@@ -235,7 +236,7 @@ export class Factory {
   }
 
   roomAt(x, y) {
-    return ROOMS.find((r) => {
+    return roomsOn(this.deck).find((r) => {
       const [x1, y1, x2, y2] = r.rect;
       return x >= x1 - 2 && x <= x2 + 2 && y >= y1 - 2 && y <= y2 + 2;
     }) || null;
@@ -248,7 +249,7 @@ export class Factory {
     b.clearRect(0, 0, PW, PH);
     this.drawShell(b);
     this.drawCorridors(b);
-    for (const room of ROOMS) this.drawRoom(b, room);
+    for (const room of roomsOn(this.deck)) this.drawRoom(b, room);
     this.drawCrew(b);
 
     // blit
@@ -339,7 +340,7 @@ export class Factory {
   }
 
   drawCorridors(b) {
-    for (const [x1, y1, x2, y2] of corridors()) {
+    for (const [x1, y1, x2, y2] of corridors(this.deck)) {
       const w = x2 - x1;
       const h = y2 - y1;
       fill(b, x1, y1, w, h, PX.floor);
@@ -378,7 +379,7 @@ export class Factory {
     }
 
     // lit thresholds at every door
-    for (const r of ROOMS) {
+    for (const r of roomsOn(this.deck)) {
       if (r.door[0] === SPINE_X) continue;
       const x = r.door[0] < SPINE_X ? r.door[0] : r.door[0] - 3;
       const col = ACCENT[r.accent] || PX.arcane;
@@ -546,7 +547,7 @@ export class Factory {
 
   drawCrew(b) {
     // trails first so sprites sit on top
-    for (const a of this.sim.agents) {
+    for (const a of this.sim.onFloor(this.deck)) {
       if (a.state !== 'transit') continue;
       for (let i = 1; i < a.wake.length; i++) {
         b.globalAlpha = (i / a.wake.length) * 0.18;
@@ -555,9 +556,7 @@ export class Factory {
     }
     b.globalAlpha = 1;
 
-    const all = [...this.sim.agents];
-    if (this.sim.arcane) all.push(this.sim.arcane);
-    all.sort((p, q) => p.y - q.y);
+    const all = this.sim.onFloor(this.deck).slice().sort((p, q) => p.y - q.y);
 
     for (const a of all) {
       const moving = a.state === 'transit';
@@ -574,8 +573,7 @@ export class Factory {
 
   /** Name plates, drawn crisp on top of the blitted pixels. */
   drawLabels(c) {
-    const all = [...this.sim.agents];
-    if (this.sim.arcane) all.push(this.sim.arcane);
+    const all = this.sim.onFloor(this.deck);
 
     c.textAlign = 'center';
     c.textBaseline = 'bottom';
@@ -607,7 +605,7 @@ export class Factory {
     c.textAlign = 'left';
     c.font = `600 ${plate}px 'Chakra Petch', sans-serif`;
     c.letterSpacing = '1px';
-    for (const r of ROOMS) {
+    for (const r of roomsOn(this.deck)) {
       if (r.id === focus) continue;
       const [x1, y1] = r.rect;
       const x = this.ox + (x1 + 3) * this.scale;
@@ -624,7 +622,7 @@ export class Factory {
     c.textAlign = 'center';
 
     // the focused room gets the full plate
-    const room = ROOMS.find((r) => r.id === focus);
+    const room = roomsOn(this.deck).find((r) => r.id === focus);
     if (room) {
       const [x1, y1, x2] = room.rect;
       const x = this.ox + ((x1 + x2) / 2) * this.scale;

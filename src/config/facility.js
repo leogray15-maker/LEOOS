@@ -46,7 +46,7 @@ export const PX = {
 export const ROOMS = [
   {
     id: 'bridge', name: 'BRIDGE', sub: 'Command · Targets',
-    rect: [130, 10, 250, 54], door: [190, 54], spine: 0,
+    rect: [130, 10, 250, 54], door: [190, 54], spine: 0, deck: 1,
     accent: 'arcane', floor: 'plate', tiles: 'plate', venture: null,
     blurb: 'The whole empire on one screen. Targets are set here and everything downstream obeys them.',
     props: [
@@ -65,7 +65,7 @@ export const ROOMS = [
   },
   {
     id: 'forge', name: 'FORGE', sub: 'Build · Site · App',
-    rect: [20, 64, 172, 118], door: [172, 91], spine: 1,
+    rect: [20, 64, 172, 118], door: [172, 91], spine: 1, deck: 1,
     accent: 'cyan', floor: 'plate', tiles: 'grate', venture: 'track',
     blurb: 'Where the site and the ArcaneTrack app get built. Racks on one wall, a bench and an arm on the other.',
     props: [
@@ -90,7 +90,7 @@ export const ROOMS = [
   },
   {
     id: 'beacon', name: 'BEACON', sub: 'Signal · Content · Email',
-    rect: [208, 64, 360, 118], door: [208, 91], spine: 1,
+    rect: [208, 64, 360, 118], door: [208, 91], spine: 1, deck: 1,
     accent: 'flare', floor: 'plate', tiles: 'grate', venture: null,
     blurb: 'The broadcast deck. Everything the outside world hears leaves the building from here.',
     props: [
@@ -111,7 +111,7 @@ export const ROOMS = [
   },
   {
     id: 'apothecary', name: 'THE LAB', sub: 'Arcane Peptides · Stock · COA · Dispatch',
-    rect: [20, 126, 172, 180], door: [172, 153], spine: 2,
+    rect: [20, 126, 172, 180], door: [172, 153], spine: 2, deck: 1,
     accent: 'arcane', floor: 'plate', tiles: 'lab', venture: 'peptides',
     blurb: 'Cold storage, vial racks, instruments and the packing bench. Nothing leaves this room without a lab report against its batch.',
     props: [
@@ -138,7 +138,7 @@ export const ROOMS = [
   },
   {
     id: 'vitals', name: 'VITALS', sub: 'Arcane Track · Members',
-    rect: [208, 126, 360, 180], door: [208, 153], spine: 2,
+    rect: [208, 126, 360, 180], door: [208, 153], spine: 2, deck: 1,
     accent: 'vital', floor: 'plate', tiles: 'lab', venture: 'track',
     blurb: 'Every dose logged, every day mapped. Member health and churn are watched from here.',
     props: [
@@ -162,7 +162,7 @@ export const ROOMS = [
   },
   {
     id: 'vault', name: 'VAULT', sub: 'Treasury · Cash · VAT',
-    rect: [20, 188, 172, 242], door: [172, 215], spine: 3,
+    rect: [20, 188, 172, 242], door: [172, 215], spine: 3, deck: 1,
     accent: 'gold', floor: 'plate', tiles: 'concrete', venture: null,
     blurb: 'Cash, runway, and the tax set-aside. This room decides what every other room can spend.',
     props: [
@@ -186,7 +186,7 @@ export const ROOMS = [
   },
   {
     id: 'archives', name: 'THE LIBRARY', sub: 'Archives · Content · PDF products',
-    rect: [208, 188, 360, 242], door: [208, 215], spine: 3,
+    rect: [208, 188, 360, 242], door: [208, 215], spine: 3, deck: 1,
     accent: 'cyan', floor: 'plate', tiles: 'carpet', venture: 'archives',
     blurb: 'Forty-eight courses and thousands of modules on the shelves. Posts get written here and modules get cut into PDFs worth selling.',
     props: [
@@ -208,7 +208,7 @@ export const ROOMS = [
   },
   {
     id: 'scriptorium', name: 'SCRIPTORIUM', sub: 'The Codex · Writing',
-    rect: [20, 250, 172, 304], door: [172, 277], spine: 4,
+    rect: [20, 250, 172, 304], door: [172, 277], spine: 4, deck: 1,
     accent: 'breach', floor: 'plate', tiles: 'wood', venture: 'codex',
     blurb: 'Where the books get written. The Dark Psych Codex, The Quiet Empire, The Arcane Game.',
     props: [
@@ -232,7 +232,7 @@ export const ROOMS = [
   },
   {
     id: 'sanctum', name: 'SANCTUM', sub: 'Leo · Body · Focus',
-    rect: [208, 250, 360, 304], door: [208, 277], spine: 4,
+    rect: [208, 250, 360, 304], door: [208, 277], spine: 4, deck: 1,
     accent: 'vital', floor: 'plate', tiles: 'mat', venture: null,
     blurb: 'Training, sleep, deep work. The operator is a system component and gets maintained like one.',
     props: [
@@ -254,13 +254,209 @@ export const ROOMS = [
       ['sign', 6, 6, 16, 4, 'SANCTUM'],
     ],
   },
+  /* ============================================================
+     DECK 2 — command, intelligence and the agent network
+     ============================================================ */
+  {
+    id: 'council', name: 'THE COUNCIL', sub: 'Deliberation · Verdicts',
+    rect: [130, 10, 250, 54], door: [190, 54], spine: 0, deck: 2,
+    accent: 'arcane', floor: 'plate', tiles: 'plate', venture: null,
+    blurb: 'Put a decision on the table and every relevant agent argues its corner. The Commander returns one recommendation, with conditions.',
+    props: [
+      ['viewport', 6, 3, 108, 7],
+      ['ceilinglight', 24, 11, 14, 2], ['ceilinglight', 82, 11, 14, 2],
+      ['holotable', 38, 16, 44, 20],
+      ['chair', 26, 17, 8, 6], ['chair', 86, 17, 8, 6],
+      ['chair', 26, 28, 8, 6], ['chair', 86, 28, 8, 6],
+      ['chair', 50, 36, 8, 5], ['chair', 62, 36, 8, 5],
+      ['terminal', 6, 22, 9, 12], ['terminal', 105, 22, 9, 12],
+      ['panel', 18, 14, 10, 7], ['panel', 92, 14, 10, 7],
+      ['cablerun', 4, 12, 108, 1],
+      ['bolt', 4, 4, 2, 2], ['bolt', 112, 4, 2, 2],
+    ],
+  },
+  {
+    id: 'warroom', name: 'THE WAR ROOM', sub: 'Strategy · The next move',
+    rect: [20, 64, 172, 118], door: [172, 91], spine: 1, deck: 2,
+    accent: 'breach', floor: 'plate', tiles: 'concrete', venture: null,
+    blurb: 'Every venture as an object on the table. What is compounding, what is bleeding, and the three moves that matter this week.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['holotable', 46, 14, 52, 24],
+      ['screen', 6, 10, 18, 11], ['screen', 26, 10, 18, 11],
+      ['screen', 6, 23, 18, 11], ['screen', 26, 23, 18, 11],
+      ['chair', 56, 41, 9, 7], ['chair', 78, 41, 9, 7],
+      ['terminal', 106, 10, 10, 13], ['terminal', 122, 10, 10, 13],
+      ['chart', 106, 26, 30, 16],
+      ['panel', 138, 10, 10, 8],
+      ['hazard', 46, 41, 8, 2],
+      ['sign', 6, 6, 16, 4, 'WAR'],
+      ['cablerun', 44, 9, 1, 32],
+    ],
+  },
+  {
+    id: 'intel', name: 'INTELLIGENCE', sub: 'Competitors · Markets · Signals',
+    rect: [208, 64, 360, 118], door: [208, 91], spine: 1, deck: 2,
+    accent: 'arcane', floor: 'grid', tiles: 'grate', venture: null,
+    blurb: 'A dark room of screens that watches everything outside the walls: competitors, pricing, suppliers, regulation, demand.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['screen', 6, 9, 17, 10], ['screen', 25, 9, 17, 10], ['screen', 44, 9, 17, 10],
+      ['screen', 63, 9, 17, 10], ['screen', 82, 9, 17, 10],
+      ['screen', 6, 21, 17, 10], ['screen', 25, 21, 17, 10], ['screen', 44, 21, 17, 10],
+      ['screen', 63, 21, 17, 10], ['screen', 82, 21, 17, 10],
+      ['mixdesk', 20, 36, 56, 12],
+      ['chair', 44, 47, 8, 5],
+      ['rack', 104, 9, 13, 30], ['rack', 120, 9, 13, 30],
+      ['terminal', 136, 9, 10, 13],
+      ['holo', 138, 26, 8, 16],
+      ['cablerun', 102, 10, 1, 34],
+      ['sign', 104, 42, 16, 4, 'INTEL'],
+    ],
+  },
+  {
+    id: 'market', name: 'THE MARKET', sub: 'Visitors → Leads → Orders',
+    rect: [20, 126, 172, 180], door: [172, 153], spine: 2, deck: 2,
+    accent: 'rose', floor: 'clean', tiles: 'lab', venture: 'peptides',
+    blurb: 'The sales engine. Conversion, average order value, repeat purchase, and the exact step where people fall out.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 30, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['chart', 6, 10, 42, 20],
+      ['screen', 52, 10, 18, 11], ['screen', 72, 10, 18, 11],
+      ['counter', 52, 24, 20, 13],
+      ['terminal', 76, 24, 10, 13],
+      ['conveyor', 6, 34, 42, 8, 'items'],
+      ['shipbox', 92, 12, 11, 10], ['shipbox', 105, 12, 11, 10],
+      ['shipbox', 92, 24, 11, 10],
+      ['pallet', 90, 36, 28, 3],
+      ['packstation', 122, 22, 20, 13],
+      ['crate', 122, 8, 12, 10],
+      ['hazard', 6, 44, 42, 2],
+      ['sign', 122, 40, 18, 4, 'ORDERS'],
+    ],
+  },
+  {
+    id: 'observatory', name: 'THE OBSERVATORY', sub: 'Continuous watch',
+    rect: [208, 126, 360, 180], door: [208, 153], spine: 2, deck: 2,
+    accent: 'cyan', floor: 'plate', tiles: 'plate', venture: null,
+    blurb: 'This room does not wait to be opened. It watches revenue, stock, competitors and deadlines, and raises a signal when one moves.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['dish', 8, 8, 34, 34],
+      ['mast', 46, 6, 6, 34],
+      ['holotable', 58, 14, 36, 22],
+      ['screen', 100, 9, 18, 11], ['screen', 120, 9, 18, 11],
+      ['screen', 100, 22, 18, 11], ['screen', 120, 22, 18, 11],
+      ['chart', 100, 35, 38, 13],
+      ['terminal', 58, 39, 10, 12],
+      ['camera', 140, 6, 8, 6],
+      ['cablerun', 56, 8, 1, 36],
+      ['sign', 72, 39, 18, 4, 'WATCH'],
+    ],
+  },
+  {
+    id: 'dealroom', name: 'THE DEAL ROOM', sub: 'People · Pipeline · Outreach',
+    rect: [20, 188, 172, 242], door: [172, 215], spine: 3, deck: 2,
+    accent: 'flare', floor: 'grid', tiles: 'carpet', venture: null,
+    blurb: 'Leads, prospects, customers, partners and suppliers as cards on a table. Research, outreach and meeting briefs prepared, never sent.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['readingdesk', 6, 12, 32, 17],
+      ['chair', 16, 32, 9, 7],
+      ['catalogue', 44, 10, 28, 8],
+      ['screen', 44, 21, 18, 11], ['screen', 64, 21, 18, 11],
+      ['bookstack', 44, 35, 12, 8],
+      ['plant', 78, 10, 11, 14],
+      ['readingdesk', 94, 12, 32, 17],
+      ['chair', 104, 32, 9, 7],
+      ['terminal', 132, 12, 10, 13],
+      ['cabinet', 132, 28, 14, 18],
+      ['sign', 78, 30, 16, 4, 'DEALS'],
+    ],
+  },
+  {
+    id: 'garage', name: 'THE AGENT GARAGE', sub: 'Build · Configure · Deploy',
+    rect: [208, 188, 360, 242], door: [208, 215], spine: 3, deck: 2,
+    accent: 'arcane', floor: 'grid', tiles: 'grate', venture: null,
+    blurb: 'Where an agent is made: its name, its domain, the tools it may reach, and the things it must ask you before doing.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 30, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['locker', 6, 10, 12, 22], ['locker', 20, 10, 12, 22],
+      ['locker', 34, 10, 12, 22], ['locker', 48, 10, 12, 22],
+      ['locker', 62, 10, 12, 22], ['locker', 76, 10, 12, 22],
+      ['cablerun', 6, 34, 84, 1],
+      ['armbot', 96, 10, 18, 18],
+      ['bench', 96, 30, 44, 10],
+      ['toolwall', 96, 5, 44, 4],
+      ['oscilloscope', 120, 12, 16, 14],
+      ['crate', 6, 38, 12, 10], ['crate', 20, 38, 12, 10],
+      ['terminal', 138, 10, 10, 13],
+      ['hazard', 40, 40, 44, 2],
+      ['sign', 40, 44, 18, 4, 'AGENTS'],
+    ],
+  },
+  {
+    id: 'inventor', name: "THE INVENTOR'S ROOM", sub: 'Ideas · Verdicts',
+    rect: [20, 250, 172, 304], door: [172, 277], spine: 4, deck: 2,
+    accent: 'vital', floor: 'plate', tiles: 'wood', venture: null,
+    blurb: 'Throw an idea on the bench. It goes through market, competition, economics, MVP, cost and risk, and comes back BUILD, WATCH or KILL.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['bench', 6, 14, 48, 10],
+      ['toolwall', 6, 8, 48, 5],
+      ['oscilloscope', 60, 12, 16, 14],
+      ['holotable', 82, 12, 34, 20],
+      ['cablespool', 6, 28, 11, 8], ['cablespool', 20, 28, 11, 8],
+      ['crate', 34, 28, 12, 10],
+      ['barrel', 50, 28, 9, 10],
+      ['press', 122, 10, 24, 26],
+      ['terminal', 62, 30, 10, 13],
+      ['papers', 86, 35, 24, 4],
+      ['hazard', 82, 41, 34, 2],
+      ['sign', 6, 40, 18, 4, 'BUILD?'],
+    ],
+  },
+  {
+    id: 'control', name: 'THE CONTROL ROOM', sub: 'Permissions · Approvals · Audit',
+    rect: [208, 250, 360, 304], door: [208, 277], spine: 4, deck: 2,
+    accent: 'breach', floor: 'plate', tiles: 'concrete', venture: null,
+    blurb: 'Every grade the network runs under, in one place. What each agent may read, draft, recommend, and what it must ask permission for.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['console', 6, 12, 26, 10], ['console', 36, 12, 26, 10], ['console', 66, 12, 26, 10],
+      ['panel', 6, 26, 12, 9], ['panel', 22, 26, 12, 9], ['panel', 38, 26, 12, 9],
+      ['panel', 54, 26, 12, 9], ['panel', 70, 26, 12, 9],
+      ['camera', 96, 6, 8, 6],
+      ['screen', 96, 14, 20, 12], ['screen', 120, 14, 20, 12],
+      ['safe', 96, 30, 22, 18],
+      ['terminal', 124, 30, 10, 13],
+      ['chair', 40, 40, 9, 7],
+      ['hazard', 6, 40, 30, 2],
+      ['sign', 120, 44, 20, 4, 'CONTROL'],
+    ],
+  },
 ];
 
 export const ROOM_BY_ID = Object.fromEntries(ROOMS.map((r) => [r.id, r]));
 
-export function corridors() {
+/** The two floors of the station. Not to be confused with DECKS in
+ *  empire.js, which is the room list. */
+export const FLOORS = [
+  { id: 1, name: 'DECK 1', sub: 'Operations' },
+  { id: 2, name: 'DECK 2', sub: 'Command' },
+];
+
+export const roomsOn = (deck) => ROOMS.filter((r) => r.deck === deck);
+
+export function corridors(deck = 1) {
   const segs = [[SPINE_X - 12, 48, SPINE_X + 12, 310]];
-  for (const r of ROOMS) {
+  for (const r of roomsOn(deck)) {
     if (r.door[0] === SPINE_X) continue;
     const left = r.door[0] < SPINE_X;
     segs.push(left

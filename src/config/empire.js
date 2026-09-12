@@ -8,6 +8,8 @@
 
 import { ROOMS } from './facility.js';
 
+export { AGENTS, CREW, ARCANE, COUNCIL, AGENT_BY_ID, CAPS, TOOLS, GRADES, GRADE_TONE } from './agents.js';
+
 /** Rooms are the decks — one import point for the rest of the app. */
 export const DECKS = ROOMS;
 
@@ -52,25 +54,6 @@ export const CATALOGUE = [
   { title: 'Dark Psychology Masterclass', price: null, venture: 'codex' },
 ];
 
-/** The commander. Driven by Leo, not by the simulation. */
-export const ARCANE = {
-  id: 'arcane', name: 'ARCANE', role: 'Commander',
-  home: 'bridge', colour: '#a98bff',
-  brief: 'You. Open a room and the commander walks there; the crew follow the attention.',
-};
-
-export const CREW = [
-  { id: 'vector',   name: 'VECTOR',   role: 'Navigator',     home: 'bridge',      colour: '#b79cff', brief: 'Holds the targets and says which one is slipping.' },
-  { id: 'anvil',    name: 'ANVIL',    role: 'Engineer',      home: 'forge',       colour: '#56c9f0', brief: 'Site, app, automation. Anything that has to be built.' },
-  { id: 'herald',   name: 'HERALD',   role: 'Signalman',     home: 'beacon',      colour: '#e8b64c', brief: 'Content, email, launches. Everything the world hears.' },
-  { id: 'meridian', name: 'MERIDIAN', role: 'Quartermaster', home: 'apothecary',  colour: '#c68bff', brief: 'Stock cover, COA, dispatch cutoffs.' },
-  { id: 'lumen',    name: 'LUMEN',    role: 'Physician',     home: 'vitals',      colour: '#3ecf8e', brief: 'Member health, churn, the people on the protocol.' },
-  { id: 'tally',    name: 'TALLY',    role: 'Purser',        home: 'vault',       colour: '#d9a441', brief: 'Cash, VAT, reconciliation. Says what you can spend.' },
-  { id: 'oracle',   name: 'ORACLE',   role: 'Archivist',     home: 'archives',    colour: '#6bd6ff', brief: 'Curriculum and the 3,300 modules underneath it.' },
-  { id: 'scribe',   name: 'SCRIBE',   role: 'Scrivener',     home: 'scriptorium', colour: '#e5484d', brief: 'The Codex. Drafts, proofs, launch sequences.' },
-  { id: 'keeper',   name: 'KEEPER',   role: 'Steward',       home: 'sanctum',     colour: '#7ee0a8', brief: 'Sleep, training, deep work. The operator is a component.' },
-];
-
 /**
  * GOALS — money and work, each anchored to a room.
  * `target` is the number that ends it; progress is stored and editable.
@@ -112,6 +95,7 @@ export const BUDGET = {
 
 /** The left-hand navigation, numbered like a control panel. */
 export const SCREENS = [
+  { id: 'empire',   no: '00', name: 'THE EMPIRE',  sub: 'State of everything' },
   { id: 'factory',  no: '01', name: 'THE FACTORY', sub: 'Live floor' },
   { id: 'agents',   no: '02', name: 'AGENTS',      sub: 'Crew & orders' },
   { id: 'orders',   no: '03', name: 'ORDERS',      sub: 'Every open task' },
@@ -119,7 +103,10 @@ export const SCREENS = [
   { id: 'ledger',   no: '05', name: 'LEDGER',      sub: 'Money & budget' },
   { id: 'goals',    no: '06', name: 'GOALS',       sub: 'Money & work targets' },
   { id: 'signals',  no: '07', name: 'SIGNALS',     sub: 'Posts from the Archives' },
-  { id: 'system',   no: '08', name: 'SYSTEM',      sub: 'Status & sync' },
+  { id: 'council',  no: '08', name: 'THE COUNCIL', sub: 'Put a decision to them' },
+  { id: 'garage',   no: '09', name: 'AGENT GARAGE',sub: 'The network' },
+  { id: 'control',  no: '10', name: 'CONTROL',     sub: 'Permissions & approvals' },
+  { id: 'system',   no: '11', name: 'SYSTEM',      sub: 'Status & sync' },
 ];
 
 export const SEED_TASKS = {

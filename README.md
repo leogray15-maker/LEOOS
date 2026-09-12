@@ -7,6 +7,50 @@ crew sprites who walk the corridors between them, drawn toward whichever room
 is carrying the most open orders — and toward ARCANE, the commander you drive.
 Click a room and the commander walks there while its dashboard opens.
 
+## Architecture
+
+```
+                    ARCANE
+                       │
+                 COMMANDER  (ARCANEBOT)
+                       │
+          ┌────────────┼────────────┐
+       MEMORY     ORCHESTRATOR    CONTROL
+      (db state)  (which agent)  (permission grades)
+                       │
+                 AGENT NETWORK  — 17 specialists, 2 decks
+                       │
+                    TOOLS  — Notion (read-only), Claude, memory
+                              calendar / email / store / CRM / web: not wired
+```
+
+Two decks. **Deck 1** is operations — the rooms that run the businesses.
+**Deck 2** is command and intelligence — where decisions get made and the
+network itself is configured. ARCANE rides a lift between them.
+
+### The Council
+
+`08 THE COUNCIL` puts a real decision to nine seated agents. Each answers from
+its own domain in its own voice, then the Commander returns one verdict —
+**BUILD, DELAY, WATCH or KILL** — with the conditions that must be true first.
+
+It is one structured `sample.json()` call, not one per seat: faster, cheaper,
+and every position is grounded in the same system brief. The prompt forbids
+inventing figures, forbids medical claims about any compound, and explicitly
+asks for disagreement — a council where everyone agrees is worthless.
+
+### Permissions
+
+Every agent carries a grade per capability: `deny`, `read`, `analyse`, `draft`,
+`recommend`, `approval`, `allow`. `10 CONTROL` renders the whole matrix.
+
+Standing rules, enforced in the model rather than asserted in prose:
+
+- No agent spends money. The Treasurer may recommend; you move it.
+- Nothing publishes unattended. Drafts wait in the Signal queue.
+- Notion is read-only for the entire network.
+- No agent gives medical advice about a compound, to you or to a member.
+
 ## The rooms
 
 | Room | What it holds | Its dashboard |

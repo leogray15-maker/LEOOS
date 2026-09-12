@@ -507,6 +507,134 @@ button, input, textarea { font: inherit; color: inherit; }
   padding-left: 11px; border-left: 2px solid var(--seam-lit);
 }
 
+/* ============================================================
+   The empire, the council, the network
+   ============================================================ */
+
+.deck-switch { display: flex; gap: 6px; margin-top: 7px; }
+.deck-switch button {
+  flex: 1 1 0; display: flex; flex-direction: column; gap: 1px; align-items: flex-start;
+  background: var(--plate); border: 1px solid var(--seam); border-radius: var(--r-sm);
+  padding: 6px 8px; cursor: pointer; text-align: left;
+}
+.deck-switch button:hover { border-color: var(--seam-lit); }
+.deck-switch button[aria-current='true'] { border-color: var(--arcane); background: var(--arcane-wash); }
+.deck-switch button[aria-current='true'] .deck-no { color: var(--arcane-lift); }
+.deck-no { font-size: 13px; line-height: 1; color: var(--ash); }
+.deck-name { font-size: 9px; color: var(--faint); line-height: 1.2; }
+
+.empire-head { margin-bottom: 16px; }
+.empire-greet {
+  font-family: var(--f-display); font-size: 26px; font-weight: 700;
+  letter-spacing: .06em; margin: 6px 0 0; line-height: 1.25;
+}
+.empire-sub { font-size: 15px; font-weight: 500; color: var(--ash); letter-spacing: .02em; }
+
+.signal-row {
+  display: grid; grid-template-columns: 3px 1fr; gap: 10px; align-items: start;
+  width: calc(100% + 16px); margin: 0 -8px; padding: 9px 8px;
+  background: transparent; border: 0; border-radius: var(--r-sm); text-align: left; cursor: pointer;
+}
+.signal-row:hover { background: var(--plate); }
+.signal-stripe { border-radius: 2px; align-self: stretch; }
+.signal-stripe.is-breach { background: var(--breach); }
+.signal-stripe.is-flare  { background: var(--flare); }
+.signal-stripe.is-vital  { background: var(--vital); }
+.signal-stripe.is-cyan   { background: var(--cyan); }
+.signal-text { font-size: 12.5px; line-height: 1.45; }
+.signal-src { font-family: var(--f-data); font-size: 10px; color: var(--faint); }
+
+.chip-role { font-size: 9px; color: var(--faint); margin-left: 4px; }
+
+/* council */
+.council-form { display: flex; gap: 8px; margin: 14px 0 16px; }
+.council-form input {
+  flex: 1 1 auto; min-width: 0; background: var(--void); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 9px 11px; font-size: 13px;
+}
+.council-form input:focus { border-color: var(--arcane); outline: none; }
+.council-form button {
+  background: var(--arcane-wash); border: 1px solid var(--arcane); border-radius: var(--r-sm);
+  color: var(--arcane-lift); cursor: pointer; padding: 0 16px;
+  font-family: var(--f-display); font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+}
+.council-form button:disabled { opacity: .5; cursor: default; }
+
+.seat-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.seat {
+  display: flex; flex-direction: column; gap: 3px;
+  background: var(--deck); border: 1px solid var(--seam); border-radius: var(--r-md); padding: 11px 12px;
+}
+.seat.is-live { border-color: var(--seam-lit); background: var(--plate); }
+.seat-dot { width: 100%; height: 3px; border-radius: 2px; margin-bottom: 5px; }
+.seat-name { font-family: var(--f-display); font-size: 12.5px; font-weight: 600; letter-spacing: .1em; }
+.seat-role { font-size: 10.5px; color: var(--faint); }
+.seat-stance {
+  font-family: var(--f-data); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  margin-top: 4px; color: var(--faint);
+}
+.seat-stance.is-for { color: var(--vital); }
+.seat-stance.is-against { color: var(--breach); }
+.seat-stance.is-conditional { color: var(--flare); }
+.seat-stance.is-thinking { color: var(--arcane-lift); }
+.seat-line { font-size: 11.5px; line-height: 1.5; color: var(--ash); margin-top: 5px; }
+
+.verdict {
+  margin-top: 16px; padding: 16px 18px; border-radius: var(--r-md);
+  border: 1px solid var(--seam); border-left: 3px solid var(--arcane); background: var(--deck);
+}
+.verdict.is-vital  { border-left-color: var(--vital); }
+.verdict.is-flare  { border-left-color: var(--flare); }
+.verdict.is-breach { border-left-color: var(--breach); }
+.verdict.is-cyan   { border-left-color: var(--cyan); }
+.verdict-word {
+  font-family: var(--f-display); font-size: 30px; font-weight: 700;
+  letter-spacing: .14em; margin: 4px 0 8px;
+}
+.verdict.is-vital .verdict-word  { color: var(--vital); }
+.verdict.is-flare .verdict-word  { color: var(--flare); }
+.verdict.is-breach .verdict-word { color: var(--breach); }
+.verdict.is-cyan .verdict-word   { color: var(--cyan); }
+.verdict-because { font-size: 13px; line-height: 1.6; margin: 0; }
+.verdict-list { margin: 6px 0 0; padding-left: 18px; }
+.verdict-list li { font-size: 12px; line-height: 1.6; color: var(--ash); margin-bottom: 3px; }
+
+/* garage */
+.agent-call { font-family: var(--f-data); font-size: 9.5px; color: var(--arcane-lift); letter-spacing: .04em; }
+.agent-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tag {
+  font-family: var(--f-data); font-size: 9px; padding: 2px 5px; border-radius: 2px;
+  background: var(--raised); color: var(--ash); border: 1px solid var(--seam);
+}
+.tag.is-flare  { color: var(--flare);  border-color: rgba(232,182,76,.3); }
+.tag.is-breach { color: var(--breach); border-color: rgba(229,72,77,.3); }
+
+/* control matrix */
+.matrix-wrap { overflow-x: auto; border: 1px solid var(--seam); border-radius: var(--r-md); }
+.matrix { border-collapse: collapse; width: 100%; min-width: 660px; }
+.matrix th, .matrix td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--seam); }
+.matrix thead th {
+  background: var(--plate); font-family: var(--f-display); font-size: 9px;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--faint); font-weight: 600;
+  white-space: nowrap;
+}
+.matrix-agent {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--f-display); font-size: 11.5px; letter-spacing: .08em;
+  font-weight: 600; white-space: nowrap;
+}
+.matrix tbody tr:hover { background: var(--plate); }
+.matrix-role { font-family: var(--f-body); font-size: 9.5px; letter-spacing: 0; color: var(--faint); font-weight: 400; }
+.grade {
+  font-family: var(--f-data); font-size: 9.5px; letter-spacing: .04em;
+  padding: 2px 6px; border-radius: 2px; background: var(--raised); color: var(--ash);
+}
+.grade.is-vital  { color: var(--vital);  background: rgba(62,207,142,.1); }
+.grade.is-breach { color: var(--breach); background: rgba(229,72,77,.1); }
+.grade.is-flare  { color: var(--flare);  background: rgba(232,182,76,.1); }
+.grade.is-arcane { color: var(--arcane-lift); background: var(--arcane-wash); }
+.grade.is-cyan   { color: var(--cyan);   background: rgba(86,201,240,.1); }
+
 </style>
 
 <div id="os">
@@ -618,7 +746,7 @@ const PX = {
 const ROOMS = [
   {
     id: 'bridge', name: 'BRIDGE', sub: 'Command · Targets',
-    rect: [130, 10, 250, 54], door: [190, 54], spine: 0,
+    rect: [130, 10, 250, 54], door: [190, 54], spine: 0, deck: 1,
     accent: 'arcane', floor: 'plate', tiles: 'plate', venture: null,
     blurb: 'The whole empire on one screen. Targets are set here and everything downstream obeys them.',
     props: [
@@ -637,7 +765,7 @@ const ROOMS = [
   },
   {
     id: 'forge', name: 'FORGE', sub: 'Build · Site · App',
-    rect: [20, 64, 172, 118], door: [172, 91], spine: 1,
+    rect: [20, 64, 172, 118], door: [172, 91], spine: 1, deck: 1,
     accent: 'cyan', floor: 'plate', tiles: 'grate', venture: 'track',
     blurb: 'Where the site and the ArcaneTrack app get built. Racks on one wall, a bench and an arm on the other.',
     props: [
@@ -662,7 +790,7 @@ const ROOMS = [
   },
   {
     id: 'beacon', name: 'BEACON', sub: 'Signal · Content · Email',
-    rect: [208, 64, 360, 118], door: [208, 91], spine: 1,
+    rect: [208, 64, 360, 118], door: [208, 91], spine: 1, deck: 1,
     accent: 'flare', floor: 'plate', tiles: 'grate', venture: null,
     blurb: 'The broadcast deck. Everything the outside world hears leaves the building from here.',
     props: [
@@ -683,7 +811,7 @@ const ROOMS = [
   },
   {
     id: 'apothecary', name: 'THE LAB', sub: 'Arcane Peptides · Stock · COA · Dispatch',
-    rect: [20, 126, 172, 180], door: [172, 153], spine: 2,
+    rect: [20, 126, 172, 180], door: [172, 153], spine: 2, deck: 1,
     accent: 'arcane', floor: 'plate', tiles: 'lab', venture: 'peptides',
     blurb: 'Cold storage, vial racks, instruments and the packing bench. Nothing leaves this room without a lab report against its batch.',
     props: [
@@ -710,7 +838,7 @@ const ROOMS = [
   },
   {
     id: 'vitals', name: 'VITALS', sub: 'Arcane Track · Members',
-    rect: [208, 126, 360, 180], door: [208, 153], spine: 2,
+    rect: [208, 126, 360, 180], door: [208, 153], spine: 2, deck: 1,
     accent: 'vital', floor: 'plate', tiles: 'lab', venture: 'track',
     blurb: 'Every dose logged, every day mapped. Member health and churn are watched from here.',
     props: [
@@ -734,7 +862,7 @@ const ROOMS = [
   },
   {
     id: 'vault', name: 'VAULT', sub: 'Treasury · Cash · VAT',
-    rect: [20, 188, 172, 242], door: [172, 215], spine: 3,
+    rect: [20, 188, 172, 242], door: [172, 215], spine: 3, deck: 1,
     accent: 'gold', floor: 'plate', tiles: 'concrete', venture: null,
     blurb: 'Cash, runway, and the tax set-aside. This room decides what every other room can spend.',
     props: [
@@ -758,7 +886,7 @@ const ROOMS = [
   },
   {
     id: 'archives', name: 'THE LIBRARY', sub: 'Archives · Content · PDF products',
-    rect: [208, 188, 360, 242], door: [208, 215], spine: 3,
+    rect: [208, 188, 360, 242], door: [208, 215], spine: 3, deck: 1,
     accent: 'cyan', floor: 'plate', tiles: 'carpet', venture: 'archives',
     blurb: 'Forty-eight courses and thousands of modules on the shelves. Posts get written here and modules get cut into PDFs worth selling.',
     props: [
@@ -780,7 +908,7 @@ const ROOMS = [
   },
   {
     id: 'scriptorium', name: 'SCRIPTORIUM', sub: 'The Codex · Writing',
-    rect: [20, 250, 172, 304], door: [172, 277], spine: 4,
+    rect: [20, 250, 172, 304], door: [172, 277], spine: 4, deck: 1,
     accent: 'breach', floor: 'plate', tiles: 'wood', venture: 'codex',
     blurb: 'Where the books get written. The Dark Psych Codex, The Quiet Empire, The Arcane Game.',
     props: [
@@ -804,7 +932,7 @@ const ROOMS = [
   },
   {
     id: 'sanctum', name: 'SANCTUM', sub: 'Leo · Body · Focus',
-    rect: [208, 250, 360, 304], door: [208, 277], spine: 4,
+    rect: [208, 250, 360, 304], door: [208, 277], spine: 4, deck: 1,
     accent: 'vital', floor: 'plate', tiles: 'mat', venture: null,
     blurb: 'Training, sleep, deep work. The operator is a system component and gets maintained like one.',
     props: [
@@ -826,13 +954,209 @@ const ROOMS = [
       ['sign', 6, 6, 16, 4, 'SANCTUM'],
     ],
   },
+  /* ============================================================
+     DECK 2 — command, intelligence and the agent network
+     ============================================================ */
+  {
+    id: 'council', name: 'THE COUNCIL', sub: 'Deliberation · Verdicts',
+    rect: [130, 10, 250, 54], door: [190, 54], spine: 0, deck: 2,
+    accent: 'arcane', floor: 'plate', tiles: 'plate', venture: null,
+    blurb: 'Put a decision on the table and every relevant agent argues its corner. The Commander returns one recommendation, with conditions.',
+    props: [
+      ['viewport', 6, 3, 108, 7],
+      ['ceilinglight', 24, 11, 14, 2], ['ceilinglight', 82, 11, 14, 2],
+      ['holotable', 38, 16, 44, 20],
+      ['chair', 26, 17, 8, 6], ['chair', 86, 17, 8, 6],
+      ['chair', 26, 28, 8, 6], ['chair', 86, 28, 8, 6],
+      ['chair', 50, 36, 8, 5], ['chair', 62, 36, 8, 5],
+      ['terminal', 6, 22, 9, 12], ['terminal', 105, 22, 9, 12],
+      ['panel', 18, 14, 10, 7], ['panel', 92, 14, 10, 7],
+      ['cablerun', 4, 12, 108, 1],
+      ['bolt', 4, 4, 2, 2], ['bolt', 112, 4, 2, 2],
+    ],
+  },
+  {
+    id: 'warroom', name: 'THE WAR ROOM', sub: 'Strategy · The next move',
+    rect: [20, 64, 172, 118], door: [172, 91], spine: 1, deck: 2,
+    accent: 'breach', floor: 'plate', tiles: 'concrete', venture: null,
+    blurb: 'Every venture as an object on the table. What is compounding, what is bleeding, and the three moves that matter this week.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['holotable', 46, 14, 52, 24],
+      ['screen', 6, 10, 18, 11], ['screen', 26, 10, 18, 11],
+      ['screen', 6, 23, 18, 11], ['screen', 26, 23, 18, 11],
+      ['chair', 56, 41, 9, 7], ['chair', 78, 41, 9, 7],
+      ['terminal', 106, 10, 10, 13], ['terminal', 122, 10, 10, 13],
+      ['chart', 106, 26, 30, 16],
+      ['panel', 138, 10, 10, 8],
+      ['hazard', 46, 41, 8, 2],
+      ['sign', 6, 6, 16, 4, 'WAR'],
+      ['cablerun', 44, 9, 1, 32],
+    ],
+  },
+  {
+    id: 'intel', name: 'INTELLIGENCE', sub: 'Competitors · Markets · Signals',
+    rect: [208, 64, 360, 118], door: [208, 91], spine: 1, deck: 2,
+    accent: 'arcane', floor: 'grid', tiles: 'grate', venture: null,
+    blurb: 'A dark room of screens that watches everything outside the walls: competitors, pricing, suppliers, regulation, demand.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['screen', 6, 9, 17, 10], ['screen', 25, 9, 17, 10], ['screen', 44, 9, 17, 10],
+      ['screen', 63, 9, 17, 10], ['screen', 82, 9, 17, 10],
+      ['screen', 6, 21, 17, 10], ['screen', 25, 21, 17, 10], ['screen', 44, 21, 17, 10],
+      ['screen', 63, 21, 17, 10], ['screen', 82, 21, 17, 10],
+      ['mixdesk', 20, 36, 56, 12],
+      ['chair', 44, 47, 8, 5],
+      ['rack', 104, 9, 13, 30], ['rack', 120, 9, 13, 30],
+      ['terminal', 136, 9, 10, 13],
+      ['holo', 138, 26, 8, 16],
+      ['cablerun', 102, 10, 1, 34],
+      ['sign', 104, 42, 16, 4, 'INTEL'],
+    ],
+  },
+  {
+    id: 'market', name: 'THE MARKET', sub: 'Visitors → Leads → Orders',
+    rect: [20, 126, 172, 180], door: [172, 153], spine: 2, deck: 2,
+    accent: 'rose', floor: 'clean', tiles: 'lab', venture: 'peptides',
+    blurb: 'The sales engine. Conversion, average order value, repeat purchase, and the exact step where people fall out.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 30, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['chart', 6, 10, 42, 20],
+      ['screen', 52, 10, 18, 11], ['screen', 72, 10, 18, 11],
+      ['counter', 52, 24, 20, 13],
+      ['terminal', 76, 24, 10, 13],
+      ['conveyor', 6, 34, 42, 8, 'items'],
+      ['shipbox', 92, 12, 11, 10], ['shipbox', 105, 12, 11, 10],
+      ['shipbox', 92, 24, 11, 10],
+      ['pallet', 90, 36, 28, 3],
+      ['packstation', 122, 22, 20, 13],
+      ['crate', 122, 8, 12, 10],
+      ['hazard', 6, 44, 42, 2],
+      ['sign', 122, 40, 18, 4, 'ORDERS'],
+    ],
+  },
+  {
+    id: 'observatory', name: 'THE OBSERVATORY', sub: 'Continuous watch',
+    rect: [208, 126, 360, 180], door: [208, 153], spine: 2, deck: 2,
+    accent: 'cyan', floor: 'plate', tiles: 'plate', venture: null,
+    blurb: 'This room does not wait to be opened. It watches revenue, stock, competitors and deadlines, and raises a signal when one moves.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['dish', 8, 8, 34, 34],
+      ['mast', 46, 6, 6, 34],
+      ['holotable', 58, 14, 36, 22],
+      ['screen', 100, 9, 18, 11], ['screen', 120, 9, 18, 11],
+      ['screen', 100, 22, 18, 11], ['screen', 120, 22, 18, 11],
+      ['chart', 100, 35, 38, 13],
+      ['terminal', 58, 39, 10, 12],
+      ['camera', 140, 6, 8, 6],
+      ['cablerun', 56, 8, 1, 36],
+      ['sign', 72, 39, 18, 4, 'WATCH'],
+    ],
+  },
+  {
+    id: 'dealroom', name: 'THE DEAL ROOM', sub: 'People · Pipeline · Outreach',
+    rect: [20, 188, 172, 242], door: [172, 215], spine: 3, deck: 2,
+    accent: 'flare', floor: 'grid', tiles: 'carpet', venture: null,
+    blurb: 'Leads, prospects, customers, partners and suppliers as cards on a table. Research, outreach and meeting briefs prepared, never sent.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['readingdesk', 6, 12, 32, 17],
+      ['chair', 16, 32, 9, 7],
+      ['catalogue', 44, 10, 28, 8],
+      ['screen', 44, 21, 18, 11], ['screen', 64, 21, 18, 11],
+      ['bookstack', 44, 35, 12, 8],
+      ['plant', 78, 10, 11, 14],
+      ['readingdesk', 94, 12, 32, 17],
+      ['chair', 104, 32, 9, 7],
+      ['terminal', 132, 12, 10, 13],
+      ['cabinet', 132, 28, 14, 18],
+      ['sign', 78, 30, 16, 4, 'DEALS'],
+    ],
+  },
+  {
+    id: 'garage', name: 'THE AGENT GARAGE', sub: 'Build · Configure · Deploy',
+    rect: [208, 188, 360, 242], door: [208, 215], spine: 3, deck: 2,
+    accent: 'arcane', floor: 'grid', tiles: 'grate', venture: null,
+    blurb: 'Where an agent is made: its name, its domain, the tools it may reach, and the things it must ask you before doing.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 30, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['locker', 6, 10, 12, 22], ['locker', 20, 10, 12, 22],
+      ['locker', 34, 10, 12, 22], ['locker', 48, 10, 12, 22],
+      ['locker', 62, 10, 12, 22], ['locker', 76, 10, 12, 22],
+      ['cablerun', 6, 34, 84, 1],
+      ['armbot', 96, 10, 18, 18],
+      ['bench', 96, 30, 44, 10],
+      ['toolwall', 96, 5, 44, 4],
+      ['oscilloscope', 120, 12, 16, 14],
+      ['crate', 6, 38, 12, 10], ['crate', 20, 38, 12, 10],
+      ['terminal', 138, 10, 10, 13],
+      ['hazard', 40, 40, 44, 2],
+      ['sign', 40, 44, 18, 4, 'AGENTS'],
+    ],
+  },
+  {
+    id: 'inventor', name: "THE INVENTOR'S ROOM", sub: 'Ideas · Verdicts',
+    rect: [20, 250, 172, 304], door: [172, 277], spine: 4, deck: 2,
+    accent: 'vital', floor: 'plate', tiles: 'wood', venture: null,
+    blurb: 'Throw an idea on the bench. It goes through market, competition, economics, MVP, cost and risk, and comes back BUILD, WATCH or KILL.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['bench', 6, 14, 48, 10],
+      ['toolwall', 6, 8, 48, 5],
+      ['oscilloscope', 60, 12, 16, 14],
+      ['holotable', 82, 12, 34, 20],
+      ['cablespool', 6, 28, 11, 8], ['cablespool', 20, 28, 11, 8],
+      ['crate', 34, 28, 12, 10],
+      ['barrel', 50, 28, 9, 10],
+      ['press', 122, 10, 24, 26],
+      ['terminal', 62, 30, 10, 13],
+      ['papers', 86, 35, 24, 4],
+      ['hazard', 82, 41, 34, 2],
+      ['sign', 6, 40, 18, 4, 'BUILD?'],
+    ],
+  },
+  {
+    id: 'control', name: 'THE CONTROL ROOM', sub: 'Permissions · Approvals · Audit',
+    rect: [208, 250, 360, 304], door: [208, 277], spine: 4, deck: 2,
+    accent: 'breach', floor: 'plate', tiles: 'concrete', venture: null,
+    blurb: 'Every grade the network runs under, in one place. What each agent may read, draft, recommend, and what it must ask permission for.',
+    props: [
+      ['pipes', 3, 3, 146, 4],
+      ['ceilinglight', 34, 8, 18, 2], ['ceilinglight', 100, 8, 18, 2],
+      ['console', 6, 12, 26, 10], ['console', 36, 12, 26, 10], ['console', 66, 12, 26, 10],
+      ['panel', 6, 26, 12, 9], ['panel', 22, 26, 12, 9], ['panel', 38, 26, 12, 9],
+      ['panel', 54, 26, 12, 9], ['panel', 70, 26, 12, 9],
+      ['camera', 96, 6, 8, 6],
+      ['screen', 96, 14, 20, 12], ['screen', 120, 14, 20, 12],
+      ['safe', 96, 30, 22, 18],
+      ['terminal', 124, 30, 10, 13],
+      ['chair', 40, 40, 9, 7],
+      ['hazard', 6, 40, 30, 2],
+      ['sign', 120, 44, 20, 4, 'CONTROL'],
+    ],
+  },
 ];
 
 const ROOM_BY_ID = Object.fromEntries(ROOMS.map((r) => [r.id, r]));
 
-function corridors() {
+/** The two floors of the station. Not to be confused with DECKS in
+ *  empire.js, which is the room list. */
+const FLOORS = [
+  { id: 1, name: 'DECK 1', sub: 'Operations' },
+  { id: 2, name: 'DECK 2', sub: 'Command' },
+];
+
+const roomsOn = (deck) => ROOMS.filter((r) => r.deck === deck);
+
+function corridors(deck = 1) {
   const segs = [[SPINE_X - 12, 48, SPINE_X + 12, 310]];
-  for (const r of ROOMS) {
+  for (const r of roomsOn(deck)) {
     if (r.door[0] === SPINE_X) continue;
     const left = r.door[0] < SPINE_X;
     segs.push(left
@@ -972,6 +1296,221 @@ const ROOM_WIDGET = {
   bridge: 'doctrine',
 };
 
+/* ==== src/config/agents.js ==== */
+/**
+ * THE AGENT NETWORK.
+ *
+ * Every agent is a specialist with a domain, a station, a toolset and an
+ * explicit permission grade per capability. Nothing executes on its own:
+ * the grades are the contract, and the Control Room is where you read them.
+ *
+ * Grades, weakest to strongest:
+ *   deny      — cannot touch it at all
+ *   read      — may look
+ *   analyse   — may look and reason over it
+ *   draft     — may produce something for you to review
+ *   recommend — may put a recommendation to you or the Council
+ *   approval  — may execute, but only after you say yes
+ *   allow     — may execute unattended
+ */
+
+const GRADES = ['deny', 'read', 'analyse', 'draft', 'recommend', 'approval', 'allow'];
+
+const GRADE_TONE = {
+  deny: 'breach', read: 'ash', analyse: 'cyan', draft: 'flare',
+  recommend: 'arcane', approval: 'flare', allow: 'vital',
+};
+
+/** The capabilities every agent is graded against. */
+const CAPS = [
+  { id: 'data',    name: 'Read data',     note: 'See the numbers behind its own room' },
+  { id: 'analyse', name: 'Analyse',       note: 'Reason over what it can see' },
+  { id: 'write',   name: 'Draft',         note: 'Produce copy, plans, documents' },
+  { id: 'spend',   name: 'Spend money',   note: 'Move or commit funds' },
+  { id: 'publish', name: 'Publish',       note: 'Put something in front of the public' },
+  { id: 'contact', name: 'Contact people',note: 'Email, message or call anyone outside' },
+  { id: 'change',  name: 'Change systems',note: 'Edit live pricing, stock, site or app' },
+];
+
+/** Tools the network can reach. Wiring state is honest, not aspirational. */
+const TOOLS = [
+  { id: 'notion',   name: 'Notion',        state: 'read-only', note: 'The Archives. Read only, by your instruction.' },
+  { id: 'memory',   name: 'Shared memory', state: 'live',      note: 'Persistent state every agent reads before acting.' },
+  { id: 'counsel',  name: 'Claude',        state: 'live',      note: 'Reasoning for Counsel and the Council.' },
+  { id: 'calendar', name: 'Calendar',      state: 'not wired', note: 'Not connected yet.' },
+  { id: 'email',    name: 'Email',         state: 'not wired', note: 'Not connected yet.' },
+  { id: 'commerce', name: 'Store',         state: 'not wired', note: 'Arcane Peptides orders and stock.' },
+  { id: 'crm',      name: 'CRM',           state: 'not wired', note: 'People, deals, follow-ups.' },
+  { id: 'web',      name: 'Web research',  state: 'not wired', note: 'Competitor and market monitoring.' },
+];
+
+const base = { data: 'analyse', analyse: 'analyse', write: 'draft', spend: 'deny', publish: 'deny', contact: 'deny', change: 'deny' };
+
+/**
+ * The network. `council` marks the agents that sit on the Council.
+ * `weight` orders their voice in a deliberation.
+ */
+const AGENTS = [
+  {
+    id: 'arcane', call: 'ARCANEBOT', name: 'ARCANE', role: 'Commander',
+    room: 'bridge', deck: 1, colour: '#a98bff', kind: 'arcane',
+    domain: 'The whole empire',
+    brief: 'Holds the state of everything and decides which specialist works next. Synthesises the Council into one recommendation.',
+    tools: ['memory', 'counsel', 'notion'],
+    caps: { ...base, recommend: 'recommend', publish: 'approval', contact: 'approval', change: 'approval', spend: 'recommend' },
+    council: true, weight: 0,
+  },
+  {
+    id: 'meridian', call: 'ARCA-LAB', name: 'MERIDIAN', role: 'Quartermaster',
+    room: 'apothecary', deck: 1, colour: '#c68bff',
+    domain: 'Arcane Peptides — stock, batches, COA, dispatch',
+    brief: 'Watches stock cover, batch records and whether every live compound has a lab report against it. Flags a dispatch cutoff at risk.',
+    tools: ['memory', 'commerce', 'notion'],
+    caps: { ...base, change: 'approval' },
+    council: true, weight: 3,
+  },
+  {
+    id: 'tally', call: 'ARCA-TREASURER', name: 'TALLY', role: 'Treasurer',
+    room: 'vault', deck: 1, colour: '#d9a441',
+    domain: 'Cash, burn, runway, tax reserve, the split',
+    brief: 'Answers what you can afford and where the money is leaking. Audits subscriptions and unusual spend. Never moves a penny itself.',
+    tools: ['memory'],
+    caps: { ...base, spend: 'recommend' },
+    council: true, weight: 1,
+  },
+  {
+    id: 'vector', call: 'ARCA-STRATEGIST', name: 'VECTOR', role: 'Strategist',
+    room: 'warroom', deck: 2, colour: '#b79cff',
+    domain: 'Which venture gets the next hour, the next pound, the next quarter',
+    brief: 'Ranks the ventures by what is actually compounding and names what to stop doing. Produces the top three moves.',
+    tools: ['memory', 'counsel'],
+    caps: { ...base, recommend: 'recommend' },
+    council: true, weight: 2,
+  },
+  {
+    id: 'herald', call: 'ARCA-MEDIA', name: 'HERALD', role: 'Signalman',
+    room: 'beacon', deck: 1, colour: '#e8b64c',
+    domain: 'Content, email, launches, the attention funnel',
+    brief: 'Turns Archives modules into posts and watches which of them actually produce leads. Drafts only — nothing goes out unapproved.',
+    tools: ['memory', 'notion'],
+    caps: { ...base, publish: 'approval', contact: 'draft' },
+    council: true, weight: 4,
+  },
+  {
+    id: 'oracle', call: 'ARCA-SCRIBE', name: 'ORACLE', role: 'Archivist',
+    room: 'archives', deck: 1, colour: '#6bd6ff',
+    domain: 'The Archives, the knowledge base, PDF products',
+    brief: 'Keeps the map of 3,300 modules and cuts them into things worth selling. Runs idea → research → draft → review → publish.',
+    tools: ['memory', 'notion'],
+    caps: { ...base },
+    council: false, weight: 6,
+  },
+  {
+    id: 'lumen', call: 'ARCA-VITALS', name: 'LUMEN', role: 'Physician',
+    room: 'vitals', deck: 1, colour: '#3ecf8e',
+    domain: 'Arcane Track — members, retention, dose logging',
+    brief: 'Watches churn and who has stopped logging. Never gives medical advice, to you or to a member.',
+    tools: ['memory'],
+    caps: { ...base, contact: 'draft' },
+    council: false, weight: 7,
+  },
+  {
+    id: 'anvil', call: 'ARCA-OPS', name: 'ANVIL', role: 'Engineer',
+    room: 'forge', deck: 1, colour: '#56c9f0',
+    domain: 'Site, app, automation, the order pipeline',
+    brief: 'Owns the machine that turns an order into a delivered parcel and a reconciled line. Flags where a workflow breaks.',
+    tools: ['memory', 'commerce'],
+    caps: { ...base, change: 'approval' },
+    council: true, weight: 5,
+  },
+  {
+    id: 'scribe', call: 'ARCA-CODEX', name: 'SCRIBE', role: 'Scrivener',
+    room: 'scriptorium', deck: 1, colour: '#e5484d',
+    domain: 'The Codex — books, masterclasses, launches',
+    brief: 'Drafts and proofs the long-form work and runs a launch sequence when a title is ready.',
+    tools: ['memory', 'notion'],
+    caps: { ...base, publish: 'approval' },
+    council: false, weight: 8,
+  },
+  {
+    id: 'keeper', call: 'ARCA-MENTOR', name: 'KEEPER', role: 'Steward',
+    room: 'sanctum', deck: 1, colour: '#7ee0a8',
+    domain: 'Sleep, training, focus, the long-term goals',
+    brief: 'Answers one question honestly: are you actually moving toward the life you said you wanted, or just busy.',
+    tools: ['memory'],
+    caps: { ...base },
+    council: true, weight: 9,
+  },
+  {
+    id: 'intel', call: 'ARCA-INTEL', name: 'CIPHER', role: 'Intelligence',
+    room: 'intel', deck: 2, colour: '#8b5cf6',
+    domain: 'Competitors, markets, pricing, suppliers, regulation',
+    brief: 'Produces the daily intelligence: opportunity, threat, signal, action. Needs web research wired before it can do its job.',
+    tools: ['memory', 'web'],
+    caps: { ...base },
+    council: true, weight: 4,
+  },
+  {
+    id: 'ledger', call: 'ARCA-COMMERCE', name: 'ABACUS', role: 'Commerce',
+    room: 'market', deck: 2, colour: '#e0609a',
+    domain: 'Visitors → leads → orders → revenue',
+    brief: 'Watches the funnel and names the biggest drop-off. Suggests the one change most likely to move conversion.',
+    tools: ['memory', 'commerce'],
+    caps: { ...base, change: 'approval' },
+    council: false, weight: 6,
+  },
+  {
+    id: 'envoy', call: 'ARCA-SALES', name: 'ENVOY', role: 'Deals',
+    room: 'dealroom', deck: 2, colour: '#f0a05a',
+    domain: 'Leads, prospects, customers, partners, suppliers',
+    brief: 'Researches a company, drafts the outreach, prepares the meeting brief. Sends nothing without your word.',
+    tools: ['memory', 'crm', 'web'],
+    caps: { ...base, contact: 'approval' },
+    council: false, weight: 7,
+  },
+  {
+    id: 'watch', call: 'ARCA-WATCH', name: 'VIGIL', role: 'Observer',
+    room: 'observatory', deck: 2, colour: '#56c9f0',
+    domain: 'Everything that changes while you are not looking',
+    brief: 'Does not wait to be asked. Raises a signal when stock, revenue, a competitor or a deadline moves.',
+    tools: ['memory', 'web'],
+    caps: { ...base, write: 'draft' },
+    council: false, weight: 5,
+  },
+  {
+    id: 'guard', call: 'ARCA-GUARD', name: 'WARDEN', role: 'Risk & Control',
+    room: 'control', deck: 2, colour: '#e5484d',
+    domain: 'Permissions, approvals, compliance, the audit trail',
+    brief: 'Holds the permission grades and says no. Flags regulatory exposure before it becomes a problem, not after.',
+    tools: ['memory'],
+    caps: { ...base, write: 'recommend' },
+    council: true, weight: 2,
+  },
+  {
+    id: 'venture', call: 'ARCA-VENTURE', name: 'SPARK', role: 'Inventor',
+    room: 'inventor', deck: 2, colour: '#3ecf8e',
+    domain: 'New ideas, before they get lost',
+    brief: 'Takes an idea through market, competition, economics, MVP, cost and risk, then returns BUILD, WATCH or KILL.',
+    tools: ['memory', 'counsel', 'web'],
+    caps: { ...base, recommend: 'recommend' },
+    council: false, weight: 8,
+  },
+  {
+    id: 'forge', call: 'ARCA-SMITH', name: 'FOUNDRY', role: 'Agent-wright',
+    room: 'garage', deck: 2, colour: '#a98bff',
+    domain: 'The agents themselves',
+    brief: 'Where an agent is configured: name, role, domain, tools, permissions, and what it must ask before doing.',
+    tools: ['memory'],
+    caps: { ...base, change: 'approval' },
+    council: false, weight: 9,
+  },
+];
+
+const AGENT_BY_ID = Object.fromEntries(AGENTS.map((a) => [a.id, a]));
+const CREW = AGENTS.filter((a) => a.kind !== 'arcane');
+const ARCANE = AGENTS.find((a) => a.kind === 'arcane');
+const COUNCIL = AGENTS.filter((a) => a.council).sort((a, b) => a.weight - b.weight);
+
 /* ==== src/config/empire.js ==== */
 /**
  * THE ARCANE EMPIRE — the business layer.
@@ -980,6 +1519,7 @@ const ROOM_WIDGET = {
  * when the business changes: what he sells, who crews it, what he is
  * aiming at, and where the money goes.
  */
+
 
 
 /** Rooms are the decks — one import point for the rest of the app. */
@@ -1026,25 +1566,6 @@ const CATALOGUE = [
   { title: 'Dark Psychology Masterclass', price: null, venture: 'codex' },
 ];
 
-/** The commander. Driven by Leo, not by the simulation. */
-const ARCANE = {
-  id: 'arcane', name: 'ARCANE', role: 'Commander',
-  home: 'bridge', colour: '#a98bff',
-  brief: 'You. Open a room and the commander walks there; the crew follow the attention.',
-};
-
-const CREW = [
-  { id: 'vector',   name: 'VECTOR',   role: 'Navigator',     home: 'bridge',      colour: '#b79cff', brief: 'Holds the targets and says which one is slipping.' },
-  { id: 'anvil',    name: 'ANVIL',    role: 'Engineer',      home: 'forge',       colour: '#56c9f0', brief: 'Site, app, automation. Anything that has to be built.' },
-  { id: 'herald',   name: 'HERALD',   role: 'Signalman',     home: 'beacon',      colour: '#e8b64c', brief: 'Content, email, launches. Everything the world hears.' },
-  { id: 'meridian', name: 'MERIDIAN', role: 'Quartermaster', home: 'apothecary',  colour: '#c68bff', brief: 'Stock cover, COA, dispatch cutoffs.' },
-  { id: 'lumen',    name: 'LUMEN',    role: 'Physician',     home: 'vitals',      colour: '#3ecf8e', brief: 'Member health, churn, the people on the protocol.' },
-  { id: 'tally',    name: 'TALLY',    role: 'Purser',        home: 'vault',       colour: '#d9a441', brief: 'Cash, VAT, reconciliation. Says what you can spend.' },
-  { id: 'oracle',   name: 'ORACLE',   role: 'Archivist',     home: 'archives',    colour: '#6bd6ff', brief: 'Curriculum and the 3,300 modules underneath it.' },
-  { id: 'scribe',   name: 'SCRIBE',   role: 'Scrivener',     home: 'scriptorium', colour: '#e5484d', brief: 'The Codex. Drafts, proofs, launch sequences.' },
-  { id: 'keeper',   name: 'KEEPER',   role: 'Steward',       home: 'sanctum',     colour: '#7ee0a8', brief: 'Sleep, training, deep work. The operator is a component.' },
-];
-
 /**
  * GOALS — money and work, each anchored to a room.
  * `target` is the number that ends it; progress is stored and editable.
@@ -1086,6 +1607,7 @@ const BUDGET = {
 
 /** The left-hand navigation, numbered like a control panel. */
 const SCREENS = [
+  { id: 'empire',   no: '00', name: 'THE EMPIRE',  sub: 'State of everything' },
   { id: 'factory',  no: '01', name: 'THE FACTORY', sub: 'Live floor' },
   { id: 'agents',   no: '02', name: 'AGENTS',      sub: 'Crew & orders' },
   { id: 'orders',   no: '03', name: 'ORDERS',      sub: 'Every open task' },
@@ -1093,7 +1615,10 @@ const SCREENS = [
   { id: 'ledger',   no: '05', name: 'LEDGER',      sub: 'Money & budget' },
   { id: 'goals',    no: '06', name: 'GOALS',       sub: 'Money & work targets' },
   { id: 'signals',  no: '07', name: 'SIGNALS',     sub: 'Posts from the Archives' },
-  { id: 'system',   no: '08', name: 'SYSTEM',      sub: 'Status & sync' },
+  { id: 'council',  no: '08', name: 'THE COUNCIL', sub: 'Put a decision to them' },
+  { id: 'garage',   no: '09', name: 'AGENT GARAGE',sub: 'The network' },
+  { id: 'control',  no: '10', name: 'CONTROL',     sub: 'Permissions & approvals' },
+  { id: 'system',   no: '11', name: 'SYSTEM',      sub: 'Status & sync' },
 ];
 
 const SEED_TASKS = {
@@ -1550,13 +2075,13 @@ function route(fromId, toId) {
 }
 
 function makeWalker(def, kind, speed) {
-  const room = ROOM_BY_ID[def.home];
+  const room = ROOM_BY_ID[def.room];
   const p = interiorPoint(room);
   return {
     ...def,
     kind,
     speed,
-    deck: def.home,
+    deck: def.room,
     x: p.x, y: p.y,
     tx: p.x, ty: p.y,
     state: 'work',
@@ -1586,6 +2111,9 @@ class Sim {
 
   everyone() { return [...this.agents, this.arcane]; }
 
+  /** Agents standing on one deck. */
+  onFloor(floor) { return this.everyone().filter((a) => (a.floor || 1) === floor); }
+
   inRoom(id) {
     return this.agents.filter((a) => a.deck === id && a.state === 'work');
   }
@@ -1609,18 +2137,34 @@ class Sim {
     return true;
   }
 
-  /** ARCANE walks to the room you opened. */
+  /** ARCANE walks to the room you opened, taking the lift between decks. */
   commandTo(roomId) {
-    if (this.arcane.deck === roomId && this.arcane.state === 'work') return;
-    if (this.dispatch(this.arcane, roomId)) {
-      this.store.trace(`ARCANE → ${ROOM_BY_ID[roomId].name}`);
+    const room = ROOM_BY_ID[roomId];
+    if (!room) return;
+    const a = this.arcane;
+    if (a.deck === roomId && a.state === 'work') return;
+
+    if ((a.floor || 1) !== room.deck) {
+      // the lift: step out on the new deck at the spine terminus, then walk
+      a.floor = room.deck;
+      a.x = SPINE_X;
+      a.y = SPINE[0] + 6;
+      a.deck = roomId;
+      a.path = [{ x: SPINE_X, y: room.door[1] },
+                { x: room.door[0], y: room.door[1] },
+                { x: (room.rect[0] + room.rect[2]) / 2, y: room.rect[3] - 12 }];
+      a.leg = 0;
+      a.state = 'transit';
+      this.store.trace(`ARCANE rode the lift to DECK ${room.deck} — ${room.name}`);
+      return;
     }
+    if (this.dispatch(a, roomId)) this.store.trace(`ARCANE → ${room.name}`);
   }
 
   /** Where a crew member drifts next: open orders pull, so does the commander. */
   chooseTarget(agent) {
     const bag = [];
-    for (const r of ROOMS) {
+    for (const r of roomsOn(agent.floor || 1)) {
       let w = 1 + this.store.openCount(r.id) * 2.4;
       if (r.id === agent.home) w += 5;
       if (r.id === this.arcane.deck) w += 4;
@@ -1705,10 +2249,10 @@ class Sim {
     }
   }
 
-  agentAt(x, y, radius = 8) {
+  agentAt(x, y, radius = 8, floor = null) {
     let best = null;
     let bestD = radius;
-    for (const a of this.everyone()) {
+    for (const a of (floor ? this.onFloor(floor) : this.everyone())) {
       const d = Math.hypot(a.x - x, a.y - (y + 5));
       if (d < bestD) { bestD = d; best = a; }
     }
@@ -3033,6 +3577,7 @@ class Factory {
     this.buf.height = PH;
     this.bctx = this.buf.getContext('2d');
 
+    this.deck = 1;
     this.selected = null;
     this.hover = null;
     this.t = 0;
@@ -3224,7 +3769,7 @@ class Factory {
   }
 
   roomAt(x, y) {
-    return ROOMS.find((r) => {
+    return roomsOn(this.deck).find((r) => {
       const [x1, y1, x2, y2] = r.rect;
       return x >= x1 - 2 && x <= x2 + 2 && y >= y1 - 2 && y <= y2 + 2;
     }) || null;
@@ -3237,7 +3782,7 @@ class Factory {
     b.clearRect(0, 0, PW, PH);
     this.drawShell(b);
     this.drawCorridors(b);
-    for (const room of ROOMS) this.drawRoom(b, room);
+    for (const room of roomsOn(this.deck)) this.drawRoom(b, room);
     this.drawCrew(b);
 
     // blit
@@ -3328,7 +3873,7 @@ class Factory {
   }
 
   drawCorridors(b) {
-    for (const [x1, y1, x2, y2] of corridors()) {
+    for (const [x1, y1, x2, y2] of corridors(this.deck)) {
       const w = x2 - x1;
       const h = y2 - y1;
       fill(b, x1, y1, w, h, PX.floor);
@@ -3367,7 +3912,7 @@ class Factory {
     }
 
     // lit thresholds at every door
-    for (const r of ROOMS) {
+    for (const r of roomsOn(this.deck)) {
       if (r.door[0] === SPINE_X) continue;
       const x = r.door[0] < SPINE_X ? r.door[0] : r.door[0] - 3;
       const col = ACCENT[r.accent] || PX.arcane;
@@ -3535,7 +4080,7 @@ class Factory {
 
   drawCrew(b) {
     // trails first so sprites sit on top
-    for (const a of this.sim.agents) {
+    for (const a of this.sim.onFloor(this.deck)) {
       if (a.state !== 'transit') continue;
       for (let i = 1; i < a.wake.length; i++) {
         b.globalAlpha = (i / a.wake.length) * 0.18;
@@ -3544,9 +4089,7 @@ class Factory {
     }
     b.globalAlpha = 1;
 
-    const all = [...this.sim.agents];
-    if (this.sim.arcane) all.push(this.sim.arcane);
-    all.sort((p, q) => p.y - q.y);
+    const all = this.sim.onFloor(this.deck).slice().sort((p, q) => p.y - q.y);
 
     for (const a of all) {
       const moving = a.state === 'transit';
@@ -3563,8 +4106,7 @@ class Factory {
 
   /** Name plates, drawn crisp on top of the blitted pixels. */
   drawLabels(c) {
-    const all = [...this.sim.agents];
-    if (this.sim.arcane) all.push(this.sim.arcane);
+    const all = this.sim.onFloor(this.deck);
 
     c.textAlign = 'center';
     c.textBaseline = 'bottom';
@@ -3596,7 +4138,7 @@ class Factory {
     c.textAlign = 'left';
     c.font = `600 ${plate}px 'Chakra Petch', sans-serif`;
     c.letterSpacing = '1px';
-    for (const r of ROOMS) {
+    for (const r of roomsOn(this.deck)) {
       if (r.id === focus) continue;
       const [x1, y1] = r.rect;
       const x = this.ox + (x1 + 3) * this.scale;
@@ -3613,7 +4155,7 @@ class Factory {
     c.textAlign = 'center';
 
     // the focused room gets the full plate
-    const room = ROOMS.find((r) => r.id === focus);
+    const room = roomsOn(this.deck).find((r) => r.id === focus);
     if (room) {
       const [x1, y1, x2] = room.rect;
       const x = this.ox + ((x1 + x2) / 2) * this.scale;
@@ -3721,6 +4263,17 @@ class UI {
         </button>`).join('')}
 
       <div class="rail-block">
+        <span class="eyebrow">Deck</span>
+        <div class="deck-switch" id="deckSwitch">
+          ${FLOORS.map((d) => `
+            <button type="button" data-deck="${d.id}">
+              <span class="deck-no mono">${d.id}</span>
+              <span class="deck-name">${esc(d.sub)}</span>
+            </button>`).join('')}
+        </div>
+      </div>
+
+      <div class="rail-block">
         <span class="eyebrow">Commander</span>
         <button class="commander" type="button" data-commander="1">
           <span class="commander-mark">◆</span>
@@ -3745,6 +4298,13 @@ class UI {
     this.railEl.addEventListener('click', (e) => {
       const nav = e.target.closest('[data-screen]');
       if (nav) { this.setScreen(nav.dataset.screen); return; }
+      const deck = e.target.closest('[data-deck]');
+      if (deck) {
+        this.factory.deck = Number(deck.dataset.deck);
+        this.closeRoom();
+        this.setScreen('factory');
+        return;
+      }
       if (e.target.closest('[data-commander]')) this.openRoom(this.sim.arcane.deck);
     });
   }
@@ -3765,8 +4325,10 @@ class UI {
 
   /** Open a room: the commander walks there and its dashboard comes up. */
   openRoom(id) {
-    if (!ROOM_BY_ID[id]) return;
+    const room = ROOM_BY_ID[id];
+    if (!room) return;
     this.room = id;
+    this.factory.deck = room.deck;
     this.factory.selected = id;
     this.sim.commandTo(id);
     if (this.screen !== 'factory') this.setScreen('factory');
@@ -3819,6 +4381,11 @@ class UI {
     const pct = total ? Math.round((done / total) * 100) : 0;
     $('#integrityFill').style.width = `${pct}%`;
     $('#integrityPct').textContent = `${pct}%`;
+
+    for (const d of FLOORS) {
+      const btn = this.railEl.querySelector(`[data-deck="${d.id}"]`);
+      if (btn) btn.setAttribute('aria-current', String(this.factory.deck === d.id));
+    }
 
     const a = this.sim.arcane;
     $('#arcaneWhere').textContent = a.state === 'transit'
@@ -3908,6 +4475,214 @@ class UI {
       </div>`;
   }
 
+
+
+  /* ================= the empire ================= */
+
+  screenEmpire() {
+    const hour = new Date().getHours();
+    const greet = hour < 5 ? 'STILL UP.' : hour < 12 ? 'GOOD MORNING.' : hour < 18 ? 'GOOD AFTERNOON.' : 'GOOD EVENING.';
+    const open = this.store.totalOpen();
+    const p1 = DECKS.reduce((n, d) => n + this.store.tasks(d.id).filter((t) => !t.done && t.p === 1).length, 0);
+    const rev = this.store.monthlyRevenue();
+    const run = this.store.runwayMonths();
+    const drafts = this.store.postCount();
+    const signals = this.signals();
+    const decisions = signals.filter((x) => x.level === 'breach').length;
+
+    return `
+      <div class="empire-head">
+        <span class="eyebrow">${esc(OPERATOR.name)} · ${esc(stamp())}</span>
+        <h2 class="empire-greet">${greet}<br><span class="empire-sub">Here is the state of the empire.</span></h2>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${this.store.ledgerCalibrated() ? money(rev) : '—'}</span><span class="stat-l">Revenue / month</span></div>
+        <div class="stat"><span class="stat-n mono is-gold">${run === null ? '—' : run.toFixed(1)}</span><span class="stat-l">Months runway</span></div>
+        <div class="stat"><span class="stat-n mono is-flare">${open}</span><span class="stat-l">Open orders</span></div>
+        <div class="stat"><span class="stat-n mono is-breach">${p1}</span><span class="stat-l">Priority one</span></div>
+        <div class="stat"><span class="stat-n mono">${drafts}</span><span class="stat-l">Drafts waiting</span></div>
+        <div class="stat"><span class="stat-n mono ${decisions ? 'is-breach' : 'is-vital'}">${decisions}</span><span class="stat-l">Need a decision</span></div>
+      </div>
+
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">What needs you</h3>
+          <span class="chip">${signals.length}</span></div>
+        ${signals.length ? signals.slice(0, 6).map((x) => `
+          <button class="signal-row" type="button" ${x.room ? `data-room="${x.room}"` : ''}>
+            <span class="signal-stripe is-${x.level}"></span>
+            <span>
+              <span class="signal-text">${esc(x.text)}</span><br>
+              <span class="signal-src">${esc(x.src)}</span>
+            </span>
+          </button>`).join('')
+          : '<p class="muted-note">Nothing is on fire. Put the hours into what compounds.</p>'}
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">The network</h3>
+          <span class="chip">${AGENTS.length} agents · 2 decks</span></div>
+        <div class="crew-chips">
+          ${AGENTS.map((a) => `<button class="crew-chip" type="button" data-agent="${a.id}">
+            <span class="dot" style="background:${a.colour}"></span>${esc(a.name)}
+            <span class="chip-role">${esc(a.role)}</span></button>`).join('')}
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Put it to the Council</h3></div>
+        <p class="muted-note">A real decision — a spend, a launch, a thing to kill. Every relevant agent argues its corner and the Commander returns one recommendation.</p>
+        <button class="act is-primary" type="button" data-goscreen="council" style="margin-top:10px">Open the Council</button>
+      </section>`;
+  }
+
+  /** Derived, not decorative — every line traces to real state. */
+  signals() {
+    const out = [];
+    for (const d of DECKS) {
+      const tasks = this.store.tasks(d.id);
+      const p1 = tasks.filter((t) => !t.done && t.p === 1).length;
+      if (p1 >= 3) out.push({ level: 'breach', room: d.id, src: d.name, text: `${d.name} is carrying ${p1} priority-one orders. Delegate or cut something.` });
+    }
+    if (!this.store.ledgerCalibrated()) {
+      out.push({ level: 'breach', room: 'vault', src: 'TALLY · Treasurer', text: 'The ledger has never been calibrated. Every money answer below is blind until you enter real figures.' });
+    }
+    const run = this.store.runwayMonths();
+    if (run !== null && run < 3) out.push({ level: 'breach', room: 'vault', src: 'TALLY · Treasurer', text: `Runway is ${run.toFixed(1)} months. Under three is a decision, not a metric.` });
+    if (this.store.splitTotal() !== 100) {
+      out.push({ level: 'flare', room: 'vault', src: 'WARDEN · Risk', text: `The profit split totals ${this.store.splitTotal()}%. The envelopes are lying until it is 100.` });
+    }
+    const drafts = this.store.postCount();
+    if (drafts) out.push({ level: 'vital', room: 'beacon', src: 'HERALD · Signalman', text: `${drafts} post${drafts === 1 ? '' : 's'} drafted from the Archives and waiting on you.` });
+    const unwired = TOOLS.filter((t) => t.state === 'not wired').length;
+    if (unwired) out.push({ level: 'flare', src: 'FOUNDRY · Agent-wright', text: `${unwired} tools are not connected yet. Agents that need them can only reason, not act.` });
+    const order = { breach: 0, flare: 1, vital: 2 };
+    return out.sort((a, b) => order[a.level] - order[b.level]);
+  }
+
+  /* ================= the council ================= */
+
+  screenCouncil() {
+    const c = this.councilState || {};
+    const verdictTone = { BUILD: 'vital', DELAY: 'flare', WATCH: 'cyan', KILL: 'breach' };
+
+    return `
+      ${this.head('The Council', `${COUNCIL.length} seats`)}
+      <p class="muted-note">Put a real decision on the table — a spend, a launch, a hire, something to kill. Each agent answers from its own domain, then the Commander returns one recommendation with conditions.</p>
+
+      <form class="council-form" data-council="1">
+        <input type="text" id="councilQ" placeholder="Should we spend £15,000 developing…" autocomplete="off"
+               value="${esc(c.question || '')}" ${c.busy ? 'disabled' : ''}>
+        <button type="submit" ${c.busy ? 'disabled' : ''}>${c.busy ? 'Deliberating…' : 'Convene'}</button>
+      </form>
+
+      <div class="seat-row">
+        ${COUNCIL.map((a) => {
+          const pos = (c.positions || []).find((p) => p.id === a.id || p.agent === a.call || p.agent === a.name);
+          const stance = pos?.stance || (c.busy ? 'thinking' : 'seated');
+          return `
+          <div class="seat ${pos ? 'is-live' : ''}">
+            <span class="seat-dot" style="background:${a.colour};box-shadow:0 0 8px ${a.colour}"></span>
+            <span class="seat-name">${esc(a.name)}</span>
+            <span class="seat-role">${esc(a.role)}</span>
+            <span class="seat-stance is-${stance}">${esc(stance)}</span>
+            ${pos ? `<span class="seat-line">${esc(pos.line)}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+
+      ${c.verdict ? `
+        <section class="verdict is-${verdictTone[c.verdict] || 'arcane'}">
+          <span class="eyebrow">Commander's recommendation</span>
+          <h3 class="verdict-word">${esc(c.verdict)}</h3>
+          <p class="verdict-because">${esc(c.because || '')}</p>
+          ${(c.conditions || []).length ? `
+            <span class="eyebrow" style="display:block;margin-top:10px">Conditions</span>
+            <ul class="verdict-list">${c.conditions.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+        </section>` : ''}
+
+      ${c.error ? `<p class="warn-note">${esc(c.error)}</p>` : ''}
+      ${!this.sampler ? '<p class="muted-note" style="margin-top:12px">The Council needs the published page on claude.ai to reason.</p>' : ''}`;
+  }
+
+  /* ================= agent garage ================= */
+
+  screenGarage() {
+    return `
+      ${this.head('Agent Garage', `${AGENTS.length} built`)}
+      <p class="muted-note">Every agent, its domain, the tools it can reach and what it must ask you before doing. Click one to send it somewhere.</p>
+      <div class="card-grid" style="margin-top:14px">
+        ${AGENTS.map((a) => {
+          const room = ROOM_BY_ID[a.room];
+          const asks = CAPS.filter((cp) => a.caps[cp.id] === 'approval').length;
+          const denied = CAPS.filter((cp) => a.caps[cp.id] === 'deny').length;
+          return `
+          <button class="agent-card ${a.kind === 'arcane' ? 'is-commander' : ''}" type="button" data-agent="${a.id}">
+            <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
+            <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
+            <span class="agent-call mono">${esc(a.call)}</span>
+            <span class="agent-role">${esc(a.role)} · ${esc(room?.name || '')} · Deck ${a.deck}</span>
+            <span class="agent-brief">${esc(a.domain)}</span>
+            <span class="agent-tags">
+              ${a.tools.map((t) => `<span class="tag">${esc(TOOLS.find((x) => x.id === t)?.name || t)}</span>`).join('')}
+            </span>
+            <span class="agent-tags">
+              <span class="tag is-flare">${asks} need approval</span>
+              <span class="tag is-breach">${denied} denied</span>
+            </span>
+          </button>`;
+        }).join('')}
+      </div>
+
+      <section class="block" style="margin-top:14px">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Tools</h3>
+          <span class="chip">${TOOLS.filter((t) => t.state !== 'not wired').length} / ${TOOLS.length} wired</span></div>
+        ${TOOLS.map((t) => `
+          <div class="tbl-row is-2" style="border-top:1px solid var(--seam)">
+            <span>${esc(t.name)}</span>
+            <span class="muted-note">${esc(t.note)}</span>
+            <span class="chip ${t.state === 'live' ? 'is-vital' : t.state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(t.state)}</span>
+          </div>`).join('')}
+      </section>`;
+  }
+
+  /* ================= control room ================= */
+
+  screenControl() {
+    const needAppr = AGENTS.reduce((n, a) => n + CAPS.filter((c) => a.caps[c.id] === 'approval').length, 0);
+    return `
+      ${this.head('Control', `${needAppr} actions gated`)}
+      <p class="muted-note">The grade each agent runs under, per capability. Nothing in this system executes unattended unless it says <strong>allow</strong>, and nothing spends money at all.</p>
+
+      <div class="matrix-wrap">
+        <table class="matrix">
+          <thead>
+            <tr><th class="matrix-agent">Agent</th>${CAPS.map((c) => `<th title="${esc(c.note)}">${esc(c.name)}</th>`).join('')}</tr>
+          </thead>
+          <tbody>
+            ${AGENTS.map((a) => `
+              <tr>
+                <th class="matrix-agent">
+                  <span class="dot" style="background:${a.colour}"></span>
+                  <span>${esc(a.name)}<br><span class="matrix-role">${esc(a.role)}</span></span>
+                </th>
+                ${CAPS.map((c) => {
+                  const g = a.caps[c.id] || 'deny';
+                  return `<td><span class="grade is-${GRADE_TONE[g] || 'ash'}">${esc(g)}</span></td>`;
+                }).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <section class="block" style="margin-top:14px">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Standing rules</h3></div>
+        <p class="doctrine">No agent spends money. The Treasurer may recommend; you move it.</p>
+        <p class="doctrine">Nothing publishes unattended. Drafts wait in the Signal queue for you.</p>
+        <p class="doctrine">Notion is read-only for the whole network, by your instruction.</p>
+        <p class="doctrine">No agent gives medical advice about a compound, to you or to a member.</p>
+      </section>`;
+  }
 
   /* ================= room widgets ================= */
 
@@ -4133,6 +4908,10 @@ class UI {
 
   screenBody() {
     switch (this.screen) {
+      case 'empire': return this.screenEmpire();
+      case 'council': return this.screenCouncil();
+      case 'garage': return this.screenGarage();
+      case 'control': return this.screenControl();
       case 'agents': return this.screenAgents();
       case 'orders': return this.screenOrders();
       case 'ventures': return this.screenVentures();
@@ -4166,13 +4945,13 @@ class UI {
         <p class="muted-note">${sel.order ? esc(sel.order) : 'Awaiting orders on this deck.'}</p>
         <h3 class="sub-title">Send to</h3>
         <div class="crew-chips">
-          ${DECKS.map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
+          ${roomsOn(sel.floor || 1).map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
              data-send="${sel.id}" data-to="${d.id}">${esc(d.name)}</button>`).join('')}
         </div>`;
     }
 
     return `
-      ${this.head('Agents', `${CREW.length} crew + commander`)}
+      ${this.head('Agents', `${AGENTS.length} in the network`)}
       <div class="card-grid">
         ${[this.sim.arcane, ...this.sim.agents].map((a) => {
           const room = ROOM_BY_ID[a.deck];
@@ -4480,6 +5259,12 @@ class UI {
       if (fresh) { if (issued) fresh.value = ''; fresh.focus(); }
       return;
     }
+    const council = e.target.closest('[data-council]');
+    if (council) {
+      e.preventDefault();
+      this.convene(council.querySelector('input').value);
+      return;
+    }
     if (e.target.closest('[data-counsel]')) {
       e.preventDefault();
       const input = $('#counselInput');
@@ -4524,9 +5309,83 @@ class UI {
     }
   }
 
+
+  /* ================= council deliberation ================= */
+
+  /**
+   * One structured call, not one per seat — the Council answers together.
+   * Every position is grounded in the same system brief the Commander reads.
+   */
+  async convene(question) {
+    const q = String(question || '').trim();
+    if (!q) return;
+    if (!this.sampler) {
+      this.councilState = { question: q, error: 'The Council needs the published page on claude.ai to reason.' };
+      this.render();
+      return;
+    }
+
+    this.councilState = { question: q, busy: true, positions: [], verdict: null };
+    this.render();
+
+    const seats = COUNCIL.map((a) =>
+      `- id "${a.id}" | ${a.call} (${a.name}), ${a.role}. Domain: ${a.domain}. ${a.brief}`).join('\n');
+
+    const prompt = [
+      'You are running THE COUNCIL aboard THE ARCANE, the operating system of Leo, who runs the Arcane brand:',
+      'Arcane Peptides (UK research compounds, HPLC verified, COA per batch), Arcane Track (skin healing tracker,',
+      '£11.99/mo or £70/yr), Arcane Archives (£128/mo education platform, ~3,300 modules), and The Codex (books).',
+      '',
+      'These agents hold seats. Each answers ONLY from its own domain, in its own voice:',
+      seats,
+      '',
+      'CURRENT SYSTEM STATE',
+      this.brief(),
+      '',
+      `THE DECISION: ${q}`,
+      '',
+      'Rules you must follow:',
+      '- Never invent a figure. If the state above does not contain a number you need, say it is missing and what it would take to know it.',
+      '- Peptides are research compounds. No medical, dosing or treatment claims from any seat.',
+      '- Disagreement is useful. Do not have every seat agree; if a seat has a real objection, make it.',
+      '- Each line is at most 24 words, direct, no hedging, no preamble.',
+      '- The verdict must be one of BUILD, DELAY, WATCH, KILL.',
+      '',
+      'Return ONLY JSON of this shape:',
+      '{"positions":[{"id":"<seat id>","stance":"for|against|conditional","line":"<their argument>"}],',
+      ' "verdict":"BUILD|DELAY|WATCH|KILL","because":"<one sentence>","conditions":["<what must be true first>"]}',
+    ].join('\n');
+
+    try {
+      const res = await this.sampler.json(prompt, { modelTier: 'complex' });
+      const data = res && typeof res === 'object' ? (res.json ?? res) : {};
+      this.councilState = {
+        question: q,
+        busy: false,
+        positions: Array.isArray(data.positions) ? data.positions : [],
+        verdict: typeof data.verdict === 'string' ? data.verdict.toUpperCase() : null,
+        because: data.because || '',
+        conditions: Array.isArray(data.conditions) ? data.conditions : [],
+      };
+      this.store.trace(`COUNCIL — ${this.councilState.verdict || 'no verdict'}: ${q.slice(0, 60)}`);
+    } catch (err) {
+      this.councilState = {
+        question: q,
+        busy: false,
+        error: err?.code === 'rate_limited' ? 'The Council is rate limited. Try again shortly.'
+          : err?.code === 'not_granted' ? 'The Council needs permission from this view to reach Claude.'
+          : `The Council could not sit (${err?.code || 'unknown'}).`,
+      };
+    }
+    this.render();
+  }
+
   /* ================= counsel ================= */
 
-  attachSampler(fn) { this.sampler = fn; this.renderTelemetry(); }
+  attachSampler(fn) {
+    this.sampler = fn;
+    this.render();
+  }
 
   brief() {
     const rooms = DECKS.map((d) => {

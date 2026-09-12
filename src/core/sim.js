@@ -7,7 +7,7 @@
  * room the commander is standing in is the room that gets attention.
  */
 
-import { ROOMS, ROOM_BY_ID, SPINE_X, SPINE } from '../config/facility.js';
+import { ROOMS, ROOM_BY_ID, SPINE_X, SPINE, roomsOn } from '../config/facility.js';
 import { CREW, ARCANE } from '../config/empire.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -38,13 +38,13 @@ function route(fromId, toId) {
 }
 
 function makeWalker(def, kind, speed) {
-  const room = ROOM_BY_ID[def.home];
+  const room = ROOM_BY_ID[def.room];
   const p = interiorPoint(room);
   return {
     ...def,
     kind,
     speed,
-    deck: def.home,
+    deck: def.room,
     x: p.x, y: p.y,
     tx: p.x, ty: p.y,
     state: 'work',
@@ -74,6 +74,9 @@ export class Sim {
 
   everyone() { return [...this.agents, this.arcane]; }
 
+  /** Agents standing on one deck. */
+  onFloor(floor) { return this.everyone().filter((a) => (a.floor || 1) === floor); }
+
   inRoom(id) {
     return this.agents.filter((a) => a.deck === id && a.state === 'work');
   }
@@ -97,18 +100,34 @@ export class Sim {
     return true;
   }
 
-  /** ARCANE walks to the room you opened. */
+  /** ARCANE walks to the room you opened, taking the lift between decks. */
   commandTo(roomId) {
-    if (this.arcane.deck === roomId && this.arcane.state === 'work') return;
-    if (this.dispatch(this.arcane, roomId)) {
-      this.store.trace(`ARCANE → ${ROOM_BY_ID[roomId].name}`);
+    const room = ROOM_BY_ID[roomId];
+    if (!room) return;
+    const a = this.arcane;
+    if (a.deck === roomId && a.state === 'work') return;
+
+    if ((a.floor || 1) !== room.deck) {
+      // the lift: step out on the new deck at the spine terminus, then walk
+      a.floor = room.deck;
+      a.x = SPINE_X;
+      a.y = SPINE[0] + 6;
+      a.deck = roomId;
+      a.path = [{ x: SPINE_X, y: room.door[1] },
+                { x: room.door[0], y: room.door[1] },
+                { x: (room.rect[0] + room.rect[2]) / 2, y: room.rect[3] - 12 }];
+      a.leg = 0;
+      a.state = 'transit';
+      this.store.trace(`ARCANE rode the lift to DECK ${room.deck} — ${room.name}`);
+      return;
     }
+    if (this.dispatch(a, roomId)) this.store.trace(`ARCANE → ${room.name}`);
   }
 
   /** Where a crew member drifts next: open orders pull, so does the commander. */
   chooseTarget(agent) {
     const bag = [];
-    for (const r of ROOMS) {
+    for (const r of roomsOn(agent.floor || 1)) {
       let w = 1 + this.store.openCount(r.id) * 2.4;
       if (r.id === agent.home) w += 5;
       if (r.id === this.arcane.deck) w += 4;
@@ -193,10 +212,10 @@ export class Sim {
     }
   }
 
-  agentAt(x, y, radius = 8) {
+  agentAt(x, y, radius = 8, floor = null) {
     let best = null;
     let bestD = radius;
-    for (const a of this.everyone()) {
+    for (const a of (floor ? this.onFloor(floor) : this.everyone())) {
       const d = Math.hypot(a.x - x, a.y - (y + 5));
       if (d < bestD) { bestD = d; best = a; }
     }

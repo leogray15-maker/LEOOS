@@ -5,8 +5,9 @@
 
 import {
   DECKS, VENTURES, CREW, ARCANE, CATALOGUE, GOALS, BUDGET, SCREENS, OPERATOR,
+  AGENTS, COUNCIL, CAPS, TOOLS, GRADE_TONE,
 } from '../config/empire.js';
-import { ROOM_BY_ID } from '../config/facility.js';
+import { ROOM_BY_ID, roomsOn, FLOORS } from '../config/facility.js';
 import {
   INVENTORY, DISPATCH, PDF_PRODUCTS, COHORTS, BUILD_QUEUE,
   MANUSCRIPTS, PROTOCOL, DOCTRINE, ROOM_WIDGET,
@@ -93,6 +94,17 @@ export class UI {
         </button>`).join('')}
 
       <div class="rail-block">
+        <span class="eyebrow">Deck</span>
+        <div class="deck-switch" id="deckSwitch">
+          ${FLOORS.map((d) => `
+            <button type="button" data-deck="${d.id}">
+              <span class="deck-no mono">${d.id}</span>
+              <span class="deck-name">${esc(d.sub)}</span>
+            </button>`).join('')}
+        </div>
+      </div>
+
+      <div class="rail-block">
         <span class="eyebrow">Commander</span>
         <button class="commander" type="button" data-commander="1">
           <span class="commander-mark">◆</span>
@@ -117,6 +129,13 @@ export class UI {
     this.railEl.addEventListener('click', (e) => {
       const nav = e.target.closest('[data-screen]');
       if (nav) { this.setScreen(nav.dataset.screen); return; }
+      const deck = e.target.closest('[data-deck]');
+      if (deck) {
+        this.factory.deck = Number(deck.dataset.deck);
+        this.closeRoom();
+        this.setScreen('factory');
+        return;
+      }
       if (e.target.closest('[data-commander]')) this.openRoom(this.sim.arcane.deck);
     });
   }
@@ -137,8 +156,10 @@ export class UI {
 
   /** Open a room: the commander walks there and its dashboard comes up. */
   openRoom(id) {
-    if (!ROOM_BY_ID[id]) return;
+    const room = ROOM_BY_ID[id];
+    if (!room) return;
     this.room = id;
+    this.factory.deck = room.deck;
     this.factory.selected = id;
     this.sim.commandTo(id);
     if (this.screen !== 'factory') this.setScreen('factory');
@@ -191,6 +212,11 @@ export class UI {
     const pct = total ? Math.round((done / total) * 100) : 0;
     $('#integrityFill').style.width = `${pct}%`;
     $('#integrityPct').textContent = `${pct}%`;
+
+    for (const d of FLOORS) {
+      const btn = this.railEl.querySelector(`[data-deck="${d.id}"]`);
+      if (btn) btn.setAttribute('aria-current', String(this.factory.deck === d.id));
+    }
 
     const a = this.sim.arcane;
     $('#arcaneWhere').textContent = a.state === 'transit'
@@ -280,6 +306,214 @@ export class UI {
       </div>`;
   }
 
+
+
+  /* ================= the empire ================= */
+
+  screenEmpire() {
+    const hour = new Date().getHours();
+    const greet = hour < 5 ? 'STILL UP.' : hour < 12 ? 'GOOD MORNING.' : hour < 18 ? 'GOOD AFTERNOON.' : 'GOOD EVENING.';
+    const open = this.store.totalOpen();
+    const p1 = DECKS.reduce((n, d) => n + this.store.tasks(d.id).filter((t) => !t.done && t.p === 1).length, 0);
+    const rev = this.store.monthlyRevenue();
+    const run = this.store.runwayMonths();
+    const drafts = this.store.postCount();
+    const signals = this.signals();
+    const decisions = signals.filter((x) => x.level === 'breach').length;
+
+    return `
+      <div class="empire-head">
+        <span class="eyebrow">${esc(OPERATOR.name)} · ${esc(stamp())}</span>
+        <h2 class="empire-greet">${greet}<br><span class="empire-sub">Here is the state of the empire.</span></h2>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${this.store.ledgerCalibrated() ? money(rev) : '—'}</span><span class="stat-l">Revenue / month</span></div>
+        <div class="stat"><span class="stat-n mono is-gold">${run === null ? '—' : run.toFixed(1)}</span><span class="stat-l">Months runway</span></div>
+        <div class="stat"><span class="stat-n mono is-flare">${open}</span><span class="stat-l">Open orders</span></div>
+        <div class="stat"><span class="stat-n mono is-breach">${p1}</span><span class="stat-l">Priority one</span></div>
+        <div class="stat"><span class="stat-n mono">${drafts}</span><span class="stat-l">Drafts waiting</span></div>
+        <div class="stat"><span class="stat-n mono ${decisions ? 'is-breach' : 'is-vital'}">${decisions}</span><span class="stat-l">Need a decision</span></div>
+      </div>
+
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">What needs you</h3>
+          <span class="chip">${signals.length}</span></div>
+        ${signals.length ? signals.slice(0, 6).map((x) => `
+          <button class="signal-row" type="button" ${x.room ? `data-room="${x.room}"` : ''}>
+            <span class="signal-stripe is-${x.level}"></span>
+            <span>
+              <span class="signal-text">${esc(x.text)}</span><br>
+              <span class="signal-src">${esc(x.src)}</span>
+            </span>
+          </button>`).join('')
+          : '<p class="muted-note">Nothing is on fire. Put the hours into what compounds.</p>'}
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">The network</h3>
+          <span class="chip">${AGENTS.length} agents · 2 decks</span></div>
+        <div class="crew-chips">
+          ${AGENTS.map((a) => `<button class="crew-chip" type="button" data-agent="${a.id}">
+            <span class="dot" style="background:${a.colour}"></span>${esc(a.name)}
+            <span class="chip-role">${esc(a.role)}</span></button>`).join('')}
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Put it to the Council</h3></div>
+        <p class="muted-note">A real decision — a spend, a launch, a thing to kill. Every relevant agent argues its corner and the Commander returns one recommendation.</p>
+        <button class="act is-primary" type="button" data-goscreen="council" style="margin-top:10px">Open the Council</button>
+      </section>`;
+  }
+
+  /** Derived, not decorative — every line traces to real state. */
+  signals() {
+    const out = [];
+    for (const d of DECKS) {
+      const tasks = this.store.tasks(d.id);
+      const p1 = tasks.filter((t) => !t.done && t.p === 1).length;
+      if (p1 >= 3) out.push({ level: 'breach', room: d.id, src: d.name, text: `${d.name} is carrying ${p1} priority-one orders. Delegate or cut something.` });
+    }
+    if (!this.store.ledgerCalibrated()) {
+      out.push({ level: 'breach', room: 'vault', src: 'TALLY · Treasurer', text: 'The ledger has never been calibrated. Every money answer below is blind until you enter real figures.' });
+    }
+    const run = this.store.runwayMonths();
+    if (run !== null && run < 3) out.push({ level: 'breach', room: 'vault', src: 'TALLY · Treasurer', text: `Runway is ${run.toFixed(1)} months. Under three is a decision, not a metric.` });
+    if (this.store.splitTotal() !== 100) {
+      out.push({ level: 'flare', room: 'vault', src: 'WARDEN · Risk', text: `The profit split totals ${this.store.splitTotal()}%. The envelopes are lying until it is 100.` });
+    }
+    const drafts = this.store.postCount();
+    if (drafts) out.push({ level: 'vital', room: 'beacon', src: 'HERALD · Signalman', text: `${drafts} post${drafts === 1 ? '' : 's'} drafted from the Archives and waiting on you.` });
+    const unwired = TOOLS.filter((t) => t.state === 'not wired').length;
+    if (unwired) out.push({ level: 'flare', src: 'FOUNDRY · Agent-wright', text: `${unwired} tools are not connected yet. Agents that need them can only reason, not act.` });
+    const order = { breach: 0, flare: 1, vital: 2 };
+    return out.sort((a, b) => order[a.level] - order[b.level]);
+  }
+
+  /* ================= the council ================= */
+
+  screenCouncil() {
+    const c = this.councilState || {};
+    const verdictTone = { BUILD: 'vital', DELAY: 'flare', WATCH: 'cyan', KILL: 'breach' };
+
+    return `
+      ${this.head('The Council', `${COUNCIL.length} seats`)}
+      <p class="muted-note">Put a real decision on the table — a spend, a launch, a hire, something to kill. Each agent answers from its own domain, then the Commander returns one recommendation with conditions.</p>
+
+      <form class="council-form" data-council="1">
+        <input type="text" id="councilQ" placeholder="Should we spend £15,000 developing…" autocomplete="off"
+               value="${esc(c.question || '')}" ${c.busy ? 'disabled' : ''}>
+        <button type="submit" ${c.busy ? 'disabled' : ''}>${c.busy ? 'Deliberating…' : 'Convene'}</button>
+      </form>
+
+      <div class="seat-row">
+        ${COUNCIL.map((a) => {
+          const pos = (c.positions || []).find((p) => p.id === a.id || p.agent === a.call || p.agent === a.name);
+          const stance = pos?.stance || (c.busy ? 'thinking' : 'seated');
+          return `
+          <div class="seat ${pos ? 'is-live' : ''}">
+            <span class="seat-dot" style="background:${a.colour};box-shadow:0 0 8px ${a.colour}"></span>
+            <span class="seat-name">${esc(a.name)}</span>
+            <span class="seat-role">${esc(a.role)}</span>
+            <span class="seat-stance is-${stance}">${esc(stance)}</span>
+            ${pos ? `<span class="seat-line">${esc(pos.line)}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+
+      ${c.verdict ? `
+        <section class="verdict is-${verdictTone[c.verdict] || 'arcane'}">
+          <span class="eyebrow">Commander's recommendation</span>
+          <h3 class="verdict-word">${esc(c.verdict)}</h3>
+          <p class="verdict-because">${esc(c.because || '')}</p>
+          ${(c.conditions || []).length ? `
+            <span class="eyebrow" style="display:block;margin-top:10px">Conditions</span>
+            <ul class="verdict-list">${c.conditions.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+        </section>` : ''}
+
+      ${c.error ? `<p class="warn-note">${esc(c.error)}</p>` : ''}
+      ${!this.sampler ? '<p class="muted-note" style="margin-top:12px">The Council needs the published page on claude.ai to reason.</p>' : ''}`;
+  }
+
+  /* ================= agent garage ================= */
+
+  screenGarage() {
+    return `
+      ${this.head('Agent Garage', `${AGENTS.length} built`)}
+      <p class="muted-note">Every agent, its domain, the tools it can reach and what it must ask you before doing. Click one to send it somewhere.</p>
+      <div class="card-grid" style="margin-top:14px">
+        ${AGENTS.map((a) => {
+          const room = ROOM_BY_ID[a.room];
+          const asks = CAPS.filter((cp) => a.caps[cp.id] === 'approval').length;
+          const denied = CAPS.filter((cp) => a.caps[cp.id] === 'deny').length;
+          return `
+          <button class="agent-card ${a.kind === 'arcane' ? 'is-commander' : ''}" type="button" data-agent="${a.id}">
+            <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
+            <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
+            <span class="agent-call mono">${esc(a.call)}</span>
+            <span class="agent-role">${esc(a.role)} · ${esc(room?.name || '')} · Deck ${a.deck}</span>
+            <span class="agent-brief">${esc(a.domain)}</span>
+            <span class="agent-tags">
+              ${a.tools.map((t) => `<span class="tag">${esc(TOOLS.find((x) => x.id === t)?.name || t)}</span>`).join('')}
+            </span>
+            <span class="agent-tags">
+              <span class="tag is-flare">${asks} need approval</span>
+              <span class="tag is-breach">${denied} denied</span>
+            </span>
+          </button>`;
+        }).join('')}
+      </div>
+
+      <section class="block" style="margin-top:14px">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Tools</h3>
+          <span class="chip">${TOOLS.filter((t) => t.state !== 'not wired').length} / ${TOOLS.length} wired</span></div>
+        ${TOOLS.map((t) => `
+          <div class="tbl-row is-2" style="border-top:1px solid var(--seam)">
+            <span>${esc(t.name)}</span>
+            <span class="muted-note">${esc(t.note)}</span>
+            <span class="chip ${t.state === 'live' ? 'is-vital' : t.state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(t.state)}</span>
+          </div>`).join('')}
+      </section>`;
+  }
+
+  /* ================= control room ================= */
+
+  screenControl() {
+    const needAppr = AGENTS.reduce((n, a) => n + CAPS.filter((c) => a.caps[c.id] === 'approval').length, 0);
+    return `
+      ${this.head('Control', `${needAppr} actions gated`)}
+      <p class="muted-note">The grade each agent runs under, per capability. Nothing in this system executes unattended unless it says <strong>allow</strong>, and nothing spends money at all.</p>
+
+      <div class="matrix-wrap">
+        <table class="matrix">
+          <thead>
+            <tr><th class="matrix-agent">Agent</th>${CAPS.map((c) => `<th title="${esc(c.note)}">${esc(c.name)}</th>`).join('')}</tr>
+          </thead>
+          <tbody>
+            ${AGENTS.map((a) => `
+              <tr>
+                <th class="matrix-agent">
+                  <span class="dot" style="background:${a.colour}"></span>
+                  <span>${esc(a.name)}<br><span class="matrix-role">${esc(a.role)}</span></span>
+                </th>
+                ${CAPS.map((c) => {
+                  const g = a.caps[c.id] || 'deny';
+                  return `<td><span class="grade is-${GRADE_TONE[g] || 'ash'}">${esc(g)}</span></td>`;
+                }).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <section class="block" style="margin-top:14px">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Standing rules</h3></div>
+        <p class="doctrine">No agent spends money. The Treasurer may recommend; you move it.</p>
+        <p class="doctrine">Nothing publishes unattended. Drafts wait in the Signal queue for you.</p>
+        <p class="doctrine">Notion is read-only for the whole network, by your instruction.</p>
+        <p class="doctrine">No agent gives medical advice about a compound, to you or to a member.</p>
+      </section>`;
+  }
 
   /* ================= room widgets ================= */
 
@@ -505,6 +739,10 @@ export class UI {
 
   screenBody() {
     switch (this.screen) {
+      case 'empire': return this.screenEmpire();
+      case 'council': return this.screenCouncil();
+      case 'garage': return this.screenGarage();
+      case 'control': return this.screenControl();
       case 'agents': return this.screenAgents();
       case 'orders': return this.screenOrders();
       case 'ventures': return this.screenVentures();
@@ -538,13 +776,13 @@ export class UI {
         <p class="muted-note">${sel.order ? esc(sel.order) : 'Awaiting orders on this deck.'}</p>
         <h3 class="sub-title">Send to</h3>
         <div class="crew-chips">
-          ${DECKS.map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
+          ${roomsOn(sel.floor || 1).map((d) => `<button class="crew-chip ${d.id === sel.deck ? 'is-here' : ''}" type="button"
              data-send="${sel.id}" data-to="${d.id}">${esc(d.name)}</button>`).join('')}
         </div>`;
     }
 
     return `
-      ${this.head('Agents', `${CREW.length} crew + commander`)}
+      ${this.head('Agents', `${AGENTS.length} in the network`)}
       <div class="card-grid">
         ${[this.sim.arcane, ...this.sim.agents].map((a) => {
           const room = ROOM_BY_ID[a.deck];
@@ -852,6 +1090,12 @@ export class UI {
       if (fresh) { if (issued) fresh.value = ''; fresh.focus(); }
       return;
     }
+    const council = e.target.closest('[data-council]');
+    if (council) {
+      e.preventDefault();
+      this.convene(council.querySelector('input').value);
+      return;
+    }
     if (e.target.closest('[data-counsel]')) {
       e.preventDefault();
       const input = $('#counselInput');
@@ -896,9 +1140,83 @@ export class UI {
     }
   }
 
+
+  /* ================= council deliberation ================= */
+
+  /**
+   * One structured call, not one per seat — the Council answers together.
+   * Every position is grounded in the same system brief the Commander reads.
+   */
+  async convene(question) {
+    const q = String(question || '').trim();
+    if (!q) return;
+    if (!this.sampler) {
+      this.councilState = { question: q, error: 'The Council needs the published page on claude.ai to reason.' };
+      this.render();
+      return;
+    }
+
+    this.councilState = { question: q, busy: true, positions: [], verdict: null };
+    this.render();
+
+    const seats = COUNCIL.map((a) =>
+      `- id "${a.id}" | ${a.call} (${a.name}), ${a.role}. Domain: ${a.domain}. ${a.brief}`).join('\n');
+
+    const prompt = [
+      'You are running THE COUNCIL aboard THE ARCANE, the operating system of Leo, who runs the Arcane brand:',
+      'Arcane Peptides (UK research compounds, HPLC verified, COA per batch), Arcane Track (skin healing tracker,',
+      '£11.99/mo or £70/yr), Arcane Archives (£128/mo education platform, ~3,300 modules), and The Codex (books).',
+      '',
+      'These agents hold seats. Each answers ONLY from its own domain, in its own voice:',
+      seats,
+      '',
+      'CURRENT SYSTEM STATE',
+      this.brief(),
+      '',
+      `THE DECISION: ${q}`,
+      '',
+      'Rules you must follow:',
+      '- Never invent a figure. If the state above does not contain a number you need, say it is missing and what it would take to know it.',
+      '- Peptides are research compounds. No medical, dosing or treatment claims from any seat.',
+      '- Disagreement is useful. Do not have every seat agree; if a seat has a real objection, make it.',
+      '- Each line is at most 24 words, direct, no hedging, no preamble.',
+      '- The verdict must be one of BUILD, DELAY, WATCH, KILL.',
+      '',
+      'Return ONLY JSON of this shape:',
+      '{"positions":[{"id":"<seat id>","stance":"for|against|conditional","line":"<their argument>"}],',
+      ' "verdict":"BUILD|DELAY|WATCH|KILL","because":"<one sentence>","conditions":["<what must be true first>"]}',
+    ].join('\n');
+
+    try {
+      const res = await this.sampler.json(prompt, { modelTier: 'complex' });
+      const data = res && typeof res === 'object' ? (res.json ?? res) : {};
+      this.councilState = {
+        question: q,
+        busy: false,
+        positions: Array.isArray(data.positions) ? data.positions : [],
+        verdict: typeof data.verdict === 'string' ? data.verdict.toUpperCase() : null,
+        because: data.because || '',
+        conditions: Array.isArray(data.conditions) ? data.conditions : [],
+      };
+      this.store.trace(`COUNCIL — ${this.councilState.verdict || 'no verdict'}: ${q.slice(0, 60)}`);
+    } catch (err) {
+      this.councilState = {
+        question: q,
+        busy: false,
+        error: err?.code === 'rate_limited' ? 'The Council is rate limited. Try again shortly.'
+          : err?.code === 'not_granted' ? 'The Council needs permission from this view to reach Claude.'
+          : `The Council could not sit (${err?.code || 'unknown'}).`,
+      };
+    }
+    this.render();
+  }
+
   /* ================= counsel ================= */
 
-  attachSampler(fn) { this.sampler = fn; this.renderTelemetry(); }
+  attachSampler(fn) {
+    this.sampler = fn;
+    this.render();
+  }
 
   brief() {
     const rooms = DECKS.map((d) => {

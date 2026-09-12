@@ -15,6 +15,7 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const ORDER = [
   'src/config/facility.js',
   'src/config/roomdata.js',
+  'src/config/agents.js',
   'src/config/empire.js',
   'src/core/store.js',
   'src/core/sim.js',
@@ -32,6 +33,9 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 function flatten(src, file) {
   return src
     .replace(/^import\s[^;]*;\s*$/gm, '')
+    // `export { a, b } from './x.js'` would try to FETCH ./x.js at runtime and
+    // kill the whole module. The names are already in scope once flattened.
+    .replace(/^export\s*\{[^}]*\}\s*from\s*['"][^'"]+['"];\s*$/gm, '')
     .replace(/^export\s+(?=(class|function|const|let|async))/gm, '')
     .trim()
     .replace(/^/, `/* ==== ${file} ==== */\n`);
@@ -64,7 +68,12 @@ function checkImports() {
   const bundled = new Set(ORDER.map((f) => path.basename(f)));
   const missing = [];
   for (const f of ORDER) {
-    for (const m of read(f).matchAll(/^import\s[^;]*?from\s+['"]([^'"]+)['"]/gm)) {
+    const text = read(f);
+    const specs = [
+      ...text.matchAll(/^import\s[^;]*?from\s+['"]([^'"]+)['"]/gm),
+      ...text.matchAll(/^export\s*\{[^}]*\}\s*from\s+['"]([^'"]+)['"]/gm),
+    ];
+    for (const m of specs) {
       const base = path.basename(m[1]);
       if (m[1].startsWith('.') && !bundled.has(base)) missing.push(`${f} imports ${m[1]}`);
     }
