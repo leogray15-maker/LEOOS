@@ -148,8 +148,33 @@ what any compound does: stock, batch and COA state only.
 
 ```bash
 npm run dev      # serve the modular source at localhost:5173
-npm run build    # flatten to dist/index.html, one self-contained page
+npm run build    # flatten to two self-contained targets
 ```
+
+The build emits the same page twice, because its two homes need different
+things:
+
+| Target | Shape | For |
+| --- | --- | --- |
+| `dist/index.html` | fragment — no doctype, html, head or body | the Artifact platform, which wraps it in its own shell at publish time |
+| `public/index.html` | complete document | Vercel or any static host |
+
+Publishing the fragment to a static host is the trap: nothing injects a charset
+or a **viewport meta**, so the page runs in quirks mode and a phone renders it
+at desktop width. The standalone target carries both, plus a theme colour, an
+inline SVG favicon and the same reset the Artifact shell applies, so the two
+render identically.
+
+## Deploying
+
+`vercel.json` sets `buildCommand: node build.js` and `outputDirectory: public`.
+There are no dependencies to install — the build is one Node script with no
+imports beyond `node:fs` and `node:path`.
+
+What does **not** work outside the Artifact viewer: `window.claude` is absent, so
+Counsel and the Council have nothing to reason with and state falls back to
+`localStorage` instead of syncing across devices. The interface says which is in
+force rather than pretending.
 
 The source is plain ES modules with no dependencies and no bundler. `build.js`
 inlines the stylesheet and flattens the modules into a single page so the

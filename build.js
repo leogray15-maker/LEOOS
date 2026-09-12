@@ -93,8 +93,59 @@ let html = read('index.html')
   .replace(/<link rel="stylesheet" href="styles\/leoos\.css">/, `<style>\n${css}\n</style>`)
   .replace(/<script type="module" src="src\/app\.js"><\/script>/, `<script type="module">\n${js}\n</script>`);
 
-fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
-fs.writeFileSync(path.join(ROOT, 'dist/index.html'), html);
+/* ------------------------------------------------------------------
+   Two targets, same page.
 
-const kb = (Buffer.byteLength(html) / 1024).toFixed(1);
-console.log(`dist/index.html — ${kb} KB · ${ORDER.length} modules · ${names} top-level names, no collisions`);
+   dist/index.html   — a FRAGMENT. The Artifact platform wraps it in its
+                       own doctype/head/body at publish time, so it must
+                       not carry those tags itself.
+   public/index.html — a COMPLETE document, for Vercel or any static
+                       host. Nothing injects a charset or a viewport
+                       there, and without a viewport meta a phone renders
+                       the page at desktop width.
+   ------------------------------------------------------------------ */
+
+const title = (html.match(/<title>([^<]*)<\/title>/) || [, 'Arcane Command Deck'])[1];
+
+const favicon = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+  + '<rect width="24" height="24" fill="#07070a"/>'
+  + '<path d="M12 3 L21.5 20 H2.5 Z" fill="none" stroke="#8b5cf6" stroke-width="1.8"/>'
+  + '<path d="M6.6 16.8 L12 8 L17.4 16.8" fill="none" stroke="#a98bff" stroke-width="1.6"/>'
+  + '</svg>',
+);
+
+/** The reset the Artifact shell applies, restated so both targets match. */
+const RESET = `*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:#07070a;color:#eceaf5}
+img{max-width:100%}
+[hidden]{display:none!important}`;
+
+const standalone = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07070a">
+<meta name="description" content="LEOOS — the operating system of the Arcane empire.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="${favicon}">
+<style>${RESET}</style>
+</head>
+<body>
+${html}
+</body>
+</html>
+`;
+
+fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
+fs.mkdirSync(path.join(ROOT, 'public'), { recursive: true });
+fs.writeFileSync(path.join(ROOT, 'dist/index.html'), html);
+fs.writeFileSync(path.join(ROOT, 'public/index.html'), standalone);
+
+const kb = (n) => (Buffer.byteLength(n) / 1024).toFixed(1);
+console.log(`dist/index.html   ${kb(html)} KB  (artifact fragment)`);
+console.log(`public/index.html ${kb(standalone)} KB  (standalone — ${title})`);
+console.log(`${ORDER.length} modules · ${names} top-level names, no collisions`);

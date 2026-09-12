@@ -51,13 +51,15 @@ export class Store {
 
   /** Boot: try db, then localStorage. Never throws; never blocks first paint. */
   async connect() {
+    // Probe writability rather than inferring it from whether data exists —
+    // a first visit has nothing saved but localStorage still works fine.
     try {
+      localStorage.setItem(`${LS_KEY}.probe`, '1');
+      localStorage.removeItem(`${LS_KEY}.probe`);
+      this.mode = 'local';
       const local = localStorage.getItem(LS_KEY);
-      if (local) {
-        this.merge(JSON.parse(local));
-        this.mode = 'local';
-        this.emit();
-      }
+      if (local) this.merge(JSON.parse(local));
+      this.emit();
     } catch { /* storage blocked — memory only */ }
 
     let db = null;
