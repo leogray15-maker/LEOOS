@@ -12,13 +12,18 @@ node build.js
 
 python3 -m http.server 4400 --directory public >/dev/null 2>&1 &
 SITE=$!
+# the repo root, for the dev suite — that one loads the real ES modules
+# rather than the flattened bundle
+python3 -m http.server 4401 --directory . >/dev/null 2>&1 &
+DEV=$!
 node test/feedserver.mjs >/dev/null 2>&1 &
 FEED=$!
-trap 'kill $SITE $FEED 2>/dev/null || true' EXIT
+trap 'kill $SITE $DEV $FEED 2>/dev/null || true' EXIT
 sleep 1.5
 
 case "${1:-}" in
   --contrast) node test/contrast.mjs ;;
   --clipping) node test/clipping.mjs ;;
+  --dev)      node test/dev.mjs ;;
   *)          node test/e2e.mjs ;;
 esac
