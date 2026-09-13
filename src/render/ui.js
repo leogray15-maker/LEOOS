@@ -159,8 +159,9 @@ export class UI {
   selectAgent(id) {
     const a = this.sim.everyone().find((x) => x.id === id);
     if (!a) return;
+    this.setScreen('agents');   // clears this.agent, so select after
     this.agent = id;
-    this.setScreen('agents');
+    this.render();
   }
 
   /* ================= render ================= */
@@ -515,22 +516,44 @@ export class UI {
 
   wLab() {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
-    const coaWord = { published: 'published', pending: 'pending', none: 'none' };
-    const low = INVENTORY.rows.filter((r) => r.vials > 0 && r.vials < 12).length;
+    const rows = this.store.stock();
+    const low = this.store.lowStock().length;
     return `
       <h3 class="sub-title">Stock</h3>
-      ${this.srcNote(INVENTORY.source)}
-      <div class="tbl">
-        <div class="tbl-head">${INVENTORY.columns.map((c) => `<span>${esc(c)}</span>`).join('')}</div>
-        ${INVENTORY.rows.map((r) => `
-          <div class="tbl-row">
-            <span class="tbl-code"><i class="vial is-${r.tint}"></i>${esc(r.code)}</span>
-            <span class="mono dim">${esc(r.size)}</span>
-            <span class="mono ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}">${r.vials || '—'}</span>
-            <span class="mono dim">${esc(r.batch)}</span>
-            <span class="chip ${coaChip[r.coa] || ''}">${esc(coaWord[r.coa] || r.coa)}</span>
+      <p class="muted-note">Counted here, saved on this device. Type a count, or tap −/+ as vials move.
+        Click the COA chip to cycle none → pending → published.</p>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono">${rows.length}</span><span class="stat-l">Lines</span></div>
+        <div class="stat"><span class="stat-n mono is-arcane">${this.store.totalVials()}</span><span class="stat-l">Vials on hand</span></div>
+        <div class="stat"><span class="stat-n mono ${low ? 'is-flare' : 'dim'}">${low}</span><span class="stat-l">Running low</span></div>
+      </div>
+      <div class="tbl is-stock">
+        <div class="tbl-head"><span>Compound</span><span>Size</span><span>Vials</span><span>Batch</span><span>COA</span><span></span></div>
+        ${rows.map((r) => `
+          <div class="tbl-row is-stock">
+            <span class="tbl-code"><i class="vial is-${esc(r.tint)}"></i>${esc(r.code)}</span>
+            <input class="cell-in mono dim" type="text" value="${esc(r.size)}"
+                   data-stock="${r.id}" data-field="size" aria-label="${esc(r.code)} size">
+            <span class="step">
+              <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="-1" aria-label="One out">−</button>
+              <input class="cell-in mono is-count ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}"
+                     type="number" min="0" step="1" value="${r.vials}"
+                     data-stock="${r.id}" data-field="vials" aria-label="${esc(r.code)} vials">
+              <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="1" aria-label="One in">+</button>
+            </span>
+            <input class="cell-in mono dim" type="text" value="${esc(r.batch)}"
+                   data-stock="${r.id}" data-field="batch" aria-label="${esc(r.code)} batch">
+            <button class="chip ${coaChip[r.coa] || ''}" type="button" data-coa="${r.id}">${esc(r.coa)}</button>
+            <button class="row-x" type="button" data-stockdrop="${r.id}" aria-label="Close ${esc(r.code)} line">×</button>
           </div>`).join('')}
       </div>
+      ${rows.length ? '' : '<p class="muted-note">No stock lines. Add the first below.</p>'}
+      <form class="add-row is-stock" data-stockadd="1">
+        <input type="text" name="code" placeholder="Compound (e.g. GHK-Cu)" maxlength="40" autocomplete="off">
+        <input type="text" name="size" placeholder="Size" maxlength="16" autocomplete="off">
+        <input type="number" name="vials" placeholder="Vials" min="0" step="1">
+        <button type="submit">Add stock</button>
+      </form>
       ${low ? `<p class="warn-note">${low} line${low === 1 ? '' : 's'} under two weeks of cover.</p>` : ''}
 
       <h3 class="sub-title">Dispatch</h3>
@@ -1053,6 +1076,12 @@ export class UI {
     if (copy) { this.copyPost(copy.dataset.copy, copy); return; }
     const posted = t('[data-posted]');
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
+    const step = t('[data-stockstep]');
+    if (step) { this.store.adjustStock(step.dataset.stockstep, Number(step.dataset.delta)); return; }
+    const coa = t('[data-coa]');
+    if (coa) { this.store.cycleCoa(coa.dataset.coa); return; }
+    const drop = t('[data-stockdrop]');
+    if (drop) { this.store.removeStockLine(drop.dataset.stockdrop); return; }
     const kill = t('[data-kill]');
     if (kill) { this.store.markPost(kill.dataset.kill, 'killed'); }
   }
@@ -1066,6 +1095,19 @@ export class UI {
       const issued = this.store.addTask(id, input.value);
       const fresh = document.querySelector(`[data-add="${id}"] input`);
       if (fresh) { if (issued) fresh.value = ''; fresh.focus(); }
+      return;
+    }
+    const stock = e.target.closest('[data-stockadd]');
+    if (stock) {
+      e.preventDefault();
+      const get = (n) => stock.querySelector(`[name="${n}"]`);
+      const added = this.store.addStockLine(get('code').value, get('size').value, get('vials').value);
+      if (added) for (const n of ['code', 'size', 'vials']) {
+        const el = document.querySelector(`[data-stockadd] [name="${n}"]`);
+        if (el) el.value = '';
+      }
+      const focus = document.querySelector('[data-stockadd] [name="code"]');
+      if (focus) focus.focus();
       return;
     }
     const council = e.target.closest('[data-council]');
@@ -1092,6 +1134,12 @@ export class UI {
     if (led) { this.store.setLedger(led.dataset.ledger, led.dataset.field, numOf(led)); return; }
     const bud = e.target.closest('[data-budget]');
     if (bud) { this.store.setBudget(bud.dataset.budget, bud.dataset.id, numOf(bud)); return; }
+    const stock = e.target.closest('[data-stock]');
+    if (stock) {
+      const field = stock.dataset.field;
+      this.store.setStock(stock.dataset.stock, field, field === 'vials' ? numOf(stock) : stock.value);
+      return;
+    }
     const goal = e.target.closest('[data-goal]');
     if (goal) this.store.setGoal(goal.dataset.goal, numOf(goal));
   }

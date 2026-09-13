@@ -69,6 +69,7 @@ function makeWalker(def, kind, speed) {
     kind,
     speed,
     deck: def.room,
+    home: def.room,        // the room it drifts back to, and reports as its station
     x: p.x, y: p.y,
     tx: p.x, ty: p.y,
     state: 'work',

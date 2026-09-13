@@ -497,6 +497,66 @@ button, input, textarea { font: inherit; color: inherit; }
 .vial.is-clear { background: linear-gradient(180deg, #d8dde8 0 30%, #9fb4c8 30%); }
 .vial.is-amber { background: linear-gradient(180deg, #e2c08a 0 30%, #c98f3a 30%); }
 
+/* ---------- editable stock table ---------- */
+
+.tbl-head.is-stock, .tbl-row.is-stock,
+.tbl.is-stock .tbl-head, .tbl.is-stock .tbl-row {
+  grid-template-columns: 1.25fr .6fr 1fr .8fr .8fr 18px;
+}
+.cell-in {
+  width: 100%; min-width: 0; background: var(--plate);
+  border: 1px solid transparent; border-radius: 4px;
+  padding: 3px 5px; font: inherit; font-size: 11.5px; color: var(--ink);
+}
+.cell-in:hover { border-color: var(--seam); }
+.cell-in:focus { border-color: var(--arcane); outline: none; background: var(--deck); color: var(--ink); }
+.cell-in.is-count { text-align: center; }
+.cell-in.is-flare { color: var(--flare); }
+/* the native spinner steals width the +/- buttons already cover */
+.cell-in[type=number]::-webkit-outer-spin-button,
+.cell-in[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cell-in[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+.step { display: grid; grid-template-columns: 20px 1fr 20px; gap: 3px; align-items: center; }
+.step-btn {
+  height: 20px; border: 1px solid var(--seam); border-radius: 4px;
+  background: var(--plate); color: var(--ash); font-size: 13px; line-height: 1;
+  cursor: pointer; padding: 0;
+}
+.step-btn:hover { border-color: var(--arcane); color: var(--arcane-lift); }
+.step-btn:active { background: var(--deck); }
+
+button.chip { cursor: pointer; font: inherit; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+button.chip:hover { border-color: var(--arcane); }
+
+.row-x {
+  border: none; background: none; color: var(--faint);
+  font-size: 14px; line-height: 1; cursor: pointer; padding: 0;
+}
+.row-x:hover { color: var(--breach); }
+
+.add-row.is-stock {
+  display: grid; grid-template-columns: 1.4fr .7fr .7fr auto;
+  gap: 6px; margin-top: 10px;
+}
+.add-row.is-stock input {
+  min-width: 0; background: var(--plate); border: 1px solid var(--seam);
+  border-radius: var(--r-sm, 5px); padding: 7px 9px; font: inherit; font-size: 12px; color: var(--ink);
+}
+.add-row.is-stock input:focus { border-color: var(--arcane); outline: none; }
+.add-row.is-stock button {
+  border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
+  color: var(--arcane-lift); border-radius: var(--r-sm, 5px); padding: 7px 12px;
+  font-family: var(--f-display); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+}
+.add-row.is-stock button:hover { background: rgba(139,92,246,.24); }
+
+@media (max-width: 560px) {
+  .tbl.is-stock .tbl-head { display: none; }
+  .tbl.is-stock .tbl-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
+  .add-row.is-stock { grid-template-columns: 1fr 1fr; }
+}
+
 .doctrine {
   font-size: 12.5px; line-height: 1.6; color: var(--ash); margin: 0 0 8px;
   padding-left: 11px; border-left: 2px solid var(--seam-lit);

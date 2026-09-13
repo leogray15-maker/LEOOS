@@ -110,6 +110,58 @@ export const SCREENS = [
 ];
 
 export const SEED_TASKS = {
+  market: [
+    { t: 'Find the biggest drop-off step in checkout', p: 1 },
+    { t: 'Set a repeat-purchase target for peptide customers', p: 2 },
+    { t: 'Abandoned cart recovery — one email, not five', p: 2 },
+  ],
+  warroom: [
+    { t: 'Rank all four ventures by what is actually compounding', p: 1 },
+    { t: 'Name the one thing to stop doing this quarter', p: 1 },
+    { t: 'Where does the next £1,000 of reinvestment go', p: 2 },
+  ],
+  council: [
+    { t: 'Put the next real spend to the Council before committing', p: 2 },
+    { t: 'Record why the last big decision was made', p: 3 },
+  ],
+  intel: [
+    { t: 'List the three closest UK peptide competitors and their pricing', p: 1 },
+    { t: 'Watch for MHRA or ASA guidance changes on research compounds', p: 1 },
+    { t: 'Track search demand for the categories you sell into', p: 2 },
+  ],
+  observatory: [
+    { t: 'Decide what a signal is worth waking you for', p: 1 },
+    { t: 'Set a stock-cover threshold that raises an alert', p: 2 },
+    { t: 'Set a churn threshold on Arcane Track', p: 2 },
+  ],
+  dealroom: [
+    { t: 'Build the supplier shortlist with lead times and MOQs', p: 1 },
+    { t: 'Five people worth knowing in the UK peptide space', p: 2 },
+    { t: 'Write the outreach template once, reuse it', p: 3 },
+  ],
+  lounge: [
+    { t: 'Take one full day off this week', p: 1 },
+    { t: 'Nothing work-related in this room', p: 3 },
+  ],
+  garage: [
+    { t: 'Attach the Notion connector to the Signal Forge routine', p: 1 },
+    { t: 'Decide which agent earns the next tool connection', p: 2 },
+    { t: 'Review what every agent is allowed to do', p: 2 },
+  ],
+  control: [
+    { t: 'Confirm no agent can spend money', p: 1 },
+    { t: 'Move API keys out of Notion into a password manager', p: 1 },
+    { t: 'Decide what you always want to approve by hand', p: 2 },
+  ],
+  inventor: [
+    { t: 'Park every new idea here instead of starting it', p: 1 },
+    { t: 'Run the oldest idea through market → cost → risk', p: 2 },
+  ],
+  records: [
+    { t: 'Get every supplier contract into one place', p: 1 },
+    { t: 'Write the SOP for dispatch so it survives you', p: 2 },
+    { t: 'Keep a decision log — what and why', p: 2 },
+  ],
   bridge: [
     { t: 'Set the Q4 number for each venture', p: 1 },
     { t: 'Kill list: cut one thing that is not compounding', p: 2 },

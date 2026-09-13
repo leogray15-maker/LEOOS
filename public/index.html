@@ -519,6 +519,66 @@ button, input, textarea { font: inherit; color: inherit; }
 .vial.is-clear { background: linear-gradient(180deg, #d8dde8 0 30%, #9fb4c8 30%); }
 .vial.is-amber { background: linear-gradient(180deg, #e2c08a 0 30%, #c98f3a 30%); }
 
+/* ---------- editable stock table ---------- */
+
+.tbl-head.is-stock, .tbl-row.is-stock,
+.tbl.is-stock .tbl-head, .tbl.is-stock .tbl-row {
+  grid-template-columns: 1.25fr .6fr 1fr .8fr .8fr 18px;
+}
+.cell-in {
+  width: 100%; min-width: 0; background: var(--plate);
+  border: 1px solid transparent; border-radius: 4px;
+  padding: 3px 5px; font: inherit; font-size: 11.5px; color: var(--ink);
+}
+.cell-in:hover { border-color: var(--seam); }
+.cell-in:focus { border-color: var(--arcane); outline: none; background: var(--deck); color: var(--ink); }
+.cell-in.is-count { text-align: center; }
+.cell-in.is-flare { color: var(--flare); }
+/* the native spinner steals width the +/- buttons already cover */
+.cell-in[type=number]::-webkit-outer-spin-button,
+.cell-in[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cell-in[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+.step { display: grid; grid-template-columns: 20px 1fr 20px; gap: 3px; align-items: center; }
+.step-btn {
+  height: 20px; border: 1px solid var(--seam); border-radius: 4px;
+  background: var(--plate); color: var(--ash); font-size: 13px; line-height: 1;
+  cursor: pointer; padding: 0;
+}
+.step-btn:hover { border-color: var(--arcane); color: var(--arcane-lift); }
+.step-btn:active { background: var(--deck); }
+
+button.chip { cursor: pointer; font: inherit; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+button.chip:hover { border-color: var(--arcane); }
+
+.row-x {
+  border: none; background: none; color: var(--faint);
+  font-size: 14px; line-height: 1; cursor: pointer; padding: 0;
+}
+.row-x:hover { color: var(--breach); }
+
+.add-row.is-stock {
+  display: grid; grid-template-columns: 1.4fr .7fr .7fr auto;
+  gap: 6px; margin-top: 10px;
+}
+.add-row.is-stock input {
+  min-width: 0; background: var(--plate); border: 1px solid var(--seam);
+  border-radius: var(--r-sm, 5px); padding: 7px 9px; font: inherit; font-size: 12px; color: var(--ink);
+}
+.add-row.is-stock input:focus { border-color: var(--arcane); outline: none; }
+.add-row.is-stock button {
+  border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
+  color: var(--arcane-lift); border-radius: var(--r-sm, 5px); padding: 7px 12px;
+  font-family: var(--f-display); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+}
+.add-row.is-stock button:hover { background: rgba(139,92,246,.24); }
+
+@media (max-width: 560px) {
+  .tbl.is-stock .tbl-head { display: none; }
+  .tbl.is-stock .tbl-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
+  .add-row.is-stock { grid-template-columns: 1fr 1fr; }
+}
+
 .doctrine {
   font-size: 12.5px; line-height: 1.6; color: var(--ash); margin: 0 0 8px;
   padding-left: 11px; border-left: 2px solid var(--seam-lit);
@@ -1751,6 +1811,58 @@ const SCREENS = [
 ];
 
 const SEED_TASKS = {
+  market: [
+    { t: 'Find the biggest drop-off step in checkout', p: 1 },
+    { t: 'Set a repeat-purchase target for peptide customers', p: 2 },
+    { t: 'Abandoned cart recovery — one email, not five', p: 2 },
+  ],
+  warroom: [
+    { t: 'Rank all four ventures by what is actually compounding', p: 1 },
+    { t: 'Name the one thing to stop doing this quarter', p: 1 },
+    { t: 'Where does the next £1,000 of reinvestment go', p: 2 },
+  ],
+  council: [
+    { t: 'Put the next real spend to the Council before committing', p: 2 },
+    { t: 'Record why the last big decision was made', p: 3 },
+  ],
+  intel: [
+    { t: 'List the three closest UK peptide competitors and their pricing', p: 1 },
+    { t: 'Watch for MHRA or ASA guidance changes on research compounds', p: 1 },
+    { t: 'Track search demand for the categories you sell into', p: 2 },
+  ],
+  observatory: [
+    { t: 'Decide what a signal is worth waking you for', p: 1 },
+    { t: 'Set a stock-cover threshold that raises an alert', p: 2 },
+    { t: 'Set a churn threshold on Arcane Track', p: 2 },
+  ],
+  dealroom: [
+    { t: 'Build the supplier shortlist with lead times and MOQs', p: 1 },
+    { t: 'Five people worth knowing in the UK peptide space', p: 2 },
+    { t: 'Write the outreach template once, reuse it', p: 3 },
+  ],
+  lounge: [
+    { t: 'Take one full day off this week', p: 1 },
+    { t: 'Nothing work-related in this room', p: 3 },
+  ],
+  garage: [
+    { t: 'Attach the Notion connector to the Signal Forge routine', p: 1 },
+    { t: 'Decide which agent earns the next tool connection', p: 2 },
+    { t: 'Review what every agent is allowed to do', p: 2 },
+  ],
+  control: [
+    { t: 'Confirm no agent can spend money', p: 1 },
+    { t: 'Move API keys out of Notion into a password manager', p: 1 },
+    { t: 'Decide what you always want to approve by hand', p: 2 },
+  ],
+  inventor: [
+    { t: 'Park every new idea here instead of starting it', p: 1 },
+    { t: 'Run the oldest idea through market → cost → risk', p: 2 },
+  ],
+  records: [
+    { t: 'Get every supplier contract into one place', p: 1 },
+    { t: 'Write the SOP for dispatch so it survives you', p: 2 },
+    { t: 'Keep a decision log — what and why', p: 2 },
+  ],
   bridge: [
     { t: 'Set the Q4 number for each venture', p: 1 },
     { t: 'Kill list: cut one thing that is not compounding', p: 2 },
@@ -1890,9 +2002,21 @@ The goal was never to make them feel bad. It's to make them see that if someone 
  */
 
 
+
 const LS_KEY = 'leoos.v1';
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+
+/** COA states cycle in this order when the chip is clicked. */
+const COA_STATES = ['none', 'pending', 'published'];
+
+/** Vial tint is inferred from the compound, so new lines look right on the shelf. */
+function tintFor(code) {
+  const c = String(code).toLowerCase();
+  if (c.includes('ghk')) return 'ghk';
+  if (c.includes('cerebro') || c.includes('ss-31') || c.includes('nad')) return 'amber';
+  return 'clear';
+}
 
 function seedState() {
   const decks = {};
@@ -1908,7 +2032,10 @@ function seedState() {
   const budget = { cash: 0, fixed: {}, split: {} };
   for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
   for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
-  return { decks, ledger, goals, budget, log: [], posts: SEED_POSTS.slice() };
+  const stock = INVENTORY.rows.map((r) => ({
+    id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
+  }));
+  return { decks, ledger, goals, budget, stock, log: [], posts: SEED_POSTS.slice() };
 }
 
 class Store {
@@ -1983,6 +2110,20 @@ class Store {
         if (body.ledger[v.id]) this.state.ledger[v.id] = body.ledger[v.id];
       }
     }
+    if (Array.isArray(body.stock)) {
+      this.state.stock = body.stock
+        .filter((r) => r && typeof r.code === 'string')
+        .slice(0, 120)
+        .map((r) => ({
+          id: r.id || uid(),
+          code: String(r.code).slice(0, 40),
+          size: String(r.size || '—').slice(0, 16),
+          vials: Number.isFinite(r.vials) ? r.vials : 0,
+          batch: String(r.batch || '—').slice(0, 24),
+          coa: COA_STATES.includes(r.coa) ? r.coa : 'none',
+          tint: r.tint || 'clear',
+        }));
+    }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
@@ -2015,6 +2156,7 @@ class Store {
       posts: this.state.posts.slice(0, 60),
       goals: this.state.goals,
       budget: this.state.budget,
+      stock: this.state.stock,
     };
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
@@ -2056,6 +2198,85 @@ class Store {
     this.log(task.done
       ? `Order complete — ${deckName(deckId)}: ${task.t}`
       : `Order reopened — ${deckName(deckId)}: ${task.t}`);
+    this.save();
+  }
+
+  /* ---------- stock ---------- */
+
+  stock() { return this.state.stock || (this.state.stock = []); }
+
+  /** Lines running down — anything held but under two weeks of cover. */
+  lowStock() { return this.stock().filter((r) => r.vials > 0 && r.vials < 12); }
+
+  totalVials() { return this.stock().reduce((n, r) => n + (Number(r.vials) || 0), 0); }
+
+  addStockLine(code, size, vials) {
+    const clean = String(code).trim().slice(0, 40);
+    if (!clean) return null;
+    const existing = this.stock().find((r) => r.code.toLowerCase() === clean.toLowerCase());
+    if (existing) {
+      // Same compound twice means a restock, not a second shelf line.
+      existing.vials = (Number(existing.vials) || 0) + (Number(vials) || 0);
+      this.log(`Stock in — ${existing.code} +${Number(vials) || 0} (${existing.vials} on hand)`);
+      this.save();
+      return existing;
+    }
+    const row = {
+      id: uid(),
+      code: clean,
+      size: String(size || '').trim().slice(0, 16) || '—',
+      vials: Number.isFinite(Number(vials)) ? Math.max(0, Math.round(Number(vials))) : 0,
+      batch: '—',
+      coa: 'none',
+      tint: tintFor(clean),
+    };
+    this.state.stock = [...this.stock(), row];
+    this.log(`Stock line opened — ${row.code} ${row.size} × ${row.vials}`);
+    this.save();
+    return row;
+  }
+
+  setStock(id, field, value) {
+    const row = this.stock().find((r) => r.id === id);
+    if (!row) return;
+    if (field === 'vials') {
+      row.vials = Math.max(0, Math.round(Number(value) || 0));
+    } else if (field === 'batch') {
+      row.batch = String(value).trim().slice(0, 24) || '—';
+    } else if (field === 'size') {
+      row.size = String(value).trim().slice(0, 16) || '—';
+    } else if (field === 'coa') {
+      row.coa = COA_STATES.includes(value) ? value : 'none';
+    } else return;
+    this.save();
+  }
+
+  /** Count a vial in or out without retyping the total. */
+  adjustStock(id, delta) {
+    const row = this.stock().find((r) => r.id === id);
+    if (!row) return;
+    const before = Number(row.vials) || 0;
+    row.vials = Math.max(0, before + delta);
+    if (row.vials !== before) {
+      this.log(`${delta > 0 ? 'Stock in' : 'Stock out'} — ${row.code}: ${before} → ${row.vials}`);
+    }
+    this.save();
+  }
+
+  cycleCoa(id) {
+    const row = this.stock().find((r) => r.id === id);
+    if (!row) return;
+    const next = COA_STATES[(COA_STATES.indexOf(row.coa) + 1) % COA_STATES.length];
+    row.coa = next;
+    this.log(`COA ${next} — ${row.code}`);
+    this.save();
+  }
+
+  removeStockLine(id) {
+    const row = this.stock().find((r) => r.id === id);
+    if (!row) return;
+    this.state.stock = this.stock().filter((r) => r.id !== id);
+    this.log(`Stock line closed — ${row.code}`);
     this.save();
   }
 
@@ -2237,6 +2458,7 @@ function makeWalker(def, kind, speed) {
     kind,
     speed,
     deck: def.room,
+    home: def.room,        // the room it drifts back to, and reports as its station
     x: p.x, y: p.y,
     tx: p.x, ty: p.y,
     state: 'work',
@@ -4665,8 +4887,9 @@ class UI {
   selectAgent(id) {
     const a = this.sim.everyone().find((x) => x.id === id);
     if (!a) return;
+    this.setScreen('agents');   // clears this.agent, so select after
     this.agent = id;
-    this.setScreen('agents');
+    this.render();
   }
 
   /* ================= render ================= */
@@ -5021,22 +5244,44 @@ class UI {
 
   wLab() {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
-    const coaWord = { published: 'published', pending: 'pending', none: 'none' };
-    const low = INVENTORY.rows.filter((r) => r.vials > 0 && r.vials < 12).length;
+    const rows = this.store.stock();
+    const low = this.store.lowStock().length;
     return `
       <h3 class="sub-title">Stock</h3>
-      ${this.srcNote(INVENTORY.source)}
-      <div class="tbl">
-        <div class="tbl-head">${INVENTORY.columns.map((c) => `<span>${esc(c)}</span>`).join('')}</div>
-        ${INVENTORY.rows.map((r) => `
-          <div class="tbl-row">
-            <span class="tbl-code"><i class="vial is-${r.tint}"></i>${esc(r.code)}</span>
-            <span class="mono dim">${esc(r.size)}</span>
-            <span class="mono ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}">${r.vials || '—'}</span>
-            <span class="mono dim">${esc(r.batch)}</span>
-            <span class="chip ${coaChip[r.coa] || ''}">${esc(coaWord[r.coa] || r.coa)}</span>
+      <p class="muted-note">Counted here, saved on this device. Type a count, or tap −/+ as vials move.
+        Click the COA chip to cycle none → pending → published.</p>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono">${rows.length}</span><span class="stat-l">Lines</span></div>
+        <div class="stat"><span class="stat-n mono is-arcane">${this.store.totalVials()}</span><span class="stat-l">Vials on hand</span></div>
+        <div class="stat"><span class="stat-n mono ${low ? 'is-flare' : 'dim'}">${low}</span><span class="stat-l">Running low</span></div>
+      </div>
+      <div class="tbl is-stock">
+        <div class="tbl-head"><span>Compound</span><span>Size</span><span>Vials</span><span>Batch</span><span>COA</span><span></span></div>
+        ${rows.map((r) => `
+          <div class="tbl-row is-stock">
+            <span class="tbl-code"><i class="vial is-${esc(r.tint)}"></i>${esc(r.code)}</span>
+            <input class="cell-in mono dim" type="text" value="${esc(r.size)}"
+                   data-stock="${r.id}" data-field="size" aria-label="${esc(r.code)} size">
+            <span class="step">
+              <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="-1" aria-label="One out">−</button>
+              <input class="cell-in mono is-count ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}"
+                     type="number" min="0" step="1" value="${r.vials}"
+                     data-stock="${r.id}" data-field="vials" aria-label="${esc(r.code)} vials">
+              <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="1" aria-label="One in">+</button>
+            </span>
+            <input class="cell-in mono dim" type="text" value="${esc(r.batch)}"
+                   data-stock="${r.id}" data-field="batch" aria-label="${esc(r.code)} batch">
+            <button class="chip ${coaChip[r.coa] || ''}" type="button" data-coa="${r.id}">${esc(r.coa)}</button>
+            <button class="row-x" type="button" data-stockdrop="${r.id}" aria-label="Close ${esc(r.code)} line">×</button>
           </div>`).join('')}
       </div>
+      ${rows.length ? '' : '<p class="muted-note">No stock lines. Add the first below.</p>'}
+      <form class="add-row is-stock" data-stockadd="1">
+        <input type="text" name="code" placeholder="Compound (e.g. GHK-Cu)" maxlength="40" autocomplete="off">
+        <input type="text" name="size" placeholder="Size" maxlength="16" autocomplete="off">
+        <input type="number" name="vials" placeholder="Vials" min="0" step="1">
+        <button type="submit">Add stock</button>
+      </form>
       ${low ? `<p class="warn-note">${low} line${low === 1 ? '' : 's'} under two weeks of cover.</p>` : ''}
 
       <h3 class="sub-title">Dispatch</h3>
@@ -5559,6 +5804,12 @@ class UI {
     if (copy) { this.copyPost(copy.dataset.copy, copy); return; }
     const posted = t('[data-posted]');
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
+    const step = t('[data-stockstep]');
+    if (step) { this.store.adjustStock(step.dataset.stockstep, Number(step.dataset.delta)); return; }
+    const coa = t('[data-coa]');
+    if (coa) { this.store.cycleCoa(coa.dataset.coa); return; }
+    const drop = t('[data-stockdrop]');
+    if (drop) { this.store.removeStockLine(drop.dataset.stockdrop); return; }
     const kill = t('[data-kill]');
     if (kill) { this.store.markPost(kill.dataset.kill, 'killed'); }
   }
@@ -5572,6 +5823,19 @@ class UI {
       const issued = this.store.addTask(id, input.value);
       const fresh = document.querySelector(`[data-add="${id}"] input`);
       if (fresh) { if (issued) fresh.value = ''; fresh.focus(); }
+      return;
+    }
+    const stock = e.target.closest('[data-stockadd]');
+    if (stock) {
+      e.preventDefault();
+      const get = (n) => stock.querySelector(`[name="${n}"]`);
+      const added = this.store.addStockLine(get('code').value, get('size').value, get('vials').value);
+      if (added) for (const n of ['code', 'size', 'vials']) {
+        const el = document.querySelector(`[data-stockadd] [name="${n}"]`);
+        if (el) el.value = '';
+      }
+      const focus = document.querySelector('[data-stockadd] [name="code"]');
+      if (focus) focus.focus();
       return;
     }
     const council = e.target.closest('[data-council]');
@@ -5598,6 +5862,12 @@ class UI {
     if (led) { this.store.setLedger(led.dataset.ledger, led.dataset.field, numOf(led)); return; }
     const bud = e.target.closest('[data-budget]');
     if (bud) { this.store.setBudget(bud.dataset.budget, bud.dataset.id, numOf(bud)); return; }
+    const stock = e.target.closest('[data-stock]');
+    if (stock) {
+      const field = stock.dataset.field;
+      this.store.setStock(stock.dataset.stock, field, field === 'vials' ? numOf(stock) : stock.value);
+      return;
+    }
     const goal = e.target.closest('[data-goal]');
     if (goal) this.store.setGoal(goal.dataset.goal, numOf(goal));
   }

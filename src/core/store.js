@@ -8,10 +8,22 @@
  */
 
 import { DECKS, VENTURES, SEED_TASKS, SEED_POSTS, GOALS, BUDGET } from '../config/empire.js';
+import { INVENTORY } from '../config/roomdata.js';
 
 const LS_KEY = 'leoos.v1';
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+
+/** COA states cycle in this order when the chip is clicked. */
+export const COA_STATES = ['none', 'pending', 'published'];
+
+/** Vial tint is inferred from the compound, so new lines look right on the shelf. */
+function tintFor(code) {
+  const c = String(code).toLowerCase();
+  if (c.includes('ghk')) return 'ghk';
+  if (c.includes('cerebro') || c.includes('ss-31') || c.includes('nad')) return 'amber';
+  return 'clear';
+}
 
 function seedState() {
   const decks = {};
@@ -27,7 +39,10 @@ function seedState() {
   const budget = { cash: 0, fixed: {}, split: {} };
   for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
   for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
-  return { decks, ledger, goals, budget, log: [], posts: SEED_POSTS.slice() };
+  const stock = INVENTORY.rows.map((r) => ({
+    id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
+  }));
+  return { decks, ledger, goals, budget, stock, log: [], posts: SEED_POSTS.slice() };
 }
 
 export class Store {
@@ -102,6 +117,20 @@ export class Store {
         if (body.ledger[v.id]) this.state.ledger[v.id] = body.ledger[v.id];
       }
     }
+    if (Array.isArray(body.stock)) {
+      this.state.stock = body.stock
+        .filter((r) => r && typeof r.code === 'string')
+        .slice(0, 120)
+        .map((r) => ({
+          id: r.id || uid(),
+          code: String(r.code).slice(0, 40),
+          size: String(r.size || '—').slice(0, 16),
+          vials: Number.isFinite(r.vials) ? r.vials : 0,
+          batch: String(r.batch || '—').slice(0, 24),
+          coa: COA_STATES.includes(r.coa) ? r.coa : 'none',
+          tint: r.tint || 'clear',
+        }));
+    }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
@@ -134,6 +163,7 @@ export class Store {
       posts: this.state.posts.slice(0, 60),
       goals: this.state.goals,
       budget: this.state.budget,
+      stock: this.state.stock,
     };
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
@@ -175,6 +205,85 @@ export class Store {
     this.log(task.done
       ? `Order complete — ${deckName(deckId)}: ${task.t}`
       : `Order reopened — ${deckName(deckId)}: ${task.t}`);
+    this.save();
+  }
+
+  /* ---------- stock ---------- */
+
+  stock() { return this.state.stock || (this.state.stock = []); }
+
+  /** Lines running down — anything held but under two weeks of cover. */
+  lowStock() { return this.stock().filter((r) => r.vials > 0 && r.vials < 12); }
+
+  totalVials() { return this.stock().reduce((n, r) => n + (Number(r.vials) || 0), 0); }
+
+  addStockLine(code, size, vials) {
+    const clean = String(code).trim().slice(0, 40);
+    if (!clean) return null;
+    const existing = this.stock().find((r) => r.code.toLowerCase() === clean.toLowerCase());
+    if (existing) {
+      // Same compound twice means a restock, not a second shelf line.
+      existing.vials = (Number(existing.vials) || 0) + (Number(vials) || 0);
+      this.log(`Stock in — ${existing.code} +${Number(vials) || 0} (${existing.vials} on hand)`);
+      this.save();
+      return existing;
+    }
+    const row = {
+      id: uid(),
+      code: clean,
+      size: String(size || '').trim().slice(0, 16) || '—',
+      vials: Number.isFinite(Number(vials)) ? Math.max(0, Math.round(Number(vials))) : 0,
+      batch: '—',
+      coa: 'none',
+      tint: tintFor(clean),
+    };
+    this.state.stock = [...this.stock(), row];
+    this.log(`Stock line opened — ${row.code} ${row.size} × ${row.vials}`);
+    this.save();
+    return row;
+  }
+
+  setStock(id, field, value) {
+    const row = this.stock().find((r) => r.id === id);
+    if (!row) return;
+    if (field === 'vials') {
+      row.vials = Math.max(0, Math.round(Number(value) || 0));
+    } else if (field === 'batch') {
+      row.batch = String(value).trim().slice(0, 24) || '—';
+    } else if (field === 'size') {
+      row.size = String(value).trim().slice(0, 16) || '—';
+    } else if (field === 'coa') {
+      row.coa = COA_STATES.includes(value) ? value : 'none';
+    } else return;
+    this.save();
+  }
+
+  /** Count a vial in or out without retyping the total. */
+  adjustStock(id, delta) {
+    const row = this.stock().find((r) => r.id === id);
+    if (!row) return;
+    const before = Number(row.vials) || 0;
+    row.vials = Math.max(0, before + delta);
+    if (row.vials !== before) {
+      this.log(`${delta > 0 ? 'Stock in' : 'Stock out'} — ${row.code}: ${before} → ${row.vials}`);
+    }
+    this.save();
+  }
+
+  cycleCoa(id) {
+    const row = this.stock().find((r) => r.id === id);
+    if (!row) return;
+    const next = COA_STATES[(COA_STATES.indexOf(row.coa) + 1) % COA_STATES.length];
+    row.coa = next;
+    this.log(`COA ${next} — ${row.code}`);
+    this.save();
+  }
+
+  removeStockLine(id) {
+    const row = this.stock().find((r) => r.id === id);
+    if (!row) return;
+    this.state.stock = this.stock().filter((r) => r.id !== id);
+    this.log(`Stock line closed — ${row.code}`);
     this.save();
   }
 
