@@ -289,6 +289,16 @@ check('restocking tops up, no duplicate line', rowsRestock === rowsAfter && coun
 await p.click('[data-stockadd] button[type="submit"]'); await p.waitForTimeout(400);
 check('empty stock submit is rejected', (await stockRows()) === rowsRestock);
 
+// ---- 3a1. THE NEXT SIXTY MINUTES --------------------------------------
+// window.claude is absent outside the artifact viewer, so Counsel cannot
+// reason here. What must hold is that the question is one button, that it
+// carries the whole floor, and that it says plainly it is offline.
+check('the next-hour question is one button', !!(await p.$('[data-nexthour]')));
+await p.click('[data-nexthour]'); await p.waitForTimeout(500);
+const counselLog = await p.$eval('#counselLog', e => e.textContent);
+check('asking it puts the question and an honest answer in the log',
+  /next 60 minutes/i.test(counselLog) && /offline|claude\.ai/i.test(counselLog));
+
 // ---- 3a2. COPY FIRST, THEN ADAPT --------------------------------------
 // The seeded drafts all carry a Notion sourceUrl and nothing has been copied
 // in, so every one of them must start out held.

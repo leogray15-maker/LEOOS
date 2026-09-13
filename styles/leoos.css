@@ -846,3 +846,13 @@ button.chip:hover { border-color: var(--seam-lit); color: var(--ink); }
 .signal-card.is-held { border-color: rgba(244,77,82,.4); }
 .signal-card.is-held .signal-card-body { opacity: .55; }
 .act[disabled] { opacity: .4; cursor: not-allowed; }
+
+/* the one question the floor exists to answer */
+.counsel-now {
+  width: 100%; margin-top: 7px; padding: 8px 10px; text-align: left; cursor: pointer;
+  background: var(--arcane-wash); border: 1px solid rgba(139,92,246,.4);
+  border-radius: var(--r-sm); color: var(--arcane-lift);
+  font-family: var(--f-display); font-size: 10.5px; letter-spacing: .06em;
+}
+.counsel-now:hover { background: rgba(139,92,246,.24); }
+.counsel-now[disabled] { opacity: .45; cursor: not-allowed; }

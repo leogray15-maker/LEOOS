@@ -361,6 +361,9 @@ export class UI extends UIWidgets {
           <input type="text" id="counselInput" placeholder="Speak to the network…" autocomplete="off" ${this.counselBusy ? 'disabled' : ''}>
           <button type="submit" ${this.counselBusy ? 'disabled' : ''}>${this.counselBusy ? '···' : 'Ask'}</button>
         </form>
+        <button class="counsel-now" type="button" data-nexthour="1" ${this.counselBusy ? 'disabled' : ''}>
+          What should we do in the next 60 minutes?
+        </button>
       </section>`);
   }
 
@@ -391,6 +394,9 @@ export class UI extends UIWidgets {
     }
     const go = t('[data-goscreen]');
     if (go) { this.setScreen(go.dataset.goscreen); return; }
+
+    // a plain button outside the form, so this is a click and not a submit
+    if (t('[data-nexthour]')) { this.askNextHour(); return; }
 
     const goroom = t('[data-goroom]');
     if (goroom) { this.openRoom(goroom.dataset.goroom); return; }
@@ -712,6 +718,22 @@ export class UI extends UIWidgets {
       '', 'ROOMS AND OPEN ORDERS', rooms,
       '', 'ALREADY FLAGGED ON THE FLOOR', blockers,
     ].join('\n');
+  }
+
+  /**
+   * The question the floor is actually for. It is worth being a button
+   * rather than something you retype, and worth being specific about what
+   * a good answer looks like — one hour, work that exists in the state,
+   * and the blockers named rather than worked around.
+   */
+  askNextHour() {
+    return this.ask(
+      'What should we do in the next 60 minutes? Pick the single highest-value hour of work '
+      + 'available right now. Ground it only in the state above — name the room it happens in and '
+      + 'the order or blocker it clears. If something is blocking dispatch, an unpublished COA or an '
+      + 'uncounted shelf line, say so rather than routing around it. If the ledger is uncalibrated, '
+      + 'say that the money picture cannot be trusted yet. Give one hour of work, not a plan for the week.',
+    );
   }
 
   async ask(question) {

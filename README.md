@@ -73,6 +73,64 @@ Standing rules, enforced in the model rather than asserted in prose:
 - Nothing publishes unattended. Drafts wait in the Signal queue.
 - Notion is read-only for the entire network.
 - No agent gives medical advice about a compound, to you or to a member.
+- A module is copied out of the Archives verbatim before anything adapts it.
+
+## How the rooms stay in step
+
+There is one state object and one change event. Every mutation goes through
+`save()`, which emits to every subscriber, and each panel re-renders from the
+same state — so LAB, MARKET, VAULT and the floor cannot hold different
+opinions about what just happened. There is no second store to keep in sync
+and nothing polls anything.
+
+**Dispatch is the flow that crosses rooms.** `store.fulfil(line, qty, value)`
+takes vials off the shelf and books what they earned, as one mutation followed
+by one save, so there is no window where the shelf has moved and the ledger
+has not. It refuses rather than half-completing, and names the guard that
+stopped it:
+
+| Refusal | Why |
+| --- | --- |
+| COA is not published | the line cannot be dispatched at all |
+| more vials than are held | the shelf does not have them |
+| the line was never counted | there is no count to ship from |
+| the line is fed by Arcane Peptides | the shop owns that decrement |
+
+That last one matters: the feed is authoritative and LEOOS only ever reads the
+shop, so a local decrement would be overwritten by the next pull and the booked
+revenue would be the only trace left. Fulfil it in the shop; the pull brings
+the new count back.
+
+**Counted is not the same as zero.** Stock ships blank, like the ledger, so a
+line that has never been counted reads as — rather than 0, is reported to
+Counsel as *quantity unknown, do not treat as zero*, and raises a
+count-the-shelf task rather than a stockout. Claiming a stockout the system
+cannot know is worse than saying nothing.
+
+**What Counsel sees.** `brief()` is the whole of what Counsel and the Council
+reason over: ventures, money, goals, the shelf and its blockers, the shop, the
+signal queue, the copy ledger, every room's open orders, and the same flags the
+Bridge is rendering. *What should we do in the next 60 minutes?* is a button
+under Counsel rather than something you retype.
+
+## Copy first, then adapt
+
+A module comes out of the Archives **word for word** and is logged in
+SCRIPTORIUM — with its source URL and the moment it was taken — before
+anything rewrites, expands or adapts it.
+
+Until that copy exists, every draft built from that module is **held**: Copy
+and Posted are disabled, the card says which module is missing, and it offers
+the way to go and log it. BEACON and the SIGNALS screen render the same card,
+so the gate cannot be walked around by opening the other one. An empty copy is
+refused, and so is one with no source — either would release the draft while
+proving nothing.
+
+Notion stays read-only throughout. This only ever brings text in.
+
+One honest limit: the Signal Forge is a Routine configured in claude.ai, not
+code in this repository, so none of this constrains what that Routine does. It
+constrains what LEOOS will let you *use*.
 
 ## Navigation
 
@@ -133,14 +191,30 @@ Three composited layers, back to front:
 2. **The station** — shell, corridors, rooms, props, crew, in the 640x460 buffer.
 3. **Atmosphere** — vignette and scanlines at display resolution.
 
-- `src/config/facility.js` — the floor plan and all 412 hand-placed props
-- `src/render/props.js` — 90 prop painters; no two rooms share furniture
+- `src/config/facility.js` — the floor plan and every hand-placed prop
+- `src/render/props.js` — 101 prop painters; no two rooms share furniture
 - `src/render/sprites.js` — character matrices, baked once and blitted
 - `src/render/factory.js` — field, buffer, blit, atmosphere, labels, hit testing
 
 Walls have real height: an outer cast shadow, a dark body, a lit top lip, with
-the doorway cut out of all three. Floors carry per-room wear — scuffs, stains, a
-drain, and darkened edges — seeded off the room id so it is stable across loads.
+the doorway cut out of all three.
+
+Floors carry a lot more than wear. Each one bakes bay seams, two inset grates,
+a worn traffic lane in the room's own colour running from the doorway inward,
+hazard chevrons where the floor meets that doorway, pooled stains and a
+stencilled bay letter — all seeded off the room id, so it is stable across
+loads. It is baked once into the room's own canvas, which is why it can be
+this dense and still cost nothing per frame, and why it never collides with a
+hand-placed prop: it is painted underneath all of them.
+
+Props paint in array order, so anything meant to drift *over* the furniture —
+`dust` in SCRIPTORIUM, vapour off the autoclave in THE LAB — goes last in the
+room's list.
+
+`build.js` resolves every prop the facility names against the painters that
+exist and fails the build if one is missing. `paintProp` falls back to a plain
+slab for a type it does not recognise, so without that check a misspelled prop
+ships as a grey box in the corner of a room and nothing reports it.
 
 ### Sprites
 
@@ -228,7 +302,7 @@ Worth being straight about, because AGENTS lists tools for every agent:
 ```bash
 npm run dev      # serve the modular source at localhost:5173
 npm run build    # flatten to two self-contained targets
-npm test               # build, serve, run the 75-check end-to-end suite
+npm test               # build, serve, run the 115-check end-to-end suite
 npm run test:dev       # the same screens and rooms on the real ES modules
 npm run test:contrast  # every text element on every screen, measured against AA
 npm run test:clipping  # anything whose content overflows its box
