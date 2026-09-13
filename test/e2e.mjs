@@ -27,8 +27,25 @@ for (const s of screens) {
   const before = errs.length;
   await p.click(`[data-screen="${s}"]`);
   await p.waitForTimeout(320);
-  const html = await p.$eval('#stageScreen, #stageCanvas', e => e.innerHTML.length).catch(() => 0);
-  check(`screen "${s}" renders`, errs.length === before && html > 50, `${html} bytes`);
+  // The two stage panes swap: the canvas owns "factory", #stageScreen owns
+  // every other screen. Measure whichever one is actually visible — a
+  // selector list always resolves to #stageCanvas, which is first in the
+  // document and a constant 377 bytes, so it passed on an empty screen.
+  const { pane, bytes } = await p.evaluate(() => {
+    const canvas = document.getElementById('stageCanvas');
+    const screen = document.getElementById('stageScreen');
+    const shown = canvas.hidden ? screen : canvas;
+    return { pane: shown.id, bytes: shown.innerHTML.length };
+  });
+  // "factory" is the canvas, so size it by the drawn buffer rather than by
+  // markup; every other screen is markup and the thinnest real one is ~3.6KB.
+  const want = s === 'factory' ? 'stageCanvas' : 'stageScreen';
+  const body = s === 'factory'
+    ? await p.$eval('#hull', c => c.width * c.height)
+    : bytes;
+  const floor = s === 'factory' ? 10000 : 1500;
+  check(`screen "${s}" renders`, errs.length === before && pane === want && body > floor,
+    s === 'factory' ? `canvas ${body}px` : `${pane} ${bytes} bytes`);
 }
 
 // ---- 2. every room opens ------------------------------------------------
