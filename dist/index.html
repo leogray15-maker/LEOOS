@@ -5430,6 +5430,35 @@ class UI {
       ${this.head('Control', `${needAppr} actions gated`)}
       <p class="muted-note">The grade each agent runs under, per capability. Nothing in this system executes unattended unless it says <strong>allow</strong>, and nothing spends money at all.</p>
 
+      <section class="block" style="margin-top:14px">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">What actually runs today</h3>
+          <span class="chip ${this.sampler ? 'is-vital' : 'is-flare'}">${this.sampler ? 'reasoning online' : 'reasoning offline'}</span></div>
+        <p class="muted-note">Straight, so you always know what you are looking at. The grades above are the
+          contract this network runs under as each piece is wired up — not a claim that every row is live.</p>
+        <div class="tbl">
+          <div class="tbl-row is-2"><span class="chip is-vital">live</span>
+            <span>The Council — all nine seats deliberate on a question and return a verdict.</span>
+            <span class="mono dim">claude.ai only</span></div>
+          <div class="tbl-row is-2"><span class="chip is-vital">live</span>
+            <span>Counsel — ask the network anything; it reads the whole floor before answering.</span>
+            <span class="mono dim">claude.ai only</span></div>
+          <div class="tbl-row is-2"><span class="chip is-vital">live</span>
+            <span>Arcane Peptides — real orders, revenue, customers and stock pulled into THE LAB and THE MARKET.</span>
+            <span class="mono dim">${this.store.feed() ? 'connected' : 'not connected'}</span></div>
+          <div class="tbl-row is-2"><span class="chip is-vital">live</span>
+            <span>The floor — ${CREW.length} crew and the commander walk, route and take the room you open.</span>
+            <span class="mono dim">simulation</span></div>
+          <div class="tbl-row is-2"><span class="chip is-flare">waiting on you</span>
+            <span>Signal Forge — the daily Routine exists but has no connector attached, so it cannot read
+              the Archives yet. Attach Notion in claude.ai → Routines.</span>
+            <span class="mono dim">06:00 daily</span></div>
+          <div class="tbl-row is-2"><span class="chip">not wired</span>
+            <span>Everything else — the tools listed on each agent in the Garage describe what it is
+              <em>for</em>. No agent calls a tool on its own yet.</span>
+            <span class="mono dim">design</span></div>
+        </div>
+      </section>
+
       <div class="matrix-wrap">
         <table class="matrix">
           <thead>

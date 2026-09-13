@@ -2,10 +2,10 @@
 
 The operating system of the Arcane empire, rendered as a facility you can walk.
 
-Nine rooms, one per real domain of the business and the life behind it. Nine
-crew sprites who walk the corridors between them, drawn toward whichever room
-is carrying the most open orders — and toward ARCANE, the commander you drive.
-Click a room and the commander walks there while its dashboard opens.
+Twenty rooms, one per real domain of the business and the life behind it.
+Eighteen crew sprites walk the corridors between them, drawn toward whichever
+room is carrying the most open orders — and toward ARCANE, the commander you
+drive. Click a room and the commander walks there while its dashboard opens.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ Click a room and the commander walks there while its dashboard opens.
        MEMORY     ORCHESTRATOR    CONTROL
       (db state)  (which agent)  (permission grades)
                        │
-                 AGENT NETWORK  — 17 specialists, 2 decks
+                 AGENT NETWORK  — 18 specialists, one facility
                        │
                     TOOLS  — Notion (read-only), Claude, memory
                               calendar / email / store / CRM / web: not wired
@@ -74,12 +74,17 @@ Standing rules, enforced in the model rather than asserted in prose:
 
 ## The rooms
 
+All twenty rooms open onto a dashboard with real controls — orders, crew,
+goals and the venture that room belongs to. Ten of them also carry a bespoke
+widget on top of that:
+
 | Room | What it holds | Its dashboard |
 | --- | --- | --- |
 | **BRIDGE** | Command. Targets and doctrine. | Standing doctrine, goals |
 | **FORGE** | Build — site, ArcaneTrack app, automation. | Build queue |
 | **BEACON** | Signal — content, email, launches. | The post queue |
-| **THE LAB** | Arcane Peptides — cold storage, vial racks, instruments, packing. | Stock by compound with COA state, dispatch queue |
+| **THE LAB** | Arcane Peptides — cold storage, vial racks, instruments, packing. | Editable stock by compound with COA state; live dispatch queue when the shop is connected |
+| **THE MARKET** | The shop front — visitors, leads, orders. | Funnel: revenue, average order, orders per customer, conversion |
 | **VITALS** | Arcane Track — members and dose logs. | Member cohorts |
 | **VAULT** | Treasury — cash, VAT, the split. | Month summary and allocations |
 | **THE LIBRARY** | Archives content, posts, PDF products. | PDF catalogue cut from real modules |
@@ -88,7 +93,7 @@ Standing rules, enforced in the model rather than asserted in prose:
 
 ## The pixel renderer
 
-Everything is drawn into a **380x320** offscreen buffer at 1:1, then blitted to
+Everything is drawn into a **640x460** offscreen buffer at 1:1, then blitted to
 the visible canvas at an **integer** scale with `imageSmoothingEnabled = false`.
 That is what keeps the pixels square instead of soupy.
 
@@ -99,11 +104,11 @@ Three composited layers, back to front:
    gantry runs, docking spars, dust. It is drawn centred on the station and
    overflows the stage, so the facility sits *in* a place rather than in a void.
    The station's own footprint is kept clear of it.
-2. **The station** — shell, corridors, rooms, props, crew, in the 380x320 buffer.
+2. **The station** — shell, corridors, rooms, props, crew, in the 640x460 buffer.
 3. **Atmosphere** — vignette and scanlines at display resolution.
 
-- `src/config/facility.js` — the floor plan and all 185 hand-placed props
-- `src/render/props.js` — 78 prop painters; no two rooms share furniture
+- `src/config/facility.js` — the floor plan and all 412 hand-placed props
+- `src/render/props.js` — 90 prop painters; no two rooms share furniture
 - `src/render/sprites.js` — character matrices, baked once and blitted
 - `src/render/factory.js` — field, buffer, blit, atmosphere, labels, hit testing
 
@@ -144,11 +149,60 @@ empty shell. Each set carries a `source` line naming what it will be wired to,
 and shows a `placeholder` chip in the interface. Nothing there is a claim about
 what any compound does: stock, batch and COA state only.
 
+## Connecting Arcane Peptides
+
+The shop at `arcanepeptides.vercel.app` is where orders, revenue, customers and
+stock actually live. LEOOS reads it; it never writes to it.
+
+**On the shop.** Copy `bridge/arcane-peptides-feed.ts` into the Next.js app as
+`app/api/leoos-feed/route.ts` and replace the three loader stubs at the bottom
+with however that app reads its data. Set `ARCANE_FEED_KEY` in the project's
+environment variables, and `LEOOS_ORIGIN` to the LEOOS deployment's origin so
+CORS is scoped rather than open. The route only selects, and it returns counts,
+totals and shelf state — no names, emails or addresses cross the wire.
+
+**In LEOOS.** System → Arcane Peptides. Paste the feed URL and the key, hit
+Save, and the pull runs. THE LAB fills with real vial counts, batches, COA state
+and the live dispatch queue; THE MARKET becomes a real funnel.
+
+Two paths in, because the two places this page runs have different rules:
+
+| Path | Where it works | Why |
+| --- | --- | --- |
+| live pull | the Vercel deployment, any normal origin | a plain `fetch` of the feed URL |
+| paste | the published artifact on claude.ai | artifacts run under a CSP that blocks outbound `fetch`, so open the feed URL in a tab, copy the JSON, and drop it into **Paste feed instead** |
+
+Both go through the same normaliser in `src/core/bridge.js`, which accepts
+several plausible field namings (`vials`/`stock`/`quantity`, `status`/`stage`)
+so the shop's own schema does not have to match this one.
+
+A pull is authoritative for the compounds the shop names and leaves every line
+counted by hand alone. Fed lines carry a green dot so it is always obvious which
+number came from where. `bridge/sample-feed.json` is a feed shaped like the real
+admin page, and `test/feedserver.mjs` serves it for the suite.
+
+## What actually reasons
+
+Worth being straight about, because the Garage lists tools for every agent:
+
+- **live** — the Council (nine seats deliberate, one structured call) and Counsel
+  (ask the network anything). Both need `sample`, so both only work on the
+  published page at claude.ai.
+- **live** — the Arcane Peptides bridge, once connected.
+- **simulation** — the floor. Crew route, walk and drift toward attention. They
+  do not perform the work their labels describe.
+- **waiting** — the Signal Forge Routine exists but has no connector attached,
+  so it cannot read the Archives yet.
+- **not wired** — the `tools` array on each agent describes what that agent is
+  *for*. No agent calls a tool on its own. Control → *What actually runs today*
+  says the same thing inside the interface.
+
 ## Running it
 
 ```bash
 npm run dev      # serve the modular source at localhost:5173
 npm run build    # flatten to two self-contained targets
+npm test         # build, serve, and run the 64-check end-to-end suite
 ```
 
 The build emits the same page twice, because its two homes need different
