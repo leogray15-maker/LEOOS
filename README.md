@@ -200,7 +200,10 @@ Two paths in, because the two places this page runs have different rules:
 
 Both go through the same normaliser in `src/core/bridge.js`, which accepts
 several plausible field namings (`vials`/`stock`/`quantity`, `status`/`stage`)
-so the shop's own schema does not have to match this one.
+so the shop's own schema does not have to match this one. A stock row that
+carries no count at all is read as "the shop does not count vials" rather than
+as zero, so the hand count in THE LAB survives the pull — the shop still sets
+that line's COA, batch and size.
 
 A pull is authoritative for the compounds the shop names and leaves every line
 counted by hand alone. Fed lines carry a green dot so it is always obvious which

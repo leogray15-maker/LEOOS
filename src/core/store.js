@@ -336,7 +336,8 @@ export class Store {
     for (const row of feed.stock || []) {
       const match = this.stock().find((r) => r.code.toLowerCase() === row.code.toLowerCase());
       if (match) {
-        match.vials = row.vials;
+        // A null count means the shop doesn't track vials — keep the hand count.
+        if (row.vials !== null) match.vials = row.vials;
         if (row.batch !== '—') match.batch = row.batch;
         match.coa = row.coa;
         match.size = row.size !== '—' ? row.size : match.size;
@@ -344,7 +345,7 @@ export class Store {
         updated++;
       } else {
         this.state.stock = [...this.stock(), {
-          id: uid(), ...row, tint: tintFor(row.code), src: 'peptides',
+          id: uid(), ...row, vials: row.vials ?? 0, tint: tintFor(row.code), src: 'peptides',
         }];
         opened++;
       }

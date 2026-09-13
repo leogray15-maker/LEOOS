@@ -26,12 +26,22 @@ const toNum = (v) => {
 const text = (v, max = 60) => String(v ?? '').trim().slice(0, max);
 
 /** Accept several shapes, because a shop's admin API rarely matches ours. */
+/** The first of these the row actually carries is the count. */
+function stockCount(r) {
+  for (const v of [r.vials, r.stock, r.quantity, r.qty, r.inventory]) {
+    if (v !== undefined && v !== null && v !== '') return Math.max(0, Math.round(toNum(v)));
+  }
+  // A shop that doesn't count vials sends none. That is not zero — it means
+  // "I don't know", and the hand count in THE LAB stands.
+  return null;
+}
+
 function normaliseStock(raw) {
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, 120).map((r) => ({
     code: text(r.code ?? r.name ?? r.product ?? r.sku, 40),
     size: text(r.size ?? r.strength ?? r.variant ?? '', 16) || '—',
-    vials: Math.max(0, Math.round(toNum(r.vials ?? r.stock ?? r.quantity ?? r.qty ?? r.inventory))),
+    vials: stockCount(r),
     batch: text(r.batch ?? r.lot ?? '', 24) || '—',
     coa: COA_WORDS.includes(r.coa) ? r.coa
       : (r.coa === true || r.coaUrl || r.coa_url) ? 'published' : 'none',
