@@ -3,7 +3,7 @@
  * driven by one animation loop.
  */
 
-import { DECKS } from './config/empire.js';
+import { SCREENS } from './config/empire.js';
 import { Store } from './core/store.js';
 import { Sim } from './core/sim.js';
 import { Factory } from './render/factory.js';
@@ -154,11 +154,32 @@ document.getElementById('transport').addEventListener('click', (e) => {
 
 /* ---------- keyboard ---------- */
 
+// The rail numbers every screen 00-10, and those numbers are the keys.
+// They used to index ROOMS instead, so pressing 3 while looking at a rail row
+// labelled `03 ORDERS` opened FORGE — and eleven of the twenty rooms had no
+// key at all. Rooms are opened from the floor, which is where they live.
+let typed = '';
+let typedAt = 0;
+
+/** Exact rail number, or a lone digit read as a leading-zero one. */
+const screenFor = (t) => SCREENS.find((s) => s.no === t)
+  || (t.length === 1 ? SCREENS.find((s) => s.no === `0${t}`) : null);
+
 window.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
-  if (e.key === 'Escape') { ui.closeRoom(); return; }
-  const n = Number(e.key);
-  if (n >= 1 && n <= DECKS.length) ui.openRoom(DECKS[n - 1].id);
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape') { typed = ''; ui.closeRoom(); return; }
+  if (!/^[0-9]$/.test(e.key)) return;
+
+  // Digits accumulate briefly so a two-digit number can be typed at all.
+  if (performance.now() - typedAt > 700) typed = '';
+  typedAt = performance.now();
+  typed = (typed + e.key).slice(-2);
+
+  let hit = screenFor(typed);
+  // "2" then "3" is not a screen — treat the 3 as the start of a new number
+  // rather than leaving the buffer stuck on a pair that matches nothing.
+  if (!hit && typed.length === 2) { typed = e.key; hit = screenFor(typed); }
+  if (hit) ui.setScreen(hit.id);
 });
 
 /* ---------- layout ---------- */

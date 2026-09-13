@@ -24,6 +24,12 @@ const ORDER = [
   'src/render/tiles.js',
   'src/render/sprites.js',
   'src/render/factory.js',
+  // The panels are one class built in three links: UIScreens -> UIWidgets ->
+  // UI. `extends` runs at class-definition time, so the chain has to be
+  // flattened in this order or the bundle throws before it boots.
+  'src/render/format.js',
+  'src/render/screens.js',
+  'src/render/widgets.js',
   'src/render/ui.js',
   'src/app.js',
 ];

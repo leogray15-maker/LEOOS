@@ -167,7 +167,16 @@ button, input, textarea { font: inherit; color: inherit; }
   grid-area: rail; border-right: 1px solid var(--seam); background: var(--deck);
   overflow-y: auto; padding-block: 12px;
 }
-.rail-head { padding: 0 16px 8px; }
+.rail-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  padding: 0 16px 8px;
+}
+.rail-hint { font-size: 9px; color: var(--faint); letter-spacing: .04em; }
+
+/* Four groups, so eleven rows read as four short lists instead of one
+   undifferentiated column of twelve. */
+.nav-group + .nav-group { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--seam); }
+.nav-group-name { display: block; padding: 0 16px 4px; }
 .rail-block { padding: 14px 16px 0; margin-top: 12px; border-top: 1px solid var(--seam); }
 .rail-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
 

@@ -27,8 +27,25 @@ for (const s of screens) {
   const before = errs.length;
   await p.click(`[data-screen="${s}"]`);
   await p.waitForTimeout(320);
-  const html = await p.$eval('#stageScreen, #stageCanvas', e => e.innerHTML.length).catch(() => 0);
-  check(`screen "${s}" renders`, errs.length === before && html > 50, `${html} bytes`);
+  // The two stage panes swap: the canvas owns "factory", #stageScreen owns
+  // every other screen. Measure whichever one is actually visible — a
+  // selector list always resolves to #stageCanvas, which is first in the
+  // document and a constant 377 bytes, so it passed on an empty screen.
+  const { pane, bytes } = await p.evaluate(() => {
+    const canvas = document.getElementById('stageCanvas');
+    const screen = document.getElementById('stageScreen');
+    const shown = canvas.hidden ? screen : canvas;
+    return { pane: shown.id, bytes: shown.innerHTML.length };
+  });
+  // "factory" is the canvas, so size it by the drawn buffer rather than by
+  // markup; every other screen is markup and the thinnest real one is ~3.6KB.
+  const want = s === 'factory' ? 'stageCanvas' : 'stageScreen';
+  const body = s === 'factory'
+    ? await p.$eval('#hull', c => c.width * c.height)
+    : bytes;
+  const floor = s === 'factory' ? 10000 : 1500;
+  check(`screen "${s}" renders`, errs.length === before && pane === want && body > floor,
+    s === 'factory' ? `canvas ${body}px` : `${pane} ${bytes} bytes`);
 }
 
 // ---- 2. every room opens ------------------------------------------------
@@ -121,12 +138,59 @@ if (sendBtn) {
   check('dispatch actually moves the agent', moved.includes(toName), `now "${moved.trim().split('\n')[0]}" → ${to}`);
 } else check('dispatch actually moves the agent', false, 'no dispatch button');
 
-// the SAME card in the garage must also open the detail
-await p.click('[data-screen="garage"]'); await p.waitForTimeout(400);
+// the roster absorbed the old Garage screen, so its content must be here:
+// call signs, domains, tool tags and the tool table, on the one roster.
+await p.click('[data-screen="agents"]'); await p.waitForTimeout(400);
+check('roster carries the call signs', (await p.$$eval('.agent-call', e => e.length)) > 3);
+check('roster carries the tool tags', (await p.$$eval('.agent-card .tag', e => e.length)) > 3);
+check('roster carries the tool table',
+  /Shared memory/.test(await p.$eval('#stageScreen', e => e.textContent)));
 await p.click('.agent-card:nth-child(2)'); await p.waitForTimeout(400);
-check('garage agent card opens detail', !!(await p.$('[data-agentback]')));
+check('a roster card opens the detail', !!(await p.$('[data-agentback]')));
 await p.click('[data-agentback]'); await p.waitForTimeout(300);
 check('back button returns to the roster', (await p.$$eval('.agent-card', e => e.length)) > 3);
+
+// the three rooms whose tool is a full screen must offer the door, not a
+// look-alike dashboard rendered into the side panel
+for (const [roomId, screenId] of [['council', 'council'], ['garage', 'agents'], ['control', 'control']]) {
+  await p.click('[data-screen="system"]'); await p.waitForTimeout(160);
+  await p.click(`#stageScreen [data-room="${roomId}"]`); await p.waitForTimeout(320);
+  // click by selector, not by a captured handle: the room overlay repaints
+  // once a second as the crew move, which detaches anything held across it
+  const sel = `#roomOverlay [data-goscreen="${screenId}"]`;
+  const door = await p.$(sel);
+  check(`room "${roomId}" opens the door to its tool`, !!door);
+  if (door) {
+    await p.click(sel); await p.waitForTimeout(320);
+    const now = await p.$eval(`[data-screen="${screenId}"]`, e => e.getAttribute('aria-current'));
+    check(`that door lands on "${screenId}"`, now === 'true', `aria-current ${now}`);
+  }
+}
+
+// The rail numbers are the keys — these used to index ROOMS instead, so a
+// digit opened a room that had nothing to do with the row wearing it.
+const current = async () => (await p.$$eval('[data-screen]', els =>
+  els.filter(e => e.getAttribute('aria-current') === 'true').map(e => e.dataset.screen)))[0];
+
+// "10" is reachable only by typing both digits, so this exercises the buffer.
+await p.click('[data-screen="empire"]'); await p.waitForTimeout(250);
+await p.keyboard.press('1'); await p.keyboard.press('0'); await p.waitForTimeout(350);
+check('typing a two-digit rail number opens that screen', (await current()) === 'system',
+  `landed on ${await current()}`);
+
+// a lone digit is read as its leading-zero number: 6 is `06 LEDGER`
+await p.waitForTimeout(800);
+await p.keyboard.press('6'); await p.waitForTimeout(350);
+check('a lone digit reads as its leading-zero number', (await current()) === 'ledger',
+  `landed on ${await current()}`);
+
+// and a digit typed into a field must stay in the field
+await p.click('[data-screen="ledger"]'); await p.waitForTimeout(300);
+await p.click('#cash'); await p.keyboard.press('7'); await p.waitForTimeout(300);
+check('a digit typed in an input does not navigate', (await current()) === 'ledger',
+  `landed on ${await current()}`);
+// put cash back — the reload checks at the end assert on this exact value
+await p.fill('#cash', '12000'); await p.keyboard.press('Tab'); await p.waitForTimeout(350);
 
 // ---- 3b. STOCK: add / step / coa / edit -------------------------------
 const openLab = async () => {

@@ -51,7 +51,8 @@ view without moving the map when it is already visible.
 
 ### The Council
 
-`08 THE COUNCIL` puts a real decision to nine seated agents. Each answers from
+`08 THE COUNCIL` — and the door inside THE COUNCIL on the floor, which is
+the same screen — puts a real decision to nine seated agents. Each answers from
 its own domain in its own voice, then the Commander returns one verdict —
 **BUILD, DELAY, WATCH or KILL** — with the conditions that must be true first.
 
@@ -63,7 +64,8 @@ asks for disagreement — a council where everyone agrees is worthless.
 ### Permissions
 
 Every agent carries a grade per capability: `deny`, `read`, `analyse`, `draft`,
-`recommend`, `approval`, `allow`. `10 CONTROL` renders the whole matrix.
+`recommend`, `approval`, `allow`. `09 CONTROL` renders the whole matrix,
+and THE CONTROL ROOM on the floor opens the same screen.
 
 Standing rules, enforced in the model rather than asserted in prose:
 
@@ -71,6 +73,30 @@ Standing rules, enforced in the model rather than asserted in prose:
 - Nothing publishes unattended. Drafts wait in the Signal queue.
 - Notion is read-only for the entire network.
 - No agent gives medical advice about a compound, to you or to a member.
+
+## Navigation
+
+**One door per thing.** Every destination has exactly one interface. Where a
+room's work needs a full screen, the room opens the door to it rather than
+rendering a second copy into the side panel — so THE COUNCIL, THE AGENT
+GARAGE and THE CONTROL ROOM each lead to one Council, one roster, one matrix.
+
+The rail is eleven rows in four groups:
+
+| | | |
+| --- | --- | --- |
+| **Overview** | `00` THE EMPIRE | `01` THE FACTORY |
+| **Work** | `02` ORDERS · `03` AGENTS | `04` SIGNALS |
+| **Money** | `05` VENTURES · `06` LEDGER | `07` GOALS |
+| **Governance** | `08` THE COUNCIL · `09` CONTROL | `10` SYSTEM |
+
+**The number on a row is the key that opens it.** Digits accumulate for
+700ms, so `10` is typed as 1 then 0; a lone digit reads as its leading-zero
+form, so 6 opens `06 LEDGER`. Escape closes an open room dashboard. A digit
+typed into a field stays in the field.
+
+Rooms are opened from the floor — click one and the commander walks there
+while its dashboard opens.
 
 ## The rooms
 
@@ -183,7 +209,7 @@ admin page, and `test/feedserver.mjs` serves it for the suite.
 
 ## What actually reasons
 
-Worth being straight about, because the Garage lists tools for every agent:
+Worth being straight about, because AGENTS lists tools for every agent:
 
 - **live** — the Council (nine seats deliberate, one structured call) and Counsel
   (ask the network anything). Both need `sample`, so both only work on the
@@ -202,7 +228,8 @@ Worth being straight about, because the Garage lists tools for every agent:
 ```bash
 npm run dev      # serve the modular source at localhost:5173
 npm run build    # flatten to two self-contained targets
-npm test               # build, serve, run the 64-check end-to-end suite
+npm test               # build, serve, run the 75-check end-to-end suite
+npm run test:dev       # the same screens and rooms on the real ES modules
 npm run test:contrast  # every text element on every screen, measured against AA
 npm run test:clipping  # anything whose content overflows its box
 ```
@@ -223,9 +250,15 @@ render identically.
 
 ## Legibility, measured
 
-Two of the three suites are there because "looks fine to me" is not a test.
+Two of these suites are there because "looks fine to me" is not a test, and
+a third is there because the bundle can hide a broken import.
 
-`npm run test:contrast` walks every rendered element on all twelve screens and
+`npm run test:dev` loads the real ES modules rather than the flattened bundle.
+Flattening shares one scope, so a module that forgot an import still resolves
+and every other check passes, while `npm run dev` dies on load. That suite
+walks all eleven screens and all twenty rooms on that path.
+
+`npm run test:contrast` walks every rendered element on all eleven screens and
 all twenty room dashboards, finds the first opaque background actually painted
 behind each piece of text, and computes the real WCAG ratio. Everything must
 clear 4.5:1 (3:1 for large text). The palette is tuned to that: `--faint` was
@@ -253,35 +286,60 @@ The source is plain ES modules with no dependencies and no bundler. `build.js`
 inlines the stylesheet and flattens the modules into a single page so the
 published artifact depends on nothing but itself.
 
-## Changing the ship
+## Changing it
 
-Everything lives in **`src/config/empire.js`** — it is the only file you need to
-touch to reshape the OS:
+The empire is **`src/config/empire.js`**:
 
 - `VENTURES` — the businesses and what they cost/earn
 - `CATALOGUE` — titles and prices
-- `DECKS` — compartments, their position in the hull (`rect`), and the door
-  that opens onto the central corridor (`door` + `spine` index)
-- `CREW` — who is aboard and which deck is their station
-- `SEED_TASKS` — the opening orders on each deck
+- `GOALS`, `BUDGET` — targets, fixed costs, the split
+- `SCREENS` — the rail: each row's number, name and group
+- `SEED_TASKS` — the opening orders in each room
 
-Ship space is 100 wide by 170 tall, nose at `y=0`. If you move a compartment,
-keep its `door` on one of its own walls and level with its spine node — the
-crew route along that corridor, so a misplaced door strands them.
+The building is **`src/config/facility.js`**: `ROOMS` (each with its `rect`,
+`door`, tileset, accent and hand-placed props) and `WINGS`. Pixel space is
+640 wide by 460 tall. A room's `door` must sit on one of its own walls and
+line up with a corridor, or the crew cannot route to it — `buildGraph()`
+proves at build time that every room still reaches every other.
+
+The network is **`src/config/agents.js`**: `AGENTS` (19, one of them ARCANE),
+their `tools`, and the `caps` grade each one runs under.
 
 ## Layout
 
 ```
 index.html              page shell
 styles/leoos.css        design system (tokens, panels, rail)
-src/config/empire.js    ← the empire. edit this.
+build.js                single-file bundler, and the module ORDER
+vercel.json             static deploy
+
+src/app.js              boot, the animation loop, pointer and keyboard
+src/config/empire.js    ventures, catalogue, goals, budget, the rail
+src/config/facility.js  the floor plan, twenty rooms and their props
+src/config/agents.js    the network: agents, tools, permission grades
+src/config/roomdata.js  per-room dashboard rows, and which room has a widget
 src/core/store.js       persistence: artifact db → localStorage → memory
 src/core/sim.js         crew routing and behaviour
-src/render/ship.js      canvas hull renderer
-src/render/ui.js        rail, readouts, dashboard, inspectors, counsel
-src/app.js              boot and the animation loop
-build.js                single-file bundler
+src/core/bridge.js      the Arcane Peptides feed, pulled or pasted
+src/render/format.js    presentation helpers — no store, no DOM
+src/render/screens.js   the full-screen bodies the rail opens
+src/render/widgets.js   per-room panels, and the bridge that feeds two
+src/render/ui.js        shell, navigation, dashboard, telemetry, events
+src/render/factory.js   field, buffer, blit, atmosphere, hit testing
+src/render/tiles.js     seven 8x8 tilesets with wear variants
+src/render/props.js     90 prop painters
+src/render/sprites.js   character matrices, baked once and blitted
+
+bridge/                 the feed route to drop into the shop, and a sample
+test/                   e2e, dev-graph, contrast and clipping suites
+trading/                the backtester — separate from the OS, see below
 ```
+
+The panels are one class in three links — `UIScreens → UIWidgets → UI`.
+`extends` runs at class-definition time, so `build.js` must flatten them in
+that order. It checks that every imported module is in `ORDER` and that no
+two modules declare the same top-level name, because flattening shares one
+scope.
 
 ## State
 
@@ -319,3 +377,37 @@ It writes drafts only. There is no auto-posting step anywhere in the system.
 Peptide content is fenced: no claim that a compound treats, cures, prevents or
 diagnoses anything, no dosing, and no named compound paired with a health
 outcome. A module that cannot clear that bar is skipped.
+
+## The trading bot
+
+`trading/` is a research backtester, and it is **not part of the OS** — no
+screen, room or agent reads it, and it shares nothing with the facility but
+the repository. It is kept here because it is the groundwork for an ETH
+trading bot that will connect through MetaMask.
+
+```bash
+cd trading
+pip install -r requirements.txt     # numpy and pandas, nothing else
+python3 test_engine.py              # 9 checks on the engine itself
+python3 run.py                      # synthetic series, clearly marked
+python3 run.py ../data/BTCUSDT_1d.csv
+```
+
+It had no dependency manifest, so `requirements.txt` now names the two it
+needs. `results.json` is a run output and is no longer tracked.
+
+The engine is deliberately pessimistic, because a backtest that flatters a
+strategy costs money with confidence:
+
+- signals are computed from data up to bar `t` and the position is only held
+  during `t+1`, so nothing can see its own future
+- every change in position pays both a fee and slippage, both ways
+- every result is reported next to buy-and-hold, after the same costs
+- nothing is reported without an out-of-sample half and a permutation test
+- long/flat only, because shorting adds funding, borrow and liquidation
+  mechanics this engine does not model and will not pretend to
+
+**Nothing in this repository can place an order or touch a wallet.** It reads
+price series and prints results. Wiring a wallet that can spend real funds is
+a different risk class from anything else in LEOOS — it belongs behind its own
+explicit, reviewed step, not inside a refactor.
