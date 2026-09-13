@@ -2232,7 +2232,19 @@ async function pullFeed(url, key, { timeoutMs = 9000 } = {}) {
   if (res.status === 401 || res.status === 403) {
     throw new Error('Feed refused the key. Check it matches the shop\'s ARCANE_FEED_KEY exactly.');
   }
-  if (!res.ok) throw new Error(`Feed answered ${res.status}.`);
+  if (!res.ok) {
+    // A shop that refuses usually explains itself in the body — a missing key
+    // or missing database credentials both come back as a 503 with the reason
+    // written out. Repeating only the status number throws that away.
+    let said = '';
+    try {
+      const problem = await res.json();
+      said = text(problem?.message || problem?.error || '', 300);
+    } catch {
+      // not JSON, nothing to add
+    }
+    throw new Error(said ? `Feed answered ${res.status}. ${said}` : `Feed answered ${res.status}.`);
+  }
 
   let body;
   try {
