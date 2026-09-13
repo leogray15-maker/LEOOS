@@ -4,7 +4,7 @@
  */
 
 import {
-  DECKS, VENTURES, CREW, ARCANE, CATALOGUE, GOALS, BUDGET, SCREENS, OPERATOR,
+  DECKS, VENTURES, CREW, ARCANE, CATALOGUE, GOALS, BUDGET, SCREENS, SCREEN_GROUPS, OPERATOR,
   AGENTS, COUNCIL, CAPS, TOOLS, GRADE_TONE,
 } from '../config/empire.js';
 import { ROOM_BY_ID, WINGS } from '../config/facility.js';
@@ -86,15 +86,20 @@ export class UI {
 
   buildRail() {
     this.railEl.innerHTML = `
-      <div class="rail-head"><span class="eyebrow">Navigation</span></div>
-      ${SCREENS.map((s) => `
-        <button class="nav-btn" type="button" data-screen="${s.id}">
-          <span class="nav-no mono">${s.no}</span>
-          <span>
-            <span class="nav-name">${esc(s.name)}</span><br>
-            <span class="nav-sub">${esc(s.sub)}</span>
-          </span>
-        </button>`).join('')}
+      <div class="rail-head"><span class="eyebrow">Navigation</span>
+        <span class="rail-hint mono">type the number</span></div>
+      ${SCREEN_GROUPS.map((g) => `
+        <div class="nav-group">
+          <span class="nav-group-name eyebrow">${esc(g)}</span>
+          ${SCREENS.filter((s) => s.group === g).map((s) => `
+            <button class="nav-btn" type="button" data-screen="${s.id}">
+              <span class="nav-no mono">${s.no}</span>
+              <span>
+                <span class="nav-name">${esc(s.name)}</span><br>
+                <span class="nav-sub">${esc(s.sub)}</span>
+              </span>
+            </button>`).join('')}
+        </div>`).join('')}
 
       <div class="rail-block">
         <span class="eyebrow">Commander</span>
@@ -428,47 +433,6 @@ export class UI {
       ${!this.sampler ? '<p class="muted-note" style="margin-top:12px">The Council needs the published page on claude.ai to reason.</p>' : ''}`;
   }
 
-  /* ================= agent garage ================= */
-
-  screenGarage() {
-    return `
-      ${this.head('Agent Garage', `${AGENTS.length} built`)}
-      <p class="muted-note">Every agent, its domain, the tools it can reach and what it must ask you before doing. Click one to send it somewhere.</p>
-      <div class="card-grid" style="margin-top:14px">
-        ${AGENTS.map((a) => {
-          const room = ROOM_BY_ID[a.room];
-          const asks = CAPS.filter((cp) => a.caps[cp.id] === 'approval').length;
-          const denied = CAPS.filter((cp) => a.caps[cp.id] === 'deny').length;
-          return `
-          <button class="agent-card ${a.kind === 'arcane' ? 'is-commander' : ''}" type="button" data-agent="${a.id}">
-            <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
-            <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
-            <span class="agent-call mono">${esc(a.call)}</span>
-            <span class="agent-role">${esc(a.role)} · ${esc(room?.name || '')}</span>
-            <span class="agent-brief">${esc(a.domain)}</span>
-            <span class="agent-tags">
-              ${a.tools.map((t) => `<span class="tag">${esc(TOOLS.find((x) => x.id === t)?.name || t)}</span>`).join('')}
-            </span>
-            <span class="agent-tags">
-              <span class="tag is-flare">${asks} need approval</span>
-              <span class="tag is-breach">${denied} denied</span>
-            </span>
-          </button>`;
-        }).join('')}
-      </div>
-
-      <section class="block" style="margin-top:14px">
-        <div class="block-head"><h3 class="sub-title" style="margin:0">Tools</h3>
-          <span class="chip">${TOOLS.filter((t) => t.state !== 'not wired').length} / ${TOOLS.length} wired</span></div>
-        ${TOOLS.map((t) => `
-          <div class="tbl-row is-2" style="border-top:1px solid var(--seam)">
-            <span>${esc(t.name)}</span>
-            <span class="muted-note">${esc(t.note)}</span>
-            <span class="chip ${t.state === 'live' ? 'is-vital' : t.state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(t.state)}</span>
-          </div>`).join('')}
-      </section>`;
-  }
-
   /* ================= control room ================= */
 
   screenControl() {
@@ -541,6 +505,7 @@ export class UI {
   /** The room-specific dashboard. Each room does a different job. */
   roomWidget(roomId) {
     switch (ROOM_WIDGET[roomId]) {
+      case 'door': return this.wDoor(roomId);
       case 'lab': return this.wLab();
       case 'market': return this.wMarket();
       case 'library': return this.wLibrary();
@@ -556,6 +521,32 @@ export class UI {
   }
 
   srcNote(text) { return `<p class="src-note"><span class="chip is-seed">placeholder</span> ${esc(text)}</p>`; }
+
+  /**
+   * A room whose work is done on a full screen. One door, named, rather
+   * than a second copy of the tool rendered into a side panel.
+   */
+  wDoor(roomId) {
+    const door = {
+      council: {
+        screen: 'council', label: 'Convene the Council',
+        note: 'Nine seats deliberate on one real decision and the Commander returns a verdict. It needs the width of a full screen, so it opens as one.',
+      },
+      garage: {
+        screen: 'agents', label: 'Open the roster',
+        note: 'Where the network is read and configured — every agent, its domain, the tools it reaches and what it must ask you before doing.',
+      },
+      control: {
+        screen: 'control', label: 'Open the permission matrix',
+        note: 'Every agent graded against every capability. The grid is too wide for this panel, so it opens as a full screen.',
+      },
+    }[roomId];
+    if (!door) return '';
+    return `
+      <h3 class="sub-title">The work of this room</h3>
+      <p class="muted-note">${esc(door.note)}</p>
+      <button class="wide-btn" type="button" data-goscreen="${door.screen}">${esc(door.label)} →</button>`;
+  }
 
   wLab() {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
@@ -810,7 +801,6 @@ export class UI {
     switch (this.screen) {
       case 'empire': return this.screenEmpire();
       case 'council': return this.screenCouncil();
-      case 'garage': return this.screenGarage();
       case 'control': return this.screenControl();
       case 'agents': return this.screenAgents();
       case 'orders': return this.screenOrders();
@@ -850,21 +840,49 @@ export class UI {
         </div>`;
     }
 
+    // One roster. The Garage screen used to render this same list of the
+    // same nineteen agents, opening this same detail view — so its call
+    // signs, domains, tools and approval counts are on the card here, and
+    // its tool table is underneath. The sim walkers carry their whole
+    // config (makeWalker spreads it), so live position comes free.
     return `
       ${this.head('Agents', `${AGENTS.length} in the network`)}
-      <div class="card-grid">
+      <p class="muted-note">Every agent, its domain, the tools it can reach and what it must ask you
+        before doing. Click one to read it or send it somewhere.</p>
+      <div class="card-grid" style="margin-top:14px">
         ${[this.sim.arcane, ...this.sim.agents].map((a) => {
           const room = ROOM_BY_ID[a.deck];
+          const asks = CAPS.filter((cp) => a.caps[cp.id] === 'approval').length;
+          const denied = CAPS.filter((cp) => a.caps[cp.id] === 'deny').length;
           return `
           <button class="agent-card ${a.kind === 'arcane' ? 'is-commander' : ''}" type="button" data-agent="${a.id}">
             <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
             <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
+            <span class="agent-call mono">${esc(a.call)}</span>
             <span class="agent-role">${esc(a.role)}</span>
             <span class="agent-where mono">${a.state === 'transit' ? '→ ' : ''}${esc(room.name)}</span>
-            <span class="agent-brief">${esc(a.brief || '')}</span>
+            <span class="agent-brief">${esc(a.domain || a.brief || '')}</span>
+            <span class="agent-tags">
+              ${a.tools.map((t) => `<span class="tag">${esc(TOOLS.find((x) => x.id === t)?.name || t)}</span>`).join('')}
+            </span>
+            <span class="agent-tags">
+              <span class="tag is-flare">${asks} need approval</span>
+              <span class="tag is-breach">${denied} denied</span>
+            </span>
           </button>`;
         }).join('')}
-      </div>`;
+      </div>
+
+      <section class="block" style="margin-top:14px">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Tools</h3>
+          <span class="chip">${TOOLS.filter((t) => t.state !== 'not wired').length} / ${TOOLS.length} wired</span></div>
+        ${TOOLS.map((t) => `
+          <div class="tbl-row is-2" style="border-top:1px solid var(--seam)">
+            <span>${esc(t.name)}</span>
+            <span class="muted-note">${esc(t.note)}</span>
+            <span class="chip ${t.state === 'live' ? 'is-vital' : t.state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(t.state)}</span>
+          </div>`).join('')}
+      </section>`;
   }
 
   screenOrders() {

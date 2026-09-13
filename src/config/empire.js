@@ -94,20 +94,35 @@ export const BUDGET = {
 };
 
 /** The left-hand navigation, numbered like a control panel. */
+/**
+ * The rail. Four groups, and the number on each row is the key that opens
+ * it — `04` is typed as 0 then 4. They were a flat list of twelve before,
+ * which made a numbered sequence out of things that have no order, and the
+ * digits collided with a separate room shortcut that used the same keys.
+ *
+ * AGENT GARAGE is gone as a screen: it listed the same nineteen agents as
+ * AGENTS, opening the same detail view. Its cards and its tool table are on
+ * AGENTS now. The room called THE AGENT GARAGE is still on the floor.
+ */
 export const SCREENS = [
-  { id: 'empire',   no: '00', name: 'THE EMPIRE',  sub: 'State of everything' },
-  { id: 'factory',  no: '01', name: 'THE FACTORY', sub: 'Live floor' },
-  { id: 'agents',   no: '02', name: 'AGENTS',      sub: 'Crew & orders' },
-  { id: 'orders',   no: '03', name: 'ORDERS',      sub: 'Every open task' },
-  { id: 'ventures', no: '04', name: 'VENTURES',    sub: 'The four businesses' },
-  { id: 'ledger',   no: '05', name: 'LEDGER',      sub: 'Money & budget' },
-  { id: 'goals',    no: '06', name: 'GOALS',       sub: 'Money & work targets' },
-  { id: 'signals',  no: '07', name: 'SIGNALS',     sub: 'Posts from the Archives' },
-  { id: 'council',  no: '08', name: 'THE COUNCIL', sub: 'Put a decision to them' },
-  { id: 'garage',   no: '09', name: 'AGENT GARAGE',sub: 'The network' },
-  { id: 'control',  no: '10', name: 'CONTROL',     sub: 'Permissions & approvals' },
-  { id: 'system',   no: '11', name: 'SYSTEM',      sub: 'Status & sync' },
+  { id: 'empire',   no: '00', name: 'THE EMPIRE',  sub: 'State of everything',     group: 'Overview' },
+  { id: 'factory',  no: '01', name: 'THE FACTORY', sub: 'The floor · 20 rooms',    group: 'Overview' },
+
+  { id: 'orders',   no: '02', name: 'ORDERS',      sub: 'Every open task',         group: 'Work' },
+  { id: 'agents',   no: '03', name: 'AGENTS',      sub: 'Roster, domains, tools',  group: 'Work' },
+  { id: 'signals',  no: '04', name: 'SIGNALS',     sub: 'Drafts from the Archives',group: 'Work' },
+
+  { id: 'ventures', no: '05', name: 'VENTURES',    sub: 'The four businesses',     group: 'Money' },
+  { id: 'ledger',   no: '06', name: 'LEDGER',      sub: 'Cash, costs, the split',  group: 'Money' },
+  { id: 'goals',    no: '07', name: 'GOALS',       sub: 'Money & work targets',    group: 'Money' },
+
+  { id: 'council',  no: '08', name: 'THE COUNCIL', sub: 'Put a decision to them',  group: 'Governance' },
+  { id: 'control',  no: '09', name: 'CONTROL',     sub: 'Permission grades',       group: 'Governance' },
+  { id: 'system',   no: '10', name: 'SYSTEM',      sub: 'Status & sync',           group: 'Governance' },
 ];
+
+/** The rail groups, in order. Derived so the two can never drift apart. */
+export const SCREEN_GROUPS = [...new Set(SCREENS.map((s) => s.group))];
 
 export const SEED_TASKS = {
   market: [

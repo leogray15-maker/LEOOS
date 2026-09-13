@@ -189,7 +189,16 @@ button, input, textarea { font: inherit; color: inherit; }
   grid-area: rail; border-right: 1px solid var(--seam); background: var(--deck);
   overflow-y: auto; padding-block: 12px;
 }
-.rail-head { padding: 0 16px 8px; }
+.rail-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  padding: 0 16px 8px;
+}
+.rail-hint { font-size: 9px; color: var(--faint); letter-spacing: .04em; }
+
+/* Four groups, so eleven rows read as four short lists instead of one
+   undifferentiated column of twelve. */
+.nav-group + .nav-group { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--seam); }
+.nav-group-name { display: block; padding: 0 16px 4px; }
 .rail-block { padding: 14px 16px 0; margin-top: 12px; border-top: 1px solid var(--seam); }
 .rail-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
 
@@ -1558,6 +1567,13 @@ const DOCTRINE = [
 /** Which dataset a room shows. */
 const ROOM_WIDGET = {
   apothecary: 'lab',
+  // These three rooms carry a tool that is too big for a side panel, so the
+  // room opens the door to it rather than showing a look-alike dashboard.
+  // Before this, clicking THE COUNCIL on the floor gave you orders and crew
+  // while the actual Council sat on a rail screen of the same name.
+  council: 'door',
+  garage: 'door',
+  control: 'door',
   market: 'market',
   archives: 'library',
   vitals: 'cohorts',
@@ -1897,20 +1913,35 @@ const BUDGET = {
 };
 
 /** The left-hand navigation, numbered like a control panel. */
+/**
+ * The rail. Four groups, and the number on each row is the key that opens
+ * it — `04` is typed as 0 then 4. They were a flat list of twelve before,
+ * which made a numbered sequence out of things that have no order, and the
+ * digits collided with a separate room shortcut that used the same keys.
+ *
+ * AGENT GARAGE is gone as a screen: it listed the same nineteen agents as
+ * AGENTS, opening the same detail view. Its cards and its tool table are on
+ * AGENTS now. The room called THE AGENT GARAGE is still on the floor.
+ */
 const SCREENS = [
-  { id: 'empire',   no: '00', name: 'THE EMPIRE',  sub: 'State of everything' },
-  { id: 'factory',  no: '01', name: 'THE FACTORY', sub: 'Live floor' },
-  { id: 'agents',   no: '02', name: 'AGENTS',      sub: 'Crew & orders' },
-  { id: 'orders',   no: '03', name: 'ORDERS',      sub: 'Every open task' },
-  { id: 'ventures', no: '04', name: 'VENTURES',    sub: 'The four businesses' },
-  { id: 'ledger',   no: '05', name: 'LEDGER',      sub: 'Money & budget' },
-  { id: 'goals',    no: '06', name: 'GOALS',       sub: 'Money & work targets' },
-  { id: 'signals',  no: '07', name: 'SIGNALS',     sub: 'Posts from the Archives' },
-  { id: 'council',  no: '08', name: 'THE COUNCIL', sub: 'Put a decision to them' },
-  { id: 'garage',   no: '09', name: 'AGENT GARAGE',sub: 'The network' },
-  { id: 'control',  no: '10', name: 'CONTROL',     sub: 'Permissions & approvals' },
-  { id: 'system',   no: '11', name: 'SYSTEM',      sub: 'Status & sync' },
+  { id: 'empire',   no: '00', name: 'THE EMPIRE',  sub: 'State of everything',     group: 'Overview' },
+  { id: 'factory',  no: '01', name: 'THE FACTORY', sub: 'The floor · 20 rooms',    group: 'Overview' },
+
+  { id: 'orders',   no: '02', name: 'ORDERS',      sub: 'Every open task',         group: 'Work' },
+  { id: 'agents',   no: '03', name: 'AGENTS',      sub: 'Roster, domains, tools',  group: 'Work' },
+  { id: 'signals',  no: '04', name: 'SIGNALS',     sub: 'Drafts from the Archives',group: 'Work' },
+
+  { id: 'ventures', no: '05', name: 'VENTURES',    sub: 'The four businesses',     group: 'Money' },
+  { id: 'ledger',   no: '06', name: 'LEDGER',      sub: 'Cash, costs, the split',  group: 'Money' },
+  { id: 'goals',    no: '07', name: 'GOALS',       sub: 'Money & work targets',    group: 'Money' },
+
+  { id: 'council',  no: '08', name: 'THE COUNCIL', sub: 'Put a decision to them',  group: 'Governance' },
+  { id: 'control',  no: '09', name: 'CONTROL',     sub: 'Permission grades',       group: 'Governance' },
+  { id: 'system',   no: '10', name: 'SYSTEM',      sub: 'Status & sync',           group: 'Governance' },
 ];
+
+/** The rail groups, in order. Derived so the two can never drift apart. */
+const SCREEN_GROUPS = [...new Set(SCREENS.map((s) => s.group))];
 
 const SEED_TASKS = {
   market: [
@@ -5116,15 +5147,20 @@ class UI {
 
   buildRail() {
     this.railEl.innerHTML = `
-      <div class="rail-head"><span class="eyebrow">Navigation</span></div>
-      ${SCREENS.map((s) => `
-        <button class="nav-btn" type="button" data-screen="${s.id}">
-          <span class="nav-no mono">${s.no}</span>
-          <span>
-            <span class="nav-name">${esc(s.name)}</span><br>
-            <span class="nav-sub">${esc(s.sub)}</span>
-          </span>
-        </button>`).join('')}
+      <div class="rail-head"><span class="eyebrow">Navigation</span>
+        <span class="rail-hint mono">type the number</span></div>
+      ${SCREEN_GROUPS.map((g) => `
+        <div class="nav-group">
+          <span class="nav-group-name eyebrow">${esc(g)}</span>
+          ${SCREENS.filter((s) => s.group === g).map((s) => `
+            <button class="nav-btn" type="button" data-screen="${s.id}">
+              <span class="nav-no mono">${s.no}</span>
+              <span>
+                <span class="nav-name">${esc(s.name)}</span><br>
+                <span class="nav-sub">${esc(s.sub)}</span>
+              </span>
+            </button>`).join('')}
+        </div>`).join('')}
 
       <div class="rail-block">
         <span class="eyebrow">Commander</span>
@@ -5458,47 +5494,6 @@ class UI {
       ${!this.sampler ? '<p class="muted-note" style="margin-top:12px">The Council needs the published page on claude.ai to reason.</p>' : ''}`;
   }
 
-  /* ================= agent garage ================= */
-
-  screenGarage() {
-    return `
-      ${this.head('Agent Garage', `${AGENTS.length} built`)}
-      <p class="muted-note">Every agent, its domain, the tools it can reach and what it must ask you before doing. Click one to send it somewhere.</p>
-      <div class="card-grid" style="margin-top:14px">
-        ${AGENTS.map((a) => {
-          const room = ROOM_BY_ID[a.room];
-          const asks = CAPS.filter((cp) => a.caps[cp.id] === 'approval').length;
-          const denied = CAPS.filter((cp) => a.caps[cp.id] === 'deny').length;
-          return `
-          <button class="agent-card ${a.kind === 'arcane' ? 'is-commander' : ''}" type="button" data-agent="${a.id}">
-            <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
-            <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
-            <span class="agent-call mono">${esc(a.call)}</span>
-            <span class="agent-role">${esc(a.role)} · ${esc(room?.name || '')}</span>
-            <span class="agent-brief">${esc(a.domain)}</span>
-            <span class="agent-tags">
-              ${a.tools.map((t) => `<span class="tag">${esc(TOOLS.find((x) => x.id === t)?.name || t)}</span>`).join('')}
-            </span>
-            <span class="agent-tags">
-              <span class="tag is-flare">${asks} need approval</span>
-              <span class="tag is-breach">${denied} denied</span>
-            </span>
-          </button>`;
-        }).join('')}
-      </div>
-
-      <section class="block" style="margin-top:14px">
-        <div class="block-head"><h3 class="sub-title" style="margin:0">Tools</h3>
-          <span class="chip">${TOOLS.filter((t) => t.state !== 'not wired').length} / ${TOOLS.length} wired</span></div>
-        ${TOOLS.map((t) => `
-          <div class="tbl-row is-2" style="border-top:1px solid var(--seam)">
-            <span>${esc(t.name)}</span>
-            <span class="muted-note">${esc(t.note)}</span>
-            <span class="chip ${t.state === 'live' ? 'is-vital' : t.state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(t.state)}</span>
-          </div>`).join('')}
-      </section>`;
-  }
-
   /* ================= control room ================= */
 
   screenControl() {
@@ -5571,6 +5566,7 @@ class UI {
   /** The room-specific dashboard. Each room does a different job. */
   roomWidget(roomId) {
     switch (ROOM_WIDGET[roomId]) {
+      case 'door': return this.wDoor(roomId);
       case 'lab': return this.wLab();
       case 'market': return this.wMarket();
       case 'library': return this.wLibrary();
@@ -5586,6 +5582,32 @@ class UI {
   }
 
   srcNote(text) { return `<p class="src-note"><span class="chip is-seed">placeholder</span> ${esc(text)}</p>`; }
+
+  /**
+   * A room whose work is done on a full screen. One door, named, rather
+   * than a second copy of the tool rendered into a side panel.
+   */
+  wDoor(roomId) {
+    const door = {
+      council: {
+        screen: 'council', label: 'Convene the Council',
+        note: 'Nine seats deliberate on one real decision and the Commander returns a verdict. It needs the width of a full screen, so it opens as one.',
+      },
+      garage: {
+        screen: 'agents', label: 'Open the roster',
+        note: 'Where the network is read and configured — every agent, its domain, the tools it reaches and what it must ask you before doing.',
+      },
+      control: {
+        screen: 'control', label: 'Open the permission matrix',
+        note: 'Every agent graded against every capability. The grid is too wide for this panel, so it opens as a full screen.',
+      },
+    }[roomId];
+    if (!door) return '';
+    return `
+      <h3 class="sub-title">The work of this room</h3>
+      <p class="muted-note">${esc(door.note)}</p>
+      <button class="wide-btn" type="button" data-goscreen="${door.screen}">${esc(door.label)} →</button>`;
+  }
 
   wLab() {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
@@ -5840,7 +5862,6 @@ class UI {
     switch (this.screen) {
       case 'empire': return this.screenEmpire();
       case 'council': return this.screenCouncil();
-      case 'garage': return this.screenGarage();
       case 'control': return this.screenControl();
       case 'agents': return this.screenAgents();
       case 'orders': return this.screenOrders();
@@ -5880,21 +5901,49 @@ class UI {
         </div>`;
     }
 
+    // One roster. The Garage screen used to render this same list of the
+    // same nineteen agents, opening this same detail view — so its call
+    // signs, domains, tools and approval counts are on the card here, and
+    // its tool table is underneath. The sim walkers carry their whole
+    // config (makeWalker spreads it), so live position comes free.
     return `
       ${this.head('Agents', `${AGENTS.length} in the network`)}
-      <div class="card-grid">
+      <p class="muted-note">Every agent, its domain, the tools it can reach and what it must ask you
+        before doing. Click one to read it or send it somewhere.</p>
+      <div class="card-grid" style="margin-top:14px">
         ${[this.sim.arcane, ...this.sim.agents].map((a) => {
           const room = ROOM_BY_ID[a.deck];
+          const asks = CAPS.filter((cp) => a.caps[cp.id] === 'approval').length;
+          const denied = CAPS.filter((cp) => a.caps[cp.id] === 'deny').length;
           return `
           <button class="agent-card ${a.kind === 'arcane' ? 'is-commander' : ''}" type="button" data-agent="${a.id}">
             <span class="agent-swatch" style="background:${a.colour};box-shadow:0 0 12px ${a.colour}"></span>
             <span class="agent-name">${a.kind === 'arcane' ? '◆ ' : ''}${esc(a.name)}</span>
+            <span class="agent-call mono">${esc(a.call)}</span>
             <span class="agent-role">${esc(a.role)}</span>
             <span class="agent-where mono">${a.state === 'transit' ? '→ ' : ''}${esc(room.name)}</span>
-            <span class="agent-brief">${esc(a.brief || '')}</span>
+            <span class="agent-brief">${esc(a.domain || a.brief || '')}</span>
+            <span class="agent-tags">
+              ${a.tools.map((t) => `<span class="tag">${esc(TOOLS.find((x) => x.id === t)?.name || t)}</span>`).join('')}
+            </span>
+            <span class="agent-tags">
+              <span class="tag is-flare">${asks} need approval</span>
+              <span class="tag is-breach">${denied} denied</span>
+            </span>
           </button>`;
         }).join('')}
-      </div>`;
+      </div>
+
+      <section class="block" style="margin-top:14px">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Tools</h3>
+          <span class="chip">${TOOLS.filter((t) => t.state !== 'not wired').length} / ${TOOLS.length} wired</span></div>
+        ${TOOLS.map((t) => `
+          <div class="tbl-row is-2" style="border-top:1px solid var(--seam)">
+            <span>${esc(t.name)}</span>
+            <span class="muted-note">${esc(t.note)}</span>
+            <span class="chip ${t.state === 'live' ? 'is-vital' : t.state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(t.state)}</span>
+          </div>`).join('')}
+      </section>`;
   }
 
   screenOrders() {
@@ -6720,11 +6769,32 @@ document.getElementById('transport').addEventListener('click', (e) => {
 
 /* ---------- keyboard ---------- */
 
+// The rail numbers every screen 00-10, and those numbers are the keys.
+// They used to index ROOMS instead, so pressing 3 while looking at a rail row
+// labelled `03 ORDERS` opened FORGE — and eleven of the twenty rooms had no
+// key at all. Rooms are opened from the floor, which is where they live.
+let typed = '';
+let typedAt = 0;
+
+/** Exact rail number, or a lone digit read as a leading-zero one. */
+const screenFor = (t) => SCREENS.find((s) => s.no === t)
+  || (t.length === 1 ? SCREENS.find((s) => s.no === `0${t}`) : null);
+
 window.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
-  if (e.key === 'Escape') { ui.closeRoom(); return; }
-  const n = Number(e.key);
-  if (n >= 1 && n <= DECKS.length) ui.openRoom(DECKS[n - 1].id);
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape') { typed = ''; ui.closeRoom(); return; }
+  if (!/^[0-9]$/.test(e.key)) return;
+
+  // Digits accumulate briefly so a two-digit number can be typed at all.
+  if (performance.now() - typedAt > 700) typed = '';
+  typedAt = performance.now();
+  typed = (typed + e.key).slice(-2);
+
+  let hit = screenFor(typed);
+  // "2" then "3" is not a screen — treat the 3 as the start of a new number
+  // rather than leaving the buffer stuck on a pair that matches nothing.
+  if (!hit && typed.length === 2) { typed = e.key; hit = screenFor(typed); }
+  if (hit) ui.setScreen(hit.id);
 });
 
 /* ---------- layout ---------- */
