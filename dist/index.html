@@ -822,6 +822,36 @@ button.chip:hover { border-color: var(--seam-lit); color: var(--ink); }
   touch-action: none;
 }
 
+/* ---------- the copy ledger ---------- */
+
+.add-row.is-copy {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px;
+}
+.add-row.is-copy input,
+.add-row.is-copy textarea {
+  min-width: 0; background: var(--plate); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 7px 9px; font: inherit; font-size: 12px;
+  color: var(--ink); resize: vertical;
+}
+.add-row.is-copy input::placeholder,
+.add-row.is-copy textarea::placeholder { color: var(--faint); }
+.add-row.is-copy input:focus,
+.add-row.is-copy textarea:focus { border-color: var(--arcane); outline: none; }
+.add-row.is-copy textarea,
+.add-row.is-copy button { grid-column: 1 / -1; }
+.add-row.is-copy button {
+  border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
+  color: var(--arcane-lift); border-radius: var(--r-sm); padding: 7px 11px;
+  font-family: var(--f-display); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; cursor: pointer;
+}
+.add-row.is-copy button:hover { background: rgba(139,92,246,.24); }
+
+/* a draft whose module has never been copied in reads as held, not ready */
+.signal-card.is-held { border-color: rgba(244,77,82,.4); }
+.signal-card.is-held .signal-card-body { opacity: .55; }
+.act[disabled] { opacity: .4; cursor: not-allowed; }
+
 </style>
 
 <div id="os">
@@ -2344,7 +2374,7 @@ function seedState() {
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch,
     coa: r.coa, tint: r.tint, counted: false,
   }));
-  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice(), copies: [] };
 }
 
 class Store {
@@ -2449,6 +2479,19 @@ class Store {
         feed: b.feed && typeof b.feed === 'object' ? b.feed : null,
       };
     }
+    if (Array.isArray(body.copies)) {
+      this.state.copies = body.copies
+        .filter((r) => r && typeof r.text === 'string')
+        .slice(0, 400)
+        .map((r) => ({
+          id: r.id || uid(),
+          source: String(r.source || 'Untitled').slice(0, 200),
+          course: String(r.course || '').slice(0, 120),
+          sourceUrl: String(r.sourceUrl || '').slice(0, 400),
+          text: String(r.text).slice(0, 40000),
+          copiedAt: Number(r.copiedAt) || 0,
+        }));
+    }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
@@ -2483,6 +2526,7 @@ class Store {
       budget: this.state.budget,
       stock: this.state.stock,
       bridge: this.state.bridge,
+      copies: (this.state.copies || []).slice(0, 200),
     };
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
@@ -2619,6 +2663,73 @@ class Store {
     this.state.stock = this.stock().filter((r) => r.id !== id);
     this.log(`Stock line closed — ${row.code}`);
     this.save();
+  }
+
+  /* ---------- the archives: copy first, then adapt ---------- */
+
+  /**
+   * The standing content rule: a module is copied out of Notion VERBATIM
+   * and logged here — with its source and the time it was taken — before
+   * anything is allowed to rewrite, expand or adapt it. The copy is the
+   * record of what was actually written; every draft is answerable to it.
+   *
+   * Notion is read-only for the whole network, so this only ever brings
+   * text in. Nothing here writes back to the workspace.
+   */
+  copies() { return this.state.copies || (this.state.copies = []); }
+
+  /** The verbatim copy logged for a source, if there is one. */
+  copyFor(sourceUrl) {
+    const key = String(sourceUrl || '').trim();
+    if (!key) return null;
+    return this.copies().find((r) => r.sourceUrl === key) || null;
+  }
+
+  /** Whether anything is allowed to adapt this source yet. */
+  canAdapt(sourceUrl) { return Boolean(this.copyFor(sourceUrl)); }
+
+  /** Record a verbatim copy. Refuses an empty one — a blank copy is worse
+   *  than none, because it would unlock adaptation while proving nothing. */
+  logCopy({ source, course, sourceUrl, text }) {
+    const body = String(text || '').trim();
+    if (!body) return { ok: false, reason: 'Paste the module text as it is written. An empty copy proves nothing.' };
+    const url = String(sourceUrl || '').trim();
+    if (!url) return { ok: false, reason: 'Give the Notion URL this was taken from, or the copy has no source.' };
+
+    const existing = this.copyFor(url);
+    if (existing) {
+      existing.text = body.slice(0, 40000);
+      existing.copiedAt = Date.now();
+      this.log(`Archives copy refreshed — ${existing.source}`);
+      this.save();
+      return { ok: true, refreshed: true, record: existing };
+    }
+    const record = {
+      id: uid(),
+      source: String(source || 'Untitled module').trim().slice(0, 200),
+      course: String(course || '').trim().slice(0, 120),
+      sourceUrl: url.slice(0, 400),
+      text: body.slice(0, 40000),
+      copiedAt: Date.now(),
+    };
+    this.state.copies = [record, ...this.copies()].slice(0, 400);
+    this.log(`Archives copied verbatim — ${record.source}`);
+    this.save();
+    return { ok: true, record };
+  }
+
+  removeCopy(id) {
+    const row = this.copies().find((r) => r.id === id);
+    if (!row) return;
+    this.state.copies = this.copies().filter((r) => r.id !== id);
+    this.log(`Archives copy removed — ${row.source}`);
+    this.save();
+  }
+
+  /** Drafts whose source has never been copied in. These are the ones the
+   *  rule holds back: an adaptation with nothing to be answerable to. */
+  unbackedDrafts() {
+    return this.drafts().filter((d) => d.sourceUrl && !this.canAdapt(d.sourceUrl));
   }
 
   /* ---------- fulfilment ---------- */
@@ -5564,6 +5675,11 @@ class UIScreens {
         text: `${feed.pending} order${feed.pending === 1 ? '' : 's'} waiting to be packed.` });
     }
 
+    const heldDrafts = this.store.unbackedDrafts();
+    if (heldDrafts.length) {
+      out.push({ level: 'breach', room: 'scriptorium', src: 'SCRIBE · Archivist',
+        text: `${heldDrafts.length} draft${heldDrafts.length === 1 ? '' : 's'} adapt a module that was never copied in verbatim. Copy first, then adapt.` });
+    }
     const drafts = this.store.postCount();
     if (drafts) out.push({ level: 'vital', room: 'beacon', src: 'HERALD · Signalman', text: `${drafts} post${drafts === 1 ? '' : 's'} drafted from the Archives and waiting on you.` });
     const unwired = TOOLS.filter((t) => t.state === 'not wired').length;
@@ -5681,6 +5797,8 @@ class UIScreens {
         <p class="doctrine">Nothing publishes unattended. Drafts wait in the Signal queue for you.</p>
         <p class="doctrine">Notion is read-only for the whole network, by your instruction.</p>
         <p class="doctrine">No agent gives medical advice about a compound, to you or to a member.</p>
+        <p class="doctrine">A module is copied out of the Archives verbatim and logged — source and time —
+          before any agent rewrites, expands or adapts it. Drafts with no copy behind them are held.</p>
       </section>`;
   }
 
@@ -5916,26 +6034,14 @@ class UIScreens {
 
   screenSignals() {
     const drafts = this.store.drafts();
+    const held = this.store.unbackedDrafts();
     return `
       ${this.head('Signals', `${drafts.length} draft${drafts.length === 1 ? '' : 's'}`)}
       <p class="muted-note">The Signal Forge reads a module from the Archives each morning and drafts a post from it. Notion is never written to.</p>
-      ${drafts.length ? drafts.map((d) => `
-        <article class="signal-card">
-          <div class="signal-card-top">
-            <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
-            <span class="signal-card-src">${esc(d.course || '')}</span>
-          </div>
-          <p class="signal-card-hook">${esc(d.hook)}</p>
-          <pre class="signal-card-body">${esc(d.post)}</pre>
-          ${d.angle ? `<p class="muted-note">${esc(d.angle)}</p>` : ''}
-          <div class="signal-card-acts">
-            <button class="act is-primary" type="button" data-copy="${d.id}">Copy</button>
-            ${d.sourceUrl ? `<a class="act" href="${esc(d.sourceUrl)}" target="_blank" rel="noopener">Source</a>` : ''}
-            <span class="signal-card-spacer"></span>
-            <button class="act" type="button" data-posted="${d.id}">Posted</button>
-            <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
-          </div>
-        </article>`).join('')
+      ${held.length ? `<p class="warn-note">${held.length} draft${held.length === 1 ? '' : 's'} held:
+        the module behind them has never been copied into the Archives verbatim.
+        SCRIPTORIUM is where that copy is logged.</p>` : ''}
+      ${drafts.length ? drafts.map((d) => this.signalCard(d)).join('')
         : '<p class="muted-note">No drafts standing.</p>'}`;
   }
 
@@ -6206,9 +6312,48 @@ class UIWidgets extends UIScreens {
       </div>`;
   }
 
+  /**
+   * The copy ledger. The standing rule is copy first, then adapt: a module
+   * comes out of the Archives verbatim and is logged here, with its source
+   * and the moment it was taken, before anything rewrites it. Every draft
+   * on BEACON is answerable to a row in this list.
+   */
+  wCopyLedger() {
+    const copies = this.store.copies();
+    const unbacked = this.store.unbackedDrafts();
+    const note = this.copyNote;
+    return `
+      <h3 class="sub-title">Archives — copied verbatim</h3>
+      <p class="muted-note">Copy first, then adapt. A module is logged here word for word before
+        anything rewrites, expands or adapts it. Notion is read-only: this only ever brings text in.</p>
+      ${unbacked.length ? `<p class="warn-note">${unbacked.length} draft${unbacked.length === 1 ? '' : 's'}
+        on BEACON adapt a module that has never been copied in. They are held until it is.</p>` : ''}
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${copies.length}</span><span class="stat-l">Modules copied</span></div>
+        <div class="stat"><span class="stat-n mono ${unbacked.length ? 'is-breach' : 'is-vital'}">${unbacked.length}</span><span class="stat-l">Drafts held</span></div>
+      </div>
+      ${copies.length ? `<div class="tbl">
+        ${copies.slice(0, 8).map((r) => `
+          <div class="tbl-row is-2">
+            <span>${esc(r.source)}${r.course ? ` <span class="mono dim">${esc(r.course)}</span>` : ''}</span>
+            <span class="muted-note">${esc(String(r.text).trim().split(/\s+/).length)} words · ${esc(clockTime(r.copiedAt))}</span>
+            <button class="act is-quiet" type="button" data-copydrop="${r.id}">Remove</button>
+          </div>`).join('')}
+      </div>` : '<p class="muted-note">Nothing copied in yet.</p>'}
+      <form class="add-row is-copy" data-copyadd="1">
+        <input type="text" name="source" placeholder="Module title" maxlength="200" autocomplete="off">
+        <input type="text" name="course" placeholder="Course" maxlength="120" autocomplete="off">
+        <input type="url" name="sourceUrl" placeholder="Notion URL" autocomplete="off">
+        <textarea name="text" rows="3" placeholder="Paste the module exactly as it is written…"></textarea>
+        <button type="submit">Log the copy</button>
+      </form>
+      ${note ? `<p class="${note.ok ? 'src-note' : 'warn-note'}">${esc(note.text)}</p>` : ''}`;
+  }
+
   wManuscripts() {
     const chip = { live: 'is-vital', proofing: 'is-flare', drafting: '' };
     return `
+      ${this.wCopyLedger()}
       <h3 class="sub-title">The Codex</h3>
       ${MANUSCRIPTS.rows.map((r) => `
         <div class="goal">
@@ -6238,22 +6383,38 @@ class UIWidgets extends UIScreens {
     const drafts = this.store.drafts().slice(0, 3);
     return `
       <h3 class="sub-title">Signal queue</h3>
-      ${drafts.length ? drafts.map((d) => `
-        <article class="signal-card">
-          <div class="signal-card-top">
-            <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
-            <span class="signal-card-src">${esc(d.course || '')}</span>
-          </div>
-          <p class="signal-card-hook">${esc(d.hook)}</p>
-          <pre class="signal-card-body">${esc(d.post)}</pre>
-          <div class="signal-card-acts">
-            <button class="act is-primary" type="button" data-copy="${d.id}">Copy</button>
-            <span class="signal-card-spacer"></span>
-            <button class="act" type="button" data-posted="${d.id}">Posted</button>
-            <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
-          </div>
-        </article>`).join('')
+      ${drafts.length ? drafts.map((d) => this.signalCard(d, true)).join('')
         : '<p class="muted-note">No drafts standing. The Signal Forge writes three every morning.</p>'}`;
+  }
+
+  /**
+   * One draft. A draft adapts a module, so it is held until that module has
+   * been copied in verbatim — the copy is what the adaptation is answerable
+   * to, and without it there is nothing to check the rewrite against.
+   */
+  signalCard(d, compact = false) {
+    const held = Boolean(d.sourceUrl) && !this.store.canAdapt(d.sourceUrl);
+    return `
+      <article class="signal-card ${held ? 'is-held' : ''}">
+        <div class="signal-card-top">
+          <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
+          <span class="signal-card-src">${esc(d.course || '')}</span>
+          ${held ? '<span class="chip is-breach">held</span>' : '<span class="chip is-vital">copy logged</span>'}
+        </div>
+        <p class="signal-card-hook">${esc(d.hook)}</p>
+        <pre class="signal-card-body">${esc(d.post)}</pre>
+        ${d.angle && !compact ? `<p class="muted-note">${esc(d.angle)}</p>` : ''}
+        ${held ? `<p class="warn-note">Copy first, then adapt. ${esc(d.source || 'This module')} has never been
+          copied into the Archives, so this rewrite has nothing to answer to.</p>` : ''}
+        <div class="signal-card-acts">
+          <button class="act is-primary" type="button" data-copy="${d.id}" ${held ? 'disabled' : ''}>Copy</button>
+          ${d.sourceUrl && !compact ? `<a class="act" href="${esc(d.sourceUrl)}" target="_blank" rel="noopener">Source</a>` : ''}
+          ${held ? '<button class="act" type="button" data-goroom="scriptorium">Log the copy</button>' : ''}
+          <span class="signal-card-spacer"></span>
+          <button class="act" type="button" data-posted="${d.id}" ${held ? 'disabled' : ''}>Posted</button>
+          <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
+        </div>
+      </article>`;
   }
 
   wTreasury() {
@@ -6809,6 +6970,12 @@ class UI extends UIWidgets {
     }
     const go = t('[data-goscreen]');
     if (go) { this.setScreen(go.dataset.goscreen); return; }
+
+    const goroom = t('[data-goroom]');
+    if (goroom) { this.openRoom(goroom.dataset.goroom); return; }
+
+    const dropCopy = t('[data-copydrop]');
+    if (dropCopy) { this.store.removeCopy(dropCopy.dataset.copydrop); return; }
     if (t('[data-agentback]')) { this.agent = null; this.render(); return; }
     const agent = t('[data-agent]');
     if (agent) { this.selectAgent(agent.dataset.agent); return; }
@@ -6865,6 +7032,26 @@ class UI extends UIWidgets {
       }
       const focus = document.querySelector('[data-stockadd] [name="code"]');
       if (focus) focus.focus();
+      return;
+    }
+    const copyAdd = e.target.closest('[data-copyadd]');
+    if (copyAdd) {
+      e.preventDefault();
+      const get = (n) => copyAdd.querySelector(`[name="${n}"]`);
+      const res = this.store.logCopy({
+        source: get('source').value,
+        course: get('course').value,
+        sourceUrl: get('sourceUrl').value,
+        text: get('text').value,
+      });
+      this.copyNote = res.ok
+        ? { ok: true, text: res.refreshed ? 'Copy refreshed. Drafts from this module are released.' : 'Copied in. Drafts from this module are released.' }
+        : { ok: false, text: res.reason };
+      if (res.ok) for (const n of ['source', 'course', 'sourceUrl', 'text']) {
+        const el = document.querySelector(`[data-copyadd] [name="${n}"]`);
+        if (el) el.value = '';
+      }
+      this.render();
       return;
     }
     const ship = e.target.closest('[data-dispatch]');
@@ -7069,12 +7256,20 @@ class UI extends UIWidgets {
           : '')
       : 'Arcane Peptides is NOT connected, so order and revenue figures for the shop are unknown.';
 
-    // BEACON.
+    // BEACON, and the content rule that governs it.
     const drafts = this.store.drafts();
+    const held = this.store.unbackedDrafts();
     const signal = drafts.length
       ? `${drafts.length} post${drafts.length === 1 ? '' : 's'} drafted and waiting: `
-        + drafts.slice(0, 6).map((d) => `${d.platform} — ${d.hook}`).join('; ')
+        + drafts.slice(0, 6).map((d) => `${d.platform} — ${d.hook}`
+          + (d.sourceUrl && !this.store.canAdapt(d.sourceUrl) ? ' [HELD — module never copied in]' : '')).join('; ')
       : 'No drafts standing.';
+    const copies = this.store.copies();
+    const archive = `Standing rule: a module is copied out of the Archives VERBATIM and logged, `
+      + `with its source and the time it was taken, before anything rewrites, expands or adapts it. `
+      + `${copies.length} module${copies.length === 1 ? '' : 's'} copied in so far`
+      + (copies.length ? `: ${copies.slice(0, 8).map((r) => r.source).join('; ')}` : '')
+      + `. ${held.length} draft${held.length === 1 ? '' : 's'} held for want of a copy.`;
 
     // What the interface itself is already flagging, so Counsel and the
     // floor cannot disagree about what is on fire.
@@ -7092,6 +7287,7 @@ class UI extends UIWidgets {
       '', 'SHELF STATE', shelf,
       '', 'THE MARKET', market,
       '', 'BEACON — SIGNAL QUEUE', signal,
+      '', 'THE ARCHIVES — COPY FIRST, THEN ADAPT', archive,
       '', 'ROOMS AND OPEN ORDERS', rooms,
       '', 'ALREADY FLAGGED ON THE FLOOR', blockers,
     ].join('\n');

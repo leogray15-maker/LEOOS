@@ -122,11 +122,21 @@ if (goalInput) {
   check('editing goal progress works', true, gid);
 } else check('editing goal progress works', false, 'no editable goal found');
 
-// signals: copy / posted / kill
+// signals: copy / posted / kill.
+// A draft is held until its module has been copied in verbatim, so back the
+// first one before driving its buttons. The gate itself is tested in 3a2.
 await p.click('[data-screen="signals"]'); await p.waitForTimeout(400);
 const draftsBefore = await p.$$eval('.signal-card', e => e.length);
-await p.click('[data-copy]'); await p.waitForTimeout(300);
-const copyLabel = await p.$eval('[data-copy]', e => e.textContent);
+await p.evaluate(() => {
+  const d = window.LEOOS.store.drafts()[0];
+  window.LEOOS.store.logCopy({
+    source: d.source, course: d.course, sourceUrl: d.sourceUrl,
+    text: 'Verbatim copy logged by the suite so this draft is released.',
+  });
+});
+await p.waitForTimeout(420);
+await p.click('.signal-card:not(.is-held) [data-copy]'); await p.waitForTimeout(300);
+const copyLabel = await p.$eval('.signal-card:not(.is-held) [data-copy]', e => e.textContent);
 check('copy button responds', /Copied|Select/.test(copyLabel), `"${copyLabel}"`);
 await p.click('[data-kill]'); await p.waitForTimeout(400);
 const draftsAfter = await p.$$eval('.signal-card', e => e.length);
@@ -278,6 +288,58 @@ check('restocking tops up, no duplicate line', rowsRestock === rowsAfter && coun
 // empty submit must not create a blank line
 await p.click('[data-stockadd] button[type="submit"]'); await p.waitForTimeout(400);
 check('empty stock submit is rejected', (await stockRows()) === rowsRestock);
+
+// ---- 3a2. COPY FIRST, THEN ADAPT --------------------------------------
+// The seeded drafts all carry a Notion sourceUrl and nothing has been copied
+// in, so every one of them must start out held.
+await p.click('[data-screen="signals"]'); await p.waitForTimeout(420);
+const heldCount = await p.evaluate(() => window.LEOOS.store.unbackedDrafts().length);
+check('a draft with no verbatim copy behind it is held', heldCount > 0, `${heldCount} held`);
+check('the held drafts say why',
+  /never been copied|held/i.test(await p.$eval('#stageScreen', e => e.textContent)));
+check('a held draft cannot be used',
+  await p.$eval('.signal-card.is-held [data-copy]', e => e.disabled) === true);
+check('and cannot be marked posted',
+  await p.$eval('.signal-card.is-held [data-posted]', e => e.disabled) === true);
+
+// an empty copy must be refused — it would release the draft while proving nothing
+const emptyCopy = await p.evaluate(() =>
+  window.LEOOS.store.logCopy({ source: 'X', sourceUrl: 'https://notion.so/x', text: '   ' }));
+check('an empty copy is refused', emptyCopy.ok === false && /empty copy/i.test(emptyCopy.reason),
+  emptyCopy.reason);
+const noSource = await p.evaluate(() =>
+  window.LEOOS.store.logCopy({ source: 'X', sourceUrl: '', text: 'real text' }));
+check('a copy with no source is refused', noSource.ok === false, noSource.reason);
+
+// log the real thing through the room that owns it
+await p.click('[data-screen="system"]'); await p.waitForTimeout(200);
+await p.click('#stageScreen [data-room="scriptorium"]'); await p.waitForTimeout(420);
+check('SCRIPTORIUM carries the copy ledger', !!(await p.$('[data-copyadd]')));
+const firstUrl = await p.evaluate(() => window.LEOOS.store.unbackedDrafts()[0].sourceUrl);
+await p.fill('[data-copyadd] [name="source"]', 'Hate Is Either Envy, Or Fear.');
+await p.fill('[data-copyadd] [name="course"]', 'Mindset Mastery');
+await p.fill('[data-copyadd] [name="sourceUrl"]', firstUrl);
+await p.fill('[data-copyadd] [name="text"]', 'The module, word for word, as it is written in the Archives.');
+await p.click('[data-copyadd] button[type="submit"]'); await p.waitForTimeout(520);
+check('the copy is logged with its source and the time it was taken',
+  await p.evaluate((u) => {
+    const r = window.LEOOS.store.copyFor(u);
+    return Boolean(r && r.copiedAt > 0 && r.text.length > 10 && r.source);
+  }, firstUrl));
+
+// and the draft it backs is released
+const releasedHeld = await p.evaluate(() => window.LEOOS.store.unbackedDrafts().length);
+check('logging the copy releases that draft', releasedHeld === heldCount - 1,
+  `${heldCount} → ${releasedHeld}`);
+await p.click('[data-screen="signals"]'); await p.waitForTimeout(420);
+check('the released draft can now be used',
+  await p.$eval('.signal-card:not(.is-held) [data-copy]', e => e.disabled) === false);
+
+// Counsel has to know the rule and who is held by it
+const ruleBrief = await p.evaluate(() => window.LEOOS.ui.brief());
+check('Counsel is told the copy-first rule',
+  /COPY FIRST, THEN ADAPT/.test(ruleBrief) && /VERBATIM/.test(ruleBrief));
+check('Counsel is told which drafts are held', /HELD — module never copied in/.test(ruleBrief));
 
 // ---- 3b0. DISPATCH: SHELF AND LEDGER MOVE TOGETHER --------------------
 await openLab();

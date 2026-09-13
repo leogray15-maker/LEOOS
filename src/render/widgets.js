@@ -233,9 +233,48 @@ export class UIWidgets extends UIScreens {
       </div>`;
   }
 
+  /**
+   * The copy ledger. The standing rule is copy first, then adapt: a module
+   * comes out of the Archives verbatim and is logged here, with its source
+   * and the moment it was taken, before anything rewrites it. Every draft
+   * on BEACON is answerable to a row in this list.
+   */
+  wCopyLedger() {
+    const copies = this.store.copies();
+    const unbacked = this.store.unbackedDrafts();
+    const note = this.copyNote;
+    return `
+      <h3 class="sub-title">Archives — copied verbatim</h3>
+      <p class="muted-note">Copy first, then adapt. A module is logged here word for word before
+        anything rewrites, expands or adapts it. Notion is read-only: this only ever brings text in.</p>
+      ${unbacked.length ? `<p class="warn-note">${unbacked.length} draft${unbacked.length === 1 ? '' : 's'}
+        on BEACON adapt a module that has never been copied in. They are held until it is.</p>` : ''}
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${copies.length}</span><span class="stat-l">Modules copied</span></div>
+        <div class="stat"><span class="stat-n mono ${unbacked.length ? 'is-breach' : 'is-vital'}">${unbacked.length}</span><span class="stat-l">Drafts held</span></div>
+      </div>
+      ${copies.length ? `<div class="tbl">
+        ${copies.slice(0, 8).map((r) => `
+          <div class="tbl-row is-2">
+            <span>${esc(r.source)}${r.course ? ` <span class="mono dim">${esc(r.course)}</span>` : ''}</span>
+            <span class="muted-note">${esc(String(r.text).trim().split(/\s+/).length)} words · ${esc(clockTime(r.copiedAt))}</span>
+            <button class="act is-quiet" type="button" data-copydrop="${r.id}">Remove</button>
+          </div>`).join('')}
+      </div>` : '<p class="muted-note">Nothing copied in yet.</p>'}
+      <form class="add-row is-copy" data-copyadd="1">
+        <input type="text" name="source" placeholder="Module title" maxlength="200" autocomplete="off">
+        <input type="text" name="course" placeholder="Course" maxlength="120" autocomplete="off">
+        <input type="url" name="sourceUrl" placeholder="Notion URL" autocomplete="off">
+        <textarea name="text" rows="3" placeholder="Paste the module exactly as it is written…"></textarea>
+        <button type="submit">Log the copy</button>
+      </form>
+      ${note ? `<p class="${note.ok ? 'src-note' : 'warn-note'}">${esc(note.text)}</p>` : ''}`;
+  }
+
   wManuscripts() {
     const chip = { live: 'is-vital', proofing: 'is-flare', drafting: '' };
     return `
+      ${this.wCopyLedger()}
       <h3 class="sub-title">The Codex</h3>
       ${MANUSCRIPTS.rows.map((r) => `
         <div class="goal">
@@ -265,22 +304,38 @@ export class UIWidgets extends UIScreens {
     const drafts = this.store.drafts().slice(0, 3);
     return `
       <h3 class="sub-title">Signal queue</h3>
-      ${drafts.length ? drafts.map((d) => `
-        <article class="signal-card">
-          <div class="signal-card-top">
-            <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
-            <span class="signal-card-src">${esc(d.course || '')}</span>
-          </div>
-          <p class="signal-card-hook">${esc(d.hook)}</p>
-          <pre class="signal-card-body">${esc(d.post)}</pre>
-          <div class="signal-card-acts">
-            <button class="act is-primary" type="button" data-copy="${d.id}">Copy</button>
-            <span class="signal-card-spacer"></span>
-            <button class="act" type="button" data-posted="${d.id}">Posted</button>
-            <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
-          </div>
-        </article>`).join('')
+      ${drafts.length ? drafts.map((d) => this.signalCard(d, true)).join('')
         : '<p class="muted-note">No drafts standing. The Signal Forge writes three every morning.</p>'}`;
+  }
+
+  /**
+   * One draft. A draft adapts a module, so it is held until that module has
+   * been copied in verbatim — the copy is what the adaptation is answerable
+   * to, and without it there is nothing to check the rewrite against.
+   */
+  signalCard(d, compact = false) {
+    const held = Boolean(d.sourceUrl) && !this.store.canAdapt(d.sourceUrl);
+    return `
+      <article class="signal-card ${held ? 'is-held' : ''}">
+        <div class="signal-card-top">
+          <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
+          <span class="signal-card-src">${esc(d.course || '')}</span>
+          ${held ? '<span class="chip is-breach">held</span>' : '<span class="chip is-vital">copy logged</span>'}
+        </div>
+        <p class="signal-card-hook">${esc(d.hook)}</p>
+        <pre class="signal-card-body">${esc(d.post)}</pre>
+        ${d.angle && !compact ? `<p class="muted-note">${esc(d.angle)}</p>` : ''}
+        ${held ? `<p class="warn-note">Copy first, then adapt. ${esc(d.source || 'This module')} has never been
+          copied into the Archives, so this rewrite has nothing to answer to.</p>` : ''}
+        <div class="signal-card-acts">
+          <button class="act is-primary" type="button" data-copy="${d.id}" ${held ? 'disabled' : ''}>Copy</button>
+          ${d.sourceUrl && !compact ? `<a class="act" href="${esc(d.sourceUrl)}" target="_blank" rel="noopener">Source</a>` : ''}
+          ${held ? '<button class="act" type="button" data-goroom="scriptorium">Log the copy</button>' : ''}
+          <span class="signal-card-spacer"></span>
+          <button class="act" type="button" data-posted="${d.id}" ${held ? 'disabled' : ''}>Posted</button>
+          <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
+        </div>
+      </article>`;
   }
 
   wTreasury() {

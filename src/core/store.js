@@ -48,7 +48,7 @@ function seedState() {
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch,
     coa: r.coa, tint: r.tint, counted: false,
   }));
-  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice(), copies: [] };
 }
 
 export class Store {
@@ -153,6 +153,19 @@ export class Store {
         feed: b.feed && typeof b.feed === 'object' ? b.feed : null,
       };
     }
+    if (Array.isArray(body.copies)) {
+      this.state.copies = body.copies
+        .filter((r) => r && typeof r.text === 'string')
+        .slice(0, 400)
+        .map((r) => ({
+          id: r.id || uid(),
+          source: String(r.source || 'Untitled').slice(0, 200),
+          course: String(r.course || '').slice(0, 120),
+          sourceUrl: String(r.sourceUrl || '').slice(0, 400),
+          text: String(r.text).slice(0, 40000),
+          copiedAt: Number(r.copiedAt) || 0,
+        }));
+    }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
@@ -187,6 +200,7 @@ export class Store {
       budget: this.state.budget,
       stock: this.state.stock,
       bridge: this.state.bridge,
+      copies: (this.state.copies || []).slice(0, 200),
     };
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
@@ -323,6 +337,73 @@ export class Store {
     this.state.stock = this.stock().filter((r) => r.id !== id);
     this.log(`Stock line closed — ${row.code}`);
     this.save();
+  }
+
+  /* ---------- the archives: copy first, then adapt ---------- */
+
+  /**
+   * The standing content rule: a module is copied out of Notion VERBATIM
+   * and logged here — with its source and the time it was taken — before
+   * anything is allowed to rewrite, expand or adapt it. The copy is the
+   * record of what was actually written; every draft is answerable to it.
+   *
+   * Notion is read-only for the whole network, so this only ever brings
+   * text in. Nothing here writes back to the workspace.
+   */
+  copies() { return this.state.copies || (this.state.copies = []); }
+
+  /** The verbatim copy logged for a source, if there is one. */
+  copyFor(sourceUrl) {
+    const key = String(sourceUrl || '').trim();
+    if (!key) return null;
+    return this.copies().find((r) => r.sourceUrl === key) || null;
+  }
+
+  /** Whether anything is allowed to adapt this source yet. */
+  canAdapt(sourceUrl) { return Boolean(this.copyFor(sourceUrl)); }
+
+  /** Record a verbatim copy. Refuses an empty one — a blank copy is worse
+   *  than none, because it would unlock adaptation while proving nothing. */
+  logCopy({ source, course, sourceUrl, text }) {
+    const body = String(text || '').trim();
+    if (!body) return { ok: false, reason: 'Paste the module text as it is written. An empty copy proves nothing.' };
+    const url = String(sourceUrl || '').trim();
+    if (!url) return { ok: false, reason: 'Give the Notion URL this was taken from, or the copy has no source.' };
+
+    const existing = this.copyFor(url);
+    if (existing) {
+      existing.text = body.slice(0, 40000);
+      existing.copiedAt = Date.now();
+      this.log(`Archives copy refreshed — ${existing.source}`);
+      this.save();
+      return { ok: true, refreshed: true, record: existing };
+    }
+    const record = {
+      id: uid(),
+      source: String(source || 'Untitled module').trim().slice(0, 200),
+      course: String(course || '').trim().slice(0, 120),
+      sourceUrl: url.slice(0, 400),
+      text: body.slice(0, 40000),
+      copiedAt: Date.now(),
+    };
+    this.state.copies = [record, ...this.copies()].slice(0, 400);
+    this.log(`Archives copied verbatim — ${record.source}`);
+    this.save();
+    return { ok: true, record };
+  }
+
+  removeCopy(id) {
+    const row = this.copies().find((r) => r.id === id);
+    if (!row) return;
+    this.state.copies = this.copies().filter((r) => r.id !== id);
+    this.log(`Archives copy removed — ${row.source}`);
+    this.save();
+  }
+
+  /** Drafts whose source has never been copied in. These are the ones the
+   *  rule holds back: an adaptation with nothing to be answerable to. */
+  unbackedDrafts() {
+    return this.drafts().filter((d) => d.sourceUrl && !this.canAdapt(d.sourceUrl));
   }
 
   /* ---------- fulfilment ---------- */

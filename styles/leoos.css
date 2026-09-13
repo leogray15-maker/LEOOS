@@ -816,3 +816,33 @@ button.chip:hover { border-color: var(--seam-lit); color: var(--ink); }
   image-rendering: crisp-edges;
   touch-action: none;
 }
+
+/* ---------- the copy ledger ---------- */
+
+.add-row.is-copy {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px;
+}
+.add-row.is-copy input,
+.add-row.is-copy textarea {
+  min-width: 0; background: var(--plate); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 7px 9px; font: inherit; font-size: 12px;
+  color: var(--ink); resize: vertical;
+}
+.add-row.is-copy input::placeholder,
+.add-row.is-copy textarea::placeholder { color: var(--faint); }
+.add-row.is-copy input:focus,
+.add-row.is-copy textarea:focus { border-color: var(--arcane); outline: none; }
+.add-row.is-copy textarea,
+.add-row.is-copy button { grid-column: 1 / -1; }
+.add-row.is-copy button {
+  border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
+  color: var(--arcane-lift); border-radius: var(--r-sm); padding: 7px 11px;
+  font-family: var(--f-display); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; cursor: pointer;
+}
+.add-row.is-copy button:hover { background: rgba(139,92,246,.24); }
+
+/* a draft whose module has never been copied in reads as held, not ready */
+.signal-card.is-held { border-color: rgba(244,77,82,.4); }
+.signal-card.is-held .signal-card-body { opacity: .55; }
+.act[disabled] { opacity: .4; cursor: not-allowed; }

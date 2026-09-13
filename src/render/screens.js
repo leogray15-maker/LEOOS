@@ -122,6 +122,11 @@ export class UIScreens {
         text: `${feed.pending} order${feed.pending === 1 ? '' : 's'} waiting to be packed.` });
     }
 
+    const heldDrafts = this.store.unbackedDrafts();
+    if (heldDrafts.length) {
+      out.push({ level: 'breach', room: 'scriptorium', src: 'SCRIBE · Archivist',
+        text: `${heldDrafts.length} draft${heldDrafts.length === 1 ? '' : 's'} adapt a module that was never copied in verbatim. Copy first, then adapt.` });
+    }
     const drafts = this.store.postCount();
     if (drafts) out.push({ level: 'vital', room: 'beacon', src: 'HERALD · Signalman', text: `${drafts} post${drafts === 1 ? '' : 's'} drafted from the Archives and waiting on you.` });
     const unwired = TOOLS.filter((t) => t.state === 'not wired').length;
@@ -239,6 +244,8 @@ export class UIScreens {
         <p class="doctrine">Nothing publishes unattended. Drafts wait in the Signal queue for you.</p>
         <p class="doctrine">Notion is read-only for the whole network, by your instruction.</p>
         <p class="doctrine">No agent gives medical advice about a compound, to you or to a member.</p>
+        <p class="doctrine">A module is copied out of the Archives verbatim and logged — source and time —
+          before any agent rewrites, expands or adapts it. Drafts with no copy behind them are held.</p>
       </section>`;
   }
 
@@ -474,26 +481,14 @@ export class UIScreens {
 
   screenSignals() {
     const drafts = this.store.drafts();
+    const held = this.store.unbackedDrafts();
     return `
       ${this.head('Signals', `${drafts.length} draft${drafts.length === 1 ? '' : 's'}`)}
       <p class="muted-note">The Signal Forge reads a module from the Archives each morning and drafts a post from it. Notion is never written to.</p>
-      ${drafts.length ? drafts.map((d) => `
-        <article class="signal-card">
-          <div class="signal-card-top">
-            <span class="chip is-${PLATFORM_CLASS[d.platform] || 'ash'}">${esc(d.platform)}</span>
-            <span class="signal-card-src">${esc(d.course || '')}</span>
-          </div>
-          <p class="signal-card-hook">${esc(d.hook)}</p>
-          <pre class="signal-card-body">${esc(d.post)}</pre>
-          ${d.angle ? `<p class="muted-note">${esc(d.angle)}</p>` : ''}
-          <div class="signal-card-acts">
-            <button class="act is-primary" type="button" data-copy="${d.id}">Copy</button>
-            ${d.sourceUrl ? `<a class="act" href="${esc(d.sourceUrl)}" target="_blank" rel="noopener">Source</a>` : ''}
-            <span class="signal-card-spacer"></span>
-            <button class="act" type="button" data-posted="${d.id}">Posted</button>
-            <button class="act is-quiet" type="button" data-kill="${d.id}">Kill</button>
-          </div>
-        </article>`).join('')
+      ${held.length ? `<p class="warn-note">${held.length} draft${held.length === 1 ? '' : 's'} held:
+        the module behind them has never been copied into the Archives verbatim.
+        SCRIPTORIUM is where that copy is logged.</p>` : ''}
+      ${drafts.length ? drafts.map((d) => this.signalCard(d)).join('')
         : '<p class="muted-note">No drafts standing.</p>'}`;
   }
 

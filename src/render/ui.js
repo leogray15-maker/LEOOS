@@ -391,6 +391,12 @@ export class UI extends UIWidgets {
     }
     const go = t('[data-goscreen]');
     if (go) { this.setScreen(go.dataset.goscreen); return; }
+
+    const goroom = t('[data-goroom]');
+    if (goroom) { this.openRoom(goroom.dataset.goroom); return; }
+
+    const dropCopy = t('[data-copydrop]');
+    if (dropCopy) { this.store.removeCopy(dropCopy.dataset.copydrop); return; }
     if (t('[data-agentback]')) { this.agent = null; this.render(); return; }
     const agent = t('[data-agent]');
     if (agent) { this.selectAgent(agent.dataset.agent); return; }
@@ -447,6 +453,26 @@ export class UI extends UIWidgets {
       }
       const focus = document.querySelector('[data-stockadd] [name="code"]');
       if (focus) focus.focus();
+      return;
+    }
+    const copyAdd = e.target.closest('[data-copyadd]');
+    if (copyAdd) {
+      e.preventDefault();
+      const get = (n) => copyAdd.querySelector(`[name="${n}"]`);
+      const res = this.store.logCopy({
+        source: get('source').value,
+        course: get('course').value,
+        sourceUrl: get('sourceUrl').value,
+        text: get('text').value,
+      });
+      this.copyNote = res.ok
+        ? { ok: true, text: res.refreshed ? 'Copy refreshed. Drafts from this module are released.' : 'Copied in. Drafts from this module are released.' }
+        : { ok: false, text: res.reason };
+      if (res.ok) for (const n of ['source', 'course', 'sourceUrl', 'text']) {
+        const el = document.querySelector(`[data-copyadd] [name="${n}"]`);
+        if (el) el.value = '';
+      }
+      this.render();
       return;
     }
     const ship = e.target.closest('[data-dispatch]');
@@ -651,12 +677,20 @@ export class UI extends UIWidgets {
           : '')
       : 'Arcane Peptides is NOT connected, so order and revenue figures for the shop are unknown.';
 
-    // BEACON.
+    // BEACON, and the content rule that governs it.
     const drafts = this.store.drafts();
+    const held = this.store.unbackedDrafts();
     const signal = drafts.length
       ? `${drafts.length} post${drafts.length === 1 ? '' : 's'} drafted and waiting: `
-        + drafts.slice(0, 6).map((d) => `${d.platform} — ${d.hook}`).join('; ')
+        + drafts.slice(0, 6).map((d) => `${d.platform} — ${d.hook}`
+          + (d.sourceUrl && !this.store.canAdapt(d.sourceUrl) ? ' [HELD — module never copied in]' : '')).join('; ')
       : 'No drafts standing.';
+    const copies = this.store.copies();
+    const archive = `Standing rule: a module is copied out of the Archives VERBATIM and logged, `
+      + `with its source and the time it was taken, before anything rewrites, expands or adapts it. `
+      + `${copies.length} module${copies.length === 1 ? '' : 's'} copied in so far`
+      + (copies.length ? `: ${copies.slice(0, 8).map((r) => r.source).join('; ')}` : '')
+      + `. ${held.length} draft${held.length === 1 ? '' : 's'} held for want of a copy.`;
 
     // What the interface itself is already flagging, so Counsel and the
     // floor cannot disagree about what is on fire.
@@ -674,6 +708,7 @@ export class UI extends UIWidgets {
       '', 'SHELF STATE', shelf,
       '', 'THE MARKET', market,
       '', 'BEACON — SIGNAL QUEUE', signal,
+      '', 'THE ARCHIVES — COPY FIRST, THEN ADAPT', archive,
       '', 'ROOMS AND OPEN ORDERS', rooms,
       '', 'ALREADY FLAGGED ON THE FLOOR', blockers,
     ].join('\n');
