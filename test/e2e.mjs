@@ -155,10 +155,13 @@ check('back button returns to the roster', (await p.$$eval('.agent-card', e => e
 for (const [roomId, screenId] of [['council', 'council'], ['garage', 'agents'], ['control', 'control']]) {
   await p.click('[data-screen="system"]'); await p.waitForTimeout(160);
   await p.click(`#stageScreen [data-room="${roomId}"]`); await p.waitForTimeout(320);
-  const door = await p.$(`#roomOverlay [data-goscreen="${screenId}"]`);
+  // click by selector, not by a captured handle: the room overlay repaints
+  // once a second as the crew move, which detaches anything held across it
+  const sel = `#roomOverlay [data-goscreen="${screenId}"]`;
+  const door = await p.$(sel);
   check(`room "${roomId}" opens the door to its tool`, !!door);
   if (door) {
-    await door.click(); await p.waitForTimeout(320);
+    await p.click(sel); await p.waitForTimeout(320);
     const now = await p.$eval(`[data-screen="${screenId}"]`, e => e.getAttribute('aria-current'));
     check(`that door lands on "${screenId}"`, now === 'true', `aria-current ${now}`);
   }

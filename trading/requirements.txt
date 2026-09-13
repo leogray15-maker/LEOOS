@@ -1,0 +1,5 @@
+# The backtester's only third-party dependencies. Everything else it uses
+# is stdlib. Nothing here reaches a network or a wallet — fetch.py pulls
+# public price history over urllib and that is the extent of it.
+numpy>=1.24
+pandas>=2.0
