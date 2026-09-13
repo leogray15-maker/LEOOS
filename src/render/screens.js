@@ -339,6 +339,10 @@ export class UIScreens {
           </div>
           <p class="muted-note">${esc(v.kind)}</p>
           <div class="fact-row">${v.facts.map((f) => `<span class="fact">${esc(f)}</span>`).join('')}</div>
+          ${this.store.liveVentureRevenue(v.id) !== null ? `
+            <p class="src-note"><span class="chip is-vital">live</span> The shop reports
+              ${money(this.store.ventureRevenue(v.id), 2)} over the last thirty days, and that is
+              what the empire counts. The figure below is yours and is kept.</p>` : ''}
           <div class="field-row">
             <label class="field">
               <span class="field-l">Revenue / month</span>

@@ -59,6 +59,38 @@ export class UIWidgets extends UIScreens {
       <button class="wide-btn" type="button" data-goscreen="${door.screen}">${esc(door.label)} →</button>`;
   }
 
+  /** What the shop knows that no one here has to type: money, COA, shelf. */
+  wShopState() {
+    const feed = this.store.feed();
+    if (!feed) return '';
+
+    const bits = [];
+    if (typeof feed.coaPct === 'number') {
+      bits.push(`<div class="stat"><span class="stat-n mono ${feed.coaPct >= 100 ? 'is-vital' : 'is-flare'}">${feed.coaPct}%</span><span class="stat-l">COA published</span></div>`);
+    }
+    if (typeof feed.last30Days === 'number') {
+      bits.push(`<div class="stat"><span class="stat-n mono is-arcane">${money(feed.last30Days, 2)}</span><span class="stat-l">Last 30 days</span></div>`);
+    }
+    if (typeof feed.openOrderValue === 'number') {
+      bits.push(`<div class="stat"><span class="stat-n mono">${money(feed.openOrderValue, 2)}</span><span class="stat-l">In open orders</span></div>`);
+    }
+    if (typeof feed.averageOrder === 'number') {
+      bits.push(`<div class="stat"><span class="stat-n mono">${money(feed.averageOrder, 2)}</span><span class="stat-l">Average order</span></div>`);
+    }
+    if (!bits.length && !feed.outOfStock.length && !feed.liveDeals.length) return '';
+
+    return `
+      <h3 class="sub-title">From the shop</h3>
+      ${bits.length ? `<div class="stat-row">${bits.join('')}</div>` : ''}
+      ${feed.liveDeals.length ? `
+        <p class="src-note"><span class="chip is-vital">live</span> Running now:
+          ${feed.liveDeals.map((d) => `${esc(d.label)}${d.code ? ` (code ${esc(d.code)})` : ''}`).join(' · ')}</p>` : ''}
+      ${feed.outOfStock.length ? `
+        <p class="warn-note">${feed.outOfStock.length} compound${feed.outOfStock.length === 1 ? '' : 's'}
+          out of stock on the site: ${feed.outOfStock.slice(0, 8).map(esc).join(', ')}${
+  feed.outOfStock.length > 8 ? '…' : ''}</p>` : ''}`;
+  }
+
   wLab() {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
     const rows = this.store.stock();
@@ -66,6 +98,7 @@ export class UIWidgets extends UIScreens {
     const feed = this.store.feed();
     const fed = rows.filter((r) => r.src === 'peptides').length;
     return `
+      ${this.wShopState()}
       <h3 class="sub-title">Stock</h3>
       ${feed
         ? `<p class="src-note"><span class="chip is-vital">live</span> ${fed} line${fed === 1 ? '' : 's'} from Arcane Peptides, pulled ${esc(clockTime(feed.fetchedAt))}. Hand counts below are yours and are left alone.</p>`
@@ -319,6 +352,23 @@ export class UIWidgets extends UIScreens {
           </form>
         </details>
       </section>`;
+  }
+
+  /**
+   * Refresh on open, quietly. A connection that only updates when someone
+   * remembers to press a button is a screenshot, not a feed — but a failure
+   * here is not worth shouting about on boot, so it leaves the last good
+   * numbers and the error where the panel shows them.
+   */
+  async pullBridgeIfStale({ maxAgeMs = 10 * 60 * 1000 } = {}) {
+    const b = this.store.bridge();
+    if (!b.url || !b.key) return;
+    if (b.last && Date.now() - b.last < maxAgeMs) return;
+    try {
+      this.store.applyFeed(await pullFeed(b.url, b.key));
+    } catch (e) {
+      this.store.bridgeError(e?.message || 'The pull failed.');
+    }
   }
 
   async pullBridge() {

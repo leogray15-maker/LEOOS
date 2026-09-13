@@ -65,7 +65,7 @@ export const GOALS = [
   { id: 'g-track',   kind: 'money', room: 'vitals',      name: '250 Arcane Track subscribers',           target: 250,   unit: 'members' },
   { id: 'g-index',   kind: 'work',  room: 'archives',    name: 'All 3,300 modules indexed',              target: 3300,  unit: 'modules' },
   { id: 'g-posts',   kind: 'work',  room: 'beacon',      name: 'Post every day for 90 days',             target: 90,    unit: 'days' },
-  { id: 'g-coa',     kind: 'work',  room: 'apothecary',  name: 'COA published for every live batch',     target: 100,   unit: '%' },
+  { id: 'g-coa',     kind: 'work',  room: 'apothecary',  name: 'COA published for every live batch',     target: 100,   unit: '%',  auto: 'coa' },
   { id: 'g-sync',    kind: 'work',  room: 'forge',       name: 'ArcaneTrack offline sync shipped',       target: 100,   unit: '%' },
   { id: 'g-codex',   kind: 'work',  room: 'scriptorium', name: 'The Quiet Empire launched',              target: 100,   unit: '%' },
   { id: 'g-train',   kind: 'work',  room: 'sanctum',     name: 'Train four times a week',                target: 4,     unit: 'per week' },

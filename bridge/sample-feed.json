@@ -5,18 +5,100 @@
   "pending": 3,
   "customers": 59,
   "stock": [
-    { "code": "GHK-Cu",              "size": "50mg", "vials": 34, "batch": "GC-2409", "coa": "published" },
-    { "code": "BPC-157",             "size": "5mg",  "vials": 9,  "batch": "BP-2408", "coa": "published" },
-    { "code": "KPV",                 "size": "10mg", "vials": 21, "batch": "KP-2407", "coa": "pending" },
-    { "code": "Retatrutide",         "size": "10mg", "vials": 6,  "batch": "RT-2409", "coa": "none" },
-    { "code": "Bacteriostatic Water","size": "10ml", "vials": 58, "batch": "BW-2406", "coa": "published" },
-    { "code": "MOTS-c",              "size": "10mg",               "batch": "MT-2409", "coa": "published" }
+    {
+      "code": "GHK-Cu",
+      "size": "50mg",
+      "vials": 34,
+      "batch": "GC-2409",
+      "coa": "published"
+    },
+    {
+      "code": "BPC-157",
+      "size": "5mg",
+      "vials": 9,
+      "batch": "BP-2408",
+      "coa": "published"
+    },
+    {
+      "code": "KPV",
+      "size": "10mg",
+      "vials": 21,
+      "batch": "KP-2407",
+      "coa": "pending"
+    },
+    {
+      "code": "Retatrutide",
+      "size": "10mg",
+      "vials": 6,
+      "batch": "RT-2409",
+      "coa": "none"
+    },
+    {
+      "code": "Bacteriostatic Water",
+      "size": "10ml",
+      "vials": 58,
+      "batch": "BW-2406",
+      "coa": "published"
+    },
+    {
+      "code": "MOTS-c",
+      "size": "10mg",
+      "batch": "MT-2409",
+      "coa": "published"
+    }
   ],
   "orders": [
-    { "ref": "#1041", "items": "1× GHK-Cu 50mg, 1× Bacteriostatic Water", "stage": "pending",   "total": 74.00 },
-    { "ref": "#1040", "items": "2× BPC-157 5mg",                          "stage": "pending",   "total": 88.00 },
-    { "ref": "#1039", "items": "1× Retatrutide 10mg",                     "stage": "pending",   "total": 119.99 },
-    { "ref": "#1038", "items": "1× KPV 10mg, 1× Bacteriostatic Water",    "stage": "shipped",   "total": 63.50 },
-    { "ref": "#1037", "items": "3× GHK-Cu 50mg",                          "stage": "delivered", "total": 186.00 }
-  ]
+    {
+      "ref": "#1041",
+      "items": "1\u00d7 GHK-Cu 50mg, 1\u00d7 Bacteriostatic Water",
+      "stage": "pending",
+      "total": 74.0
+    },
+    {
+      "ref": "#1040",
+      "items": "2\u00d7 BPC-157 5mg",
+      "stage": "pending",
+      "total": 88.0
+    },
+    {
+      "ref": "#1039",
+      "items": "1\u00d7 Retatrutide 10mg",
+      "stage": "pending",
+      "total": 119.99
+    },
+    {
+      "ref": "#1038",
+      "items": "1\u00d7 KPV 10mg, 1\u00d7 Bacteriostatic Water",
+      "stage": "shipped",
+      "total": 63.5
+    },
+    {
+      "ref": "#1037",
+      "items": "3\u00d7 GHK-Cu 50mg",
+      "stage": "delivered",
+      "total": 186.0
+    }
+  ],
+  "detail": {
+    "revenue": {
+      "monthToDateGBP": 640.1,
+      "last30DaysGBP": 1200.55,
+      "openOrderValueGBP": 300.0,
+      "averageOrderGBP": 71.0
+    },
+    "catalogue": {
+      "coaCoverage": 0.75,
+      "outOfStockSlugs": [
+        "kpv"
+      ]
+    },
+    "deals": {
+      "live": [
+        {
+          "label": "Buy 2 get 1 free",
+          "code": null
+        }
+      ]
+    }
+  }
 }

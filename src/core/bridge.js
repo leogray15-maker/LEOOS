@@ -62,6 +62,43 @@ function normaliseDispatch(raw) {
   })).filter((r) => r.ref !== '—' || r.items !== '—');
 }
 
+/**
+ * Anything past the core contract. A shop that sends more detail gets more of
+ * the room filled in; one that doesn't still works, so every field here can
+ * come back null and the rooms fall back to what is typed by hand.
+ */
+function normaliseDetail(src) {
+  const d = src.detail && typeof src.detail === 'object' ? src.detail : {};
+  const money = d.revenue && typeof d.revenue === 'object' ? d.revenue : {};
+  const shelf = d.catalogue && typeof d.catalogue === 'object' ? d.catalogue : {};
+  const deals = d.deals && typeof d.deals === 'object' ? d.deals : {};
+
+  const has = (v) => v !== undefined && v !== null && v !== '';
+  const num = (v) => (has(v) ? toNum(v) : null);
+
+  // A fraction on the wire (0.9), a percentage on the screen (90).
+  const coverage = num(shelf.coaCoverage);
+
+  return {
+    monthToDate: num(money.monthToDateGBP),
+    // The honest figure for a "per month" tile: a rolling window, not a
+    // month-to-date total that reads low on the 2nd and high on the 30th.
+    last30Days: num(money.last30DaysGBP),
+    openOrderValue: num(money.openOrderValueGBP),
+    averageOrder: num(money.averageOrderGBP),
+    coaPct: coverage === null ? null : Math.round(coverage * 100),
+    outOfStock: Array.isArray(shelf.outOfStockSlugs)
+      ? shelf.outOfStockSlugs.slice(0, 40).map((x) => text(x, 40)).filter(Boolean)
+      : [],
+    liveDeals: Array.isArray(deals.live)
+      ? deals.live.slice(0, 8).map((x) => ({
+        label: text(x?.label, 80),
+        code: text(x?.code, 24),
+      })).filter((x) => x.label)
+      : [],
+  };
+}
+
 /** Fold whatever the shop sent into the one shape the rooms read. */
 export function normaliseFeed(body) {
   if (!body || typeof body !== 'object') throw new Error('Feed is not a JSON object.');
@@ -81,6 +118,7 @@ export function normaliseFeed(body) {
     visitors: Math.round(toNum(src.visitors ?? src.sessions)),
     stock: normaliseStock(src.stock ?? src.inventory ?? src.products),
     dispatch: normaliseDispatch(list),
+    ...normaliseDetail(src),
   };
 
   const empty = !feed.revenue && !feed.orderCount && !feed.customers

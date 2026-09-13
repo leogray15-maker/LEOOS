@@ -370,8 +370,31 @@ export class Store {
 
   /* ---------- money ---------- */
 
+  /**
+   * What a venture earns in a month. The shop knows its own takings, so when
+   * the feed is connected that figure wins for Arcane Peptides — the typed one
+   * stays put underneath and comes back if the feed is disconnected.
+   *
+   * The live number is the rolling last thirty days, not the calendar month to
+   * date: a "per month" tile that reads £0 on the 1st and full on the 30th
+   * tells you nothing.
+   */
+  ventureRevenue(ventureId) {
+    const live = this.liveVentureRevenue(ventureId);
+    if (live !== null) return live;
+    return Number(this.state.ledger[ventureId]?.mrr) || 0;
+  }
+
+  /** The feed's figure for a venture, or null when there isn't one. */
+  liveVentureRevenue(ventureId) {
+    if (ventureId !== 'peptides') return null;
+    const feed = this.feed();
+    const n = feed ? feed.last30Days : null;
+    return typeof n === 'number' && Number.isFinite(n) ? n : null;
+  }
+
   monthlyRevenue() {
-    return VENTURES.reduce((n, v) => n + (Number(this.state.ledger[v.id]?.mrr) || 0), 0);
+    return VENTURES.reduce((n, v) => n + this.ventureRevenue(v.id), 0);
   }
 
   monthlyFixed() {
@@ -417,7 +440,11 @@ export class Store {
   }
 
   ledgerCalibrated() {
-    return VENTURES.some((v) => this.state.ledger[v.id]?.calibrated);
+    // A connected shop counts as calibrated — the money is real, it simply
+    // wasn't typed in.
+    return VENTURES.some(
+      (v) => this.state.ledger[v.id]?.calibrated || this.liveVentureRevenue(v.id) !== null
+    );
   }
 
   /* ---------- goals ---------- */
@@ -426,7 +453,18 @@ export class Store {
   goalValue(goal) {
     if (goal.auto === 'mrr') return this.monthlyRevenue();
     if (goal.auto === 'runway') return this.runwayMonths() ?? 0;
+    // The shop publishes its own COA coverage. Until it is connected this
+    // falls through to whatever was typed.
+    if (goal.auto === 'coa') {
+      const pct = this.feed()?.coaPct;
+      if (typeof pct === 'number') return pct;
+    }
     return Number(this.state.goals[goal.id]?.progress) || 0;
+  }
+
+  /** True when this goal is being answered by the feed rather than by hand. */
+  goalIsLive(goal) {
+    return goal.auto === 'coa' && typeof this.feed()?.coaPct === 'number';
   }
 
   goalPct(goal) {
