@@ -842,6 +842,138 @@ export const PROPS = {
       R(c, cx2, y + h / 2, 2, 2, '#5a6472');
     }
   },
+
+  /* ---- density pass: the working clutter a room accumulates ---- */
+
+  /** Crates stacked two or three high, stencilled and strapped. */
+  cratestack(c, x, y, w, h, a, t, opt) {
+    const tiers = h > 16 ? 3 : 2;
+    const th = Math.floor(h / tiers);
+    for (let i = 0; i < tiers; i++) {
+      const inset = i;                       // the stack leans back as it rises
+      const cy = y + h - (i + 1) * th;
+      slab(c, x + inset, cy, w - inset * 2, th - 1, '#5a4530', '#3a2c1e');
+      R(c, x + inset + 1, cy + 2, w - inset * 2 - 2, 1, '#241a10');
+      R(c, x + inset + 1, cy + th - 4, w - inset * 2 - 2, 1, '#241a10');
+      if (opt === 'marked') R(c, x + inset + 2, cy + 3, 3, 2, a);
+    }
+  },
+
+  /** A grid of small screens, most idle, a couple carrying a trace. */
+  monitorbank(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, PX.wallTop, '#16161f');
+    const cols = Math.max(2, Math.floor(w / 9));
+    const rows = Math.max(1, Math.floor(h / 8));
+    for (let r = 0; r < rows; r++) {
+      for (let i = 0; i < cols; i++) {
+        const sx = x + 2 + i * 9;
+        const sy = y + 2 + r * 8;
+        R(c, sx, sy, 7, 6, '#070d14');
+        const live = blink(t, i * 3 + r * 7, 0.7);
+        if (live) {
+          for (let k = 0; k < 3; k++) {
+            R(c, sx + 1, sy + 1 + k, 1 + ((Math.sin(t * 2 + i + k) + 1) * 2.4) | 0, 1, a);
+          }
+        } else {
+          R(c, sx + 1, sy + 2, 5, 1, '#1c2430');
+        }
+      }
+    }
+  },
+
+  /** Cork, pinned paper, a thread between two of them. */
+  pinboard(c, x, y, w, h, a, t) {
+    slab(c, x, y, w, h, '#6a5238', '#3c2c1c');
+    R(c, x + 1, y + 1, w - 2, h - 2, '#4a3826');
+    const notes = [[2, 2, 7, 6], [11, 3, 6, 5], [4, 10, 8, 5], [15, 9, 6, 6], [22, 4, 6, 7]];
+    for (const [nx, ny, nw, nh] of notes) {
+      if (nx + nw > w - 2 || ny + nh > h - 2) continue;
+      R(c, x + nx, y + ny, nw, nh, '#cfcbb8');
+      R(c, x + nx, y + ny, nw, 1, '#eae6d4');
+      for (let l = 2; l < nh - 1; l += 2) R(c, x + nx + 1, y + ny + l, nw - 2, 1, '#8c8878');
+      R(c, x + nx + (nw >> 1), y + ny, 1, 1, a);
+    }
+  },
+
+  /** Pegboard with tools hung off it. */
+  toolrack(c, x, y, w, h, a, t) {
+    R(c, x, y, w, h, '#241c14');
+    R(c, x, y, w, 1, '#4a3c2a');
+    for (let i = 2; i < w - 2; i += 4) {
+      for (let j = 2; j < h - 2; j += 4) R(c, x + i, y + j, 1, 1, '#120e08');
+    }
+    const tools = [[2, 2, 2, 7], [6, 2, 3, 5], [11, 2, 1, 9], [14, 3, 4, 3], [20, 2, 2, 6]];
+    for (const [tx, ty, tw, th] of tools) {
+      if (tx + tw > w - 1 || ty + th > h - 1) continue;
+      R(c, x + tx, y + ty, tw, th, '#7d8492');
+      R(c, x + tx, y + ty, tw, 1, '#a8b0c0');
+      R(c, x + tx, y + ty + th - 2, tw, 2, '#3a2a1a');
+    }
+  },
+
+  /** A stool, seen from above. */
+  stool(c, x, y, w, h) {
+    R(c, x + 1, y + 1, w - 2, h - 2, '#2a2432');
+    R(c, x + 1, y + 1, w - 2, 1, '#453c52');
+    R(c, x + (w >> 1) - 1, y + (h >> 1) - 1, 2, 2, '#1a1622');
+  },
+
+  /** Sacks or sealed bags, slumped. */
+  sacks(c, x, y, w, h, a) {
+    for (let i = 0; i < 3; i++) {
+      const sx = x + i * (w / 3);
+      const sw = w / 3 - 1;
+      R(c, sx, y + 2, sw, h - 2, '#4a4438');
+      R(c, sx, y + 2, sw, 1, '#6a6350');
+      R(c, sx + 1, y + h - 3, sw - 2, 1, '#241f18');
+      R(c, sx + (sw >> 1) - 1, y + 4, 2, 1, a);
+    }
+  },
+
+  /** A strip of printed labels. */
+  labels(c, x, y, w, h, a) {
+    for (let i = 0; i < w; i += 6) {
+      R(c, x + i, y, 5, h, '#cfcbb8');
+      R(c, x + i + 1, y + 1, 3, 1, '#2a2620');
+      R(c, x + i + 1, y + h - 2, 2, 1, a);
+    }
+  },
+
+  /** A bulb on a flex, with the pool it throws. */
+  bulb(c, x, y, w, h, a, t) {
+    R(c, x + (w >> 1), y, 1, h - 3, '#1a1a24');
+    const lit = 0.8 + Math.sin(t * 1.7 + x) * 0.12;
+    R(c, x + (w >> 1) - 1, y + h - 3, 3, 3, '#f2e2a8');
+    c.globalAlpha = 0.10 * lit;
+    R(c, x - 3, y + h, w + 6, 6, '#f2e2a8');
+    c.globalAlpha = 0.05 * lit;
+    R(c, x - 6, y + h, w + 12, 11, '#f2e2a8');
+    c.globalAlpha = 1;
+  },
+
+  /** Steam or vapour lifting off something warm. Cheap, deterministic. */
+  steam(c, x, y, w, h, a, t) {
+    for (let i = 0; i < 5; i++) {
+      const ph = (t * 0.45 + i * 0.37) % 1;          // 0..1, one wisp cycle
+      const wy = y + h - ph * h;
+      const wx = x + (w >> 1) + Math.sin(ph * 5 + i * 2.1) * (w * 0.32);
+      c.globalAlpha = 0.22 * (1 - ph);
+      R(c, wx, wy, 2, 2, '#cfd6e8');
+      c.globalAlpha = 1;
+    }
+  },
+
+  /** Motes drifting in the light. Drawn over the furniture, so place last. */
+  dust(c, x, y, w, h, a, t) {
+    for (let i = 0; i < 9; i++) {
+      const sp = 0.05 + (i % 4) * 0.02;
+      const dx = (i * 37) % w;
+      const dy = (h - ((t * sp * h * 2 + i * 13) % h));
+      c.globalAlpha = 0.10 + (i % 3) * 0.05;
+      R(c, x + dx + Math.sin(t * 0.6 + i) * 2, y + dy, 1, 1, '#d8dcf0');
+    }
+    c.globalAlpha = 1;
+  },
 };
 
 export function paintProp(ctx, type, x, y, w, h, accent, t, opt) {

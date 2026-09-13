@@ -491,14 +491,85 @@ export class Factory {
 
     paintFloorTiles(c, room.tiles || 'plate', w, h, room.id.length * 7919 + x1 * 31 + y1);
 
-    // scuffs and a drain, seeded so they never move between loads
+    // Everything below is baked once into this room's own canvas, so it is
+    // free per frame and sits UNDER the furniture — which is why it can be
+    // dense without colliding with a single hand-placed prop.
     const rnd = mulberry(x1 * 104729 + y1 * 7919);
-    for (let i = 0; i < 12; i++) {
-      c.globalAlpha = 0.05 + rnd() * 0.08;
+    const accent = accentOf(room.accent);
+
+    // bay seams — the floor reads as laid panels rather than one sheet
+    c.globalAlpha = 0.16;
+    for (let gx = 16; gx < w - 6; gx += 16) fill(c, gx, 4, 1, h - 8, '#05050a');
+    for (let gy = 18; gy < h - 6; gy += 18) fill(c, 4, gy, w - 8, 1, '#05050a');
+    c.globalAlpha = 0.06;
+    for (let gx = 16; gx < w - 6; gx += 16) fill(c, gx + 1, 4, 1, h - 8, '#5a5a7a');
+    for (let gy = 18; gy < h - 6; gy += 18) fill(c, 4, gy + 1, w - 8, 1, '#5a5a7a');
+    c.globalAlpha = 1;
+
+    // two inset grates, placed off the seed so they differ room to room
+    for (let g = 0; g < 2; g++) {
+      const gw = 10 + ((rnd() * 8) | 0);
+      const gh = 6 + ((rnd() * 4) | 0);
+      const gx = 5 + rnd() * (w - gw - 10);
+      const gy = 6 + rnd() * (h - gh - 12);
+      fill(c, gx, gy, gw, gh, '#0a0a11');
+      for (let i = 1; i < gh - 1; i += 2) fill(c, gx + 1, gy + i, gw - 2, 1, '#1b1b28');
+      fill(c, gx, gy, gw, 1, '#2a2a3e');
+      fill(c, gx, gy + gh - 1, gw, 1, '#07070c');
+    }
+
+    // a worn traffic lane from the doorway into the room, in the room's own
+    // colour — the eye follows it to whatever the room is for
+    const [ddx, ddy] = room.door;
+    const lx = ddx - x1;
+    const ly = ddy - y1;
+    c.globalAlpha = 0.05;
+    if (lx <= 2 || lx >= w - 2) fill(c, 4, ly - 7, w - 8, 14, accent);
+    else fill(c, lx - 7, 4, 14, h - 8, accent);
+    c.globalAlpha = 1;
+
+    // hazard chevrons where the floor meets the doorway
+    const chev = (cx, cy, vert) => {
+      for (let i = 0; i < 5; i++) {
+        c.globalAlpha = 0.5 - i * 0.07;
+        if (vert) fill(c, cx, cy - 6 + i * 3, 3, 2, i % 2 ? '#1a1a22' : '#c8a23a');
+        else fill(c, cx - 6 + i * 3, cy, 2, 3, i % 2 ? '#1a1a22' : '#c8a23a');
+      }
+      c.globalAlpha = 1;
+    };
+    if (lx <= 2) chev(2, ly, true);
+    else if (lx >= w - 2) chev(w - 5, ly, true);
+    else if (ly <= 2) chev(lx, 2, false);
+    else chev(lx, h - 5, false);
+
+    // oil and wear, heavier than the old twelve flecks
+    for (let i = 0; i < 26; i++) {
+      c.globalAlpha = 0.04 + rnd() * 0.07;
       fill(c, 3 + rnd() * (w - 8), 4 + rnd() * (h - 10),
-        2 + rnd() * 8, 1 + rnd() * 2, rnd() < 0.5 ? '#000000' : '#4a4a66');
+        2 + rnd() * 9, 1 + rnd() * 2, rnd() < 0.5 ? '#000000' : '#4a4a66');
+    }
+    // a few soft pooled stains
+    for (let i = 0; i < 3; i++) {
+      const sx = 6 + rnd() * (w - 20);
+      const sy = 8 + rnd() * (h - 22);
+      const sw = 6 + rnd() * 12;
+      for (let r = 3; r > 0; r--) {
+        c.globalAlpha = 0.035 * r;
+        fill(c, sx - r, sy - r, sw + r * 2, 3 + r * 2, '#000000');
+      }
     }
     c.globalAlpha = 1;
+
+    // a stencilled bay letter, painted on and half worn away
+    c.globalAlpha = 0.07;
+    const stencil = room.name.replace(/^THE /, '').slice(0, 3).toUpperCase();
+    for (let i = 0; i < stencil.length; i++) {
+      fill(c, 7 + i * 7, h - 16, 5, 8, '#b9bcd8');
+      fill(c, 8 + i * 7, h - 15, 3, 6, '#0d0d15');
+    }
+    c.globalAlpha = 1;
+
+    // the drain
     const dx = 6 + rnd() * (w - 16);
     const dy = h - 9;
     fill(c, dx, dy, 6, 6, '#0b0b11');

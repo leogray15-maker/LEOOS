@@ -91,7 +91,31 @@ function checkImports() {
   }
 }
 
+/** Every prop a room names must have a painter. paintProp falls back to a
+ *  plain slab for an unknown type, so a typo ships as a grey box in the
+ *  corner of a room and nothing anywhere reports it. */
+function checkProps() {
+  const facility = read('src/config/facility.js');
+  const painters = new Set(
+    [...read('src/render/props.js').matchAll(/^  ([a-zA-Z0-9_]+)\(c, x, y/gm)].map((m) => m[1]),
+  );
+  // scan only inside `props: [ ... ]`, or the room-id lists in WINGS match too
+  const used = new Set();
+  for (const block of facility.matchAll(/props:\s*\[([\s\S]*?)\n\s{4}\],/g)) {
+    for (const m of block[1].matchAll(/\['([a-zA-Z0-9_]+)',/g)) used.add(m[1]);
+  }
+  // svc() is spread into every room, so its own props count as used too
+  for (const m of facility.matchAll(/^\s{2}\['([a-zA-Z0-9_]+)',/gm)) used.add(m[1]);
+  const missing = [...used].filter((t) => !painters.has(t)).sort();
+  if (missing.length) {
+    console.error(`Props with no painter (they would render as grey slabs):\n  ${missing.join('\n  ')}`);
+    process.exit(1);
+  }
+  return { painters: painters.size, used: used.size };
+}
+
 checkImports();
+const props = checkProps();
 const sources = ORDER.map((f) => [f, read(f)]);
 const names = checkCollisions(sources);
 const js = sources.map(([f, src]) => flatten(src, f)).join('\n\n');
@@ -156,3 +180,4 @@ const kb = (n) => (Buffer.byteLength(n) / 1024).toFixed(1);
 console.log(`dist/index.html   ${kb(html)} KB  (artifact fragment)`);
 console.log(`public/index.html ${kb(standalone)} KB  (standalone — ${title})`);
 console.log(`${ORDER.length} modules · ${names} top-level names, no collisions`);
+console.log(`${props.used} prop types used · ${props.painters} painters, every one resolved`);
