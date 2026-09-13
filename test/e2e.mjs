@@ -294,6 +294,16 @@ await p.waitForTimeout(1500);
 warn = await p.$eval('#stageScreen', e => e.textContent);
 check('an unreachable feed is reported', /could not reach/i.test(warn));
 
+// a URL pointing at a page rather than the feed route must say so — this is
+// the mistake that actually happens, and "could not reach" sends you hunting
+// for the wrong thing
+await p.fill('#bridgeUrl', 'http://localhost:4400/');
+await p.click('[data-bridgesave] button[type="submit"]');
+await p.waitForTimeout(1500);
+warn = await p.$eval('#stageScreen', e => e.textContent);
+check('a page URL is named as the problem', /looks like a page|returned a page/i.test(warn),
+  warn.match(/(Could not reach|That URL)[^.]*\./)?.[0] || '');
+
 // the real pull
 await p.fill('#bridgeUrl', 'http://localhost:4500/');
 await p.fill('#bridgeKey', 'test-key');

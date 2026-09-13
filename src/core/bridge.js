@@ -25,6 +25,10 @@ const toNum = (v) => {
 };
 const text = (v, max = 60) => String(v ?? '').trim().slice(0, max);
 
+const pathOf = (url) => { try { return new URL(url).pathname || '/'; } catch { return '/'; } };
+/** A feed route says so in its path; a storefront page does not. */
+const looksLikeFeedUrl = (url) => /feed|api/i.test(pathOf(url));
+
 /** Accept several shapes, because a shop's admin API rarely matches ours. */
 /** The first of these the row actually carries is the count. */
 function stockCount(r) {
@@ -104,19 +108,30 @@ export async function pullFeed(url, key, { timeoutMs = 9000 } = {}) {
       cache: 'no-store',
     });
   } catch (e) {
-    // A CSP block and a dead host both land here, so say what to do next.
-    throw new Error(e?.name === 'AbortError'
-      ? 'The shop did not answer in time.'
-      : 'Could not reach the feed. On claude.ai the page cannot call out — use Paste feed instead.');
+    if (e?.name === 'AbortError') throw new Error('The shop did not answer in time.');
+    // A wrong path, a CORS refusal, a protected deployment and a dead host all
+    // surface as the same opaque TypeError. The wrong path is by far the most
+    // common, and it is the one we can actually detect, so say so.
+    throw new Error(`Could not reach the feed. ${looksLikeFeedUrl(target)
+      ? 'Check the shop is deployed, its key is set, and the deployment is not password-protected. On claude.ai this page cannot call out at all — use Paste feed instead.'
+      : `That URL points at ${pathOf(target)}, which looks like a page rather than the feed route — a page refuses the key header. The route usually ends /api/leoos-feed.`}`);
   } finally {
     if (timer) clearTimeout(timer);
   }
 
-  if (res.status === 401 || res.status === 403) throw new Error('Feed refused the key.');
+  if (res.status === 401 || res.status === 403) {
+    throw new Error('Feed refused the key. Check it matches the shop\'s ARCANE_FEED_KEY exactly.');
+  }
   if (!res.ok) throw new Error(`Feed answered ${res.status}.`);
 
   let body;
-  try { body = await res.json(); } catch { throw new Error('Feed did not return JSON.'); }
+  try {
+    body = await res.json();
+  } catch {
+    throw new Error(looksLikeFeedUrl(target)
+      ? 'Feed did not return JSON.'
+      : `That URL returned a page, not the feed. Point it at the feed route — it usually ends /api/leoos-feed.`);
+  }
   return normaliseFeed(body);
 }
 
