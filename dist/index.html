@@ -1867,7 +1867,7 @@ const GOALS = [
   { id: 'g-track',   kind: 'money', room: 'vitals',      name: '250 Arcane Track subscribers',           target: 250,   unit: 'members' },
   { id: 'g-index',   kind: 'work',  room: 'archives',    name: 'All 3,300 modules indexed',              target: 3300,  unit: 'modules' },
   { id: 'g-posts',   kind: 'work',  room: 'beacon',      name: 'Post every day for 90 days',             target: 90,    unit: 'days' },
-  { id: 'g-coa',     kind: 'work',  room: 'apothecary',  name: 'COA published for every live batch',     target: 100,   unit: '%' },
+  { id: 'g-coa',     kind: 'work',  room: 'apothecary',  name: 'COA published for every live batch',     target: 100,   unit: '%',  auto: 'coa' },
   { id: 'g-sync',    kind: 'work',  room: 'forge',       name: 'ArcaneTrack offline sync shipped',       target: 100,   unit: '%' },
   { id: 'g-codex',   kind: 'work',  room: 'scriptorium', name: 'The Quiet Empire launched',              target: 100,   unit: '%' },
   { id: 'g-train',   kind: 'work',  room: 'sanctum',     name: 'Train four times a week',                target: 4,     unit: 'per week' },
@@ -2172,6 +2172,43 @@ function normaliseDispatch(raw) {
   })).filter((r) => r.ref !== '—' || r.items !== '—');
 }
 
+/**
+ * Anything past the core contract. A shop that sends more detail gets more of
+ * the room filled in; one that doesn't still works, so every field here can
+ * come back null and the rooms fall back to what is typed by hand.
+ */
+function normaliseDetail(src) {
+  const d = src.detail && typeof src.detail === 'object' ? src.detail : {};
+  const money = d.revenue && typeof d.revenue === 'object' ? d.revenue : {};
+  const shelf = d.catalogue && typeof d.catalogue === 'object' ? d.catalogue : {};
+  const deals = d.deals && typeof d.deals === 'object' ? d.deals : {};
+
+  const has = (v) => v !== undefined && v !== null && v !== '';
+  const num = (v) => (has(v) ? toNum(v) : null);
+
+  // A fraction on the wire (0.9), a percentage on the screen (90).
+  const coverage = num(shelf.coaCoverage);
+
+  return {
+    monthToDate: num(money.monthToDateGBP),
+    // The honest figure for a "per month" tile: a rolling window, not a
+    // month-to-date total that reads low on the 2nd and high on the 30th.
+    last30Days: num(money.last30DaysGBP),
+    openOrderValue: num(money.openOrderValueGBP),
+    averageOrder: num(money.averageOrderGBP),
+    coaPct: coverage === null ? null : Math.round(coverage * 100),
+    outOfStock: Array.isArray(shelf.outOfStockSlugs)
+      ? shelf.outOfStockSlugs.slice(0, 40).map((x) => text(x, 40)).filter(Boolean)
+      : [],
+    liveDeals: Array.isArray(deals.live)
+      ? deals.live.slice(0, 8).map((x) => ({
+        label: text(x?.label, 80),
+        code: text(x?.code, 24),
+      })).filter((x) => x.label)
+      : [],
+  };
+}
+
 /** Fold whatever the shop sent into the one shape the rooms read. */
 function normaliseFeed(body) {
   if (!body || typeof body !== 'object') throw new Error('Feed is not a JSON object.');
@@ -2191,6 +2228,7 @@ function normaliseFeed(body) {
     visitors: Math.round(toNum(src.visitors ?? src.sessions)),
     stock: normaliseStock(src.stock ?? src.inventory ?? src.products),
     dispatch: normaliseDispatch(list),
+    ...normaliseDetail(src),
   };
 
   const empty = !feed.revenue && !feed.orderCount && !feed.customers
@@ -2636,8 +2674,31 @@ class Store {
 
   /* ---------- money ---------- */
 
+  /**
+   * What a venture earns in a month. The shop knows its own takings, so when
+   * the feed is connected that figure wins for Arcane Peptides — the typed one
+   * stays put underneath and comes back if the feed is disconnected.
+   *
+   * The live number is the rolling last thirty days, not the calendar month to
+   * date: a "per month" tile that reads £0 on the 1st and full on the 30th
+   * tells you nothing.
+   */
+  ventureRevenue(ventureId) {
+    const live = this.liveVentureRevenue(ventureId);
+    if (live !== null) return live;
+    return Number(this.state.ledger[ventureId]?.mrr) || 0;
+  }
+
+  /** The feed's figure for a venture, or null when there isn't one. */
+  liveVentureRevenue(ventureId) {
+    if (ventureId !== 'peptides') return null;
+    const feed = this.feed();
+    const n = feed ? feed.last30Days : null;
+    return typeof n === 'number' && Number.isFinite(n) ? n : null;
+  }
+
   monthlyRevenue() {
-    return VENTURES.reduce((n, v) => n + (Number(this.state.ledger[v.id]?.mrr) || 0), 0);
+    return VENTURES.reduce((n, v) => n + this.ventureRevenue(v.id), 0);
   }
 
   monthlyFixed() {
@@ -2683,7 +2744,11 @@ class Store {
   }
 
   ledgerCalibrated() {
-    return VENTURES.some((v) => this.state.ledger[v.id]?.calibrated);
+    // A connected shop counts as calibrated — the money is real, it simply
+    // wasn't typed in.
+    return VENTURES.some(
+      (v) => this.state.ledger[v.id]?.calibrated || this.liveVentureRevenue(v.id) !== null
+    );
   }
 
   /* ---------- goals ---------- */
@@ -2692,7 +2757,18 @@ class Store {
   goalValue(goal) {
     if (goal.auto === 'mrr') return this.monthlyRevenue();
     if (goal.auto === 'runway') return this.runwayMonths() ?? 0;
+    // The shop publishes its own COA coverage. Until it is connected this
+    // falls through to whatever was typed.
+    if (goal.auto === 'coa') {
+      const pct = this.feed()?.coaPct;
+      if (typeof pct === 'number') return pct;
+    }
     return Number(this.state.goals[goal.id]?.progress) || 0;
+  }
+
+  /** True when this goal is being answered by the feed rather than by hand. */
+  goalIsLive(goal) {
+    return goal.auto === 'coa' && typeof this.feed()?.coaPct === 'number';
   }
 
   goalPct(goal) {
@@ -5461,6 +5537,10 @@ class UIScreens {
           </div>
           <p class="muted-note">${esc(v.kind)}</p>
           <div class="fact-row">${v.facts.map((f) => `<span class="fact">${esc(f)}</span>`).join('')}</div>
+          ${this.store.liveVentureRevenue(v.id) !== null ? `
+            <p class="src-note"><span class="chip is-vital">live</span> The shop reports
+              ${money(this.store.ventureRevenue(v.id), 2)} over the last thirty days, and that is
+              what the empire counts. The figure below is yours and is kept.</p>` : ''}
           <div class="field-row">
             <label class="field">
               <span class="field-l">Revenue / month</span>
@@ -5678,6 +5758,38 @@ class UIWidgets extends UIScreens {
       <button class="wide-btn" type="button" data-goscreen="${door.screen}">${esc(door.label)} →</button>`;
   }
 
+  /** What the shop knows that no one here has to type: money, COA, shelf. */
+  wShopState() {
+    const feed = this.store.feed();
+    if (!feed) return '';
+
+    const bits = [];
+    if (typeof feed.coaPct === 'number') {
+      bits.push(`<div class="stat"><span class="stat-n mono ${feed.coaPct >= 100 ? 'is-vital' : 'is-flare'}">${feed.coaPct}%</span><span class="stat-l">COA published</span></div>`);
+    }
+    if (typeof feed.last30Days === 'number') {
+      bits.push(`<div class="stat"><span class="stat-n mono is-arcane">${money(feed.last30Days, 2)}</span><span class="stat-l">Last 30 days</span></div>`);
+    }
+    if (typeof feed.openOrderValue === 'number') {
+      bits.push(`<div class="stat"><span class="stat-n mono">${money(feed.openOrderValue, 2)}</span><span class="stat-l">In open orders</span></div>`);
+    }
+    if (typeof feed.averageOrder === 'number') {
+      bits.push(`<div class="stat"><span class="stat-n mono">${money(feed.averageOrder, 2)}</span><span class="stat-l">Average order</span></div>`);
+    }
+    if (!bits.length && !feed.outOfStock.length && !feed.liveDeals.length) return '';
+
+    return `
+      <h3 class="sub-title">From the shop</h3>
+      ${bits.length ? `<div class="stat-row">${bits.join('')}</div>` : ''}
+      ${feed.liveDeals.length ? `
+        <p class="src-note"><span class="chip is-vital">live</span> Running now:
+          ${feed.liveDeals.map((d) => `${esc(d.label)}${d.code ? ` (code ${esc(d.code)})` : ''}`).join(' · ')}</p>` : ''}
+      ${feed.outOfStock.length ? `
+        <p class="warn-note">${feed.outOfStock.length} compound${feed.outOfStock.length === 1 ? '' : 's'}
+          out of stock on the site: ${feed.outOfStock.slice(0, 8).map(esc).join(', ')}${
+  feed.outOfStock.length > 8 ? '…' : ''}</p>` : ''}`;
+  }
+
   wLab() {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
     const rows = this.store.stock();
@@ -5685,6 +5797,7 @@ class UIWidgets extends UIScreens {
     const feed = this.store.feed();
     const fed = rows.filter((r) => r.src === 'peptides').length;
     return `
+      ${this.wShopState()}
       <h3 class="sub-title">Stock</h3>
       ${feed
         ? `<p class="src-note"><span class="chip is-vital">live</span> ${fed} line${fed === 1 ? '' : 's'} from Arcane Peptides, pulled ${esc(clockTime(feed.fetchedAt))}. Hand counts below are yours and are left alone.</p>`
@@ -5938,6 +6051,23 @@ class UIWidgets extends UIScreens {
           </form>
         </details>
       </section>`;
+  }
+
+  /**
+   * Refresh on open, quietly. A connection that only updates when someone
+   * remembers to press a button is a screenshot, not a feed — but a failure
+   * here is not worth shouting about on boot, so it leaves the last good
+   * numbers and the error where the panel shows them.
+   */
+  async pullBridgeIfStale({ maxAgeMs = 10 * 60 * 1000 } = {}) {
+    const b = this.store.bridge();
+    if (!b.url || !b.key) return;
+    if (b.last && Date.now() - b.last < maxAgeMs) return;
+    try {
+      this.store.applyFeed(await pullFeed(b.url, b.key));
+    } catch (e) {
+      this.store.bridgeError(e?.message || 'The pull failed.');
+    }
   }
 
   async pullBridge() {
@@ -6267,8 +6397,14 @@ class UI extends UIWidgets {
         <div class="stat"><span class="stat-n mono">${crew.length}</span><span class="stat-l">Crew present</span></div>
         <div class="stat"><span class="stat-n mono">${goals.length}</span><span class="stat-l">Goals anchored</span></div>
         ${venture ? `<div class="stat"><span class="stat-n mono is-${venture.accent}">${
-          this.store.state.ledger[venture.id]?.calibrated ? money(this.store.state.ledger[venture.id].mrr) : '—'
-        }</span><span class="stat-l">${esc(venture.name)} / mo</span></div>` : ''}
+          this.store.liveVentureRevenue(venture.id) !== null
+            ? money(this.store.ventureRevenue(venture.id))
+            : this.store.state.ledger[venture.id]?.calibrated
+              ? money(this.store.state.ledger[venture.id].mrr)
+              : '—'
+        }</span><span class="stat-l">${esc(venture.name)} / mo${
+          this.store.liveVentureRevenue(venture.id) !== null ? ' · live' : ''
+        }</span></div>` : ''}
       </div>
 
       ${goals.length ? `
@@ -6874,6 +7010,10 @@ window.addEventListener('resize', () => factory.resize());
 /* ---------- late capabilities ---------- */
 
 store.connect().then(() => ui.render());
+
+// The shop's numbers go stale the moment they're stored, so refresh them on
+// open rather than waiting for someone to press Pull.
+ui.pullBridgeIfStale().catch(() => { /* the panel carries the error */ });
 
 window.claude?.use?.('sample').then((s) => {
   if (s) ui.attachSampler(s);

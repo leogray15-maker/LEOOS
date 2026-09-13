@@ -350,6 +350,35 @@ check('lab shows the live dispatch queue', /#1041/.test(labText));
 // a hand count the shop does not know about must survive the pull
 check('hand-counted lines survive a pull', /Cerebrolysin/.test(labText));
 
+// the richer block the shop publishes must reach the room
+const labStats = await p.evaluate(() =>
+  Object.fromEntries([...document.querySelectorAll('#roomOverlay .stat')].map((s) => [
+    s.querySelector('.stat-l')?.textContent.trim(),
+    s.querySelector('.stat-n')?.textContent.trim(),
+  ])));
+check('the shop panel shows COA coverage', labStats['COA published'] === '75%', `"${labStats['COA published']}"`);
+check('the shop panel shows the rolling month', /1,200/.test(labStats['Last 30 days'] || ''), `"${labStats['Last 30 days']}"`);
+check('the venture tile reads live', /1,20/.test(labStats['Arcane Peptides / mo · live'] || ''),
+  `"${labStats['Arcane Peptides / mo · live']}"`);
+check('the live deal is named', /Buy 2 get 1 free/.test(labText));
+check('compounds out of stock on the site are flagged', /out of stock on the site/.test(labText));
+// the COA target answers itself from the feed rather than from a typed number
+check('the COA goal fills itself from the feed', /COA published for every live batch\s*75/.test(
+  labText.replace(/\s+/g, ' ')), labText.replace(/\s+/g, ' ').match(/COA published for every live batch[^%]*%/)?.[0] || '');
+
+// a typed venture figure must survive a pull that supersedes it
+await p.click('[data-screen="ventures"]'); await p.waitForTimeout(600);
+await p.fill('#v-mrr-peptides', '1300');
+await p.keyboard.press('Tab'); await p.waitForTimeout(400);
+await p.click('[data-screen="system"]'); await p.waitForTimeout(300);
+await p.click('[data-bridgepull]'); await p.waitForTimeout(1500);
+await p.click('[data-screen="ventures"]'); await p.waitForTimeout(600);
+check('a typed venture figure survives the feed',
+  (await p.$eval('#v-mrr-peptides', (e) => e.value)) === '1300');
+check('but the empire counts the live one',
+  /1,20/.test(await p.$eval('#roRevenue', (e) => e.textContent)),
+  await p.$eval('#roRevenue', (e) => e.textContent.trim()));
+
 // THE MARKET funnel
 await p.click('[data-screen="system"]'); await p.waitForTimeout(200);
 await p.click('#stageScreen [data-room="market"]'); await p.waitForTimeout(600);

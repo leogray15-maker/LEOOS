@@ -192,6 +192,10 @@ window.addEventListener('resize', () => factory.resize());
 
 store.connect().then(() => ui.render());
 
+// The shop's numbers go stale the moment they're stored, so refresh them on
+// open rather than waiting for someone to press Pull.
+ui.pullBridgeIfStale().catch(() => { /* the panel carries the error */ });
+
 window.claude?.use?.('sample').then((s) => {
   if (s) ui.attachSampler(s);
 }).catch(() => { /* counsel stays on standby */ });

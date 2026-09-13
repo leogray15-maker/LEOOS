@@ -242,8 +242,14 @@ export class UI extends UIWidgets {
         <div class="stat"><span class="stat-n mono">${crew.length}</span><span class="stat-l">Crew present</span></div>
         <div class="stat"><span class="stat-n mono">${goals.length}</span><span class="stat-l">Goals anchored</span></div>
         ${venture ? `<div class="stat"><span class="stat-n mono is-${venture.accent}">${
-          this.store.state.ledger[venture.id]?.calibrated ? money(this.store.state.ledger[venture.id].mrr) : '—'
-        }</span><span class="stat-l">${esc(venture.name)} / mo</span></div>` : ''}
+          this.store.liveVentureRevenue(venture.id) !== null
+            ? money(this.store.ventureRevenue(venture.id))
+            : this.store.state.ledger[venture.id]?.calibrated
+              ? money(this.store.state.ledger[venture.id].mrr)
+              : '—'
+        }</span><span class="stat-l">${esc(venture.name)} / mo${
+          this.store.liveVentureRevenue(venture.id) !== null ? ' · live' : ''
+        }</span></div>` : ''}
       </div>
 
       ${goals.length ? `
