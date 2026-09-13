@@ -304,6 +304,15 @@ warn = await p.$eval('#stageScreen', e => e.textContent);
 check('a page URL is named as the problem', /looks like a page|returned a page/i.test(warn),
   warn.match(/(Could not reach|That URL)[^.]*\./)?.[0] || '');
 
+// a shop that answers but isn't configured must pass its reason through, not
+// just the status number
+await p.fill('#bridgeUrl', 'http://localhost:4500/unconfigured');
+await p.click('[data-bridgesave] button[type="submit"]');
+await p.waitForTimeout(1500);
+warn = await p.$eval('#stageScreen', e => e.textContent);
+check("the shop's own reason is shown", /ARCANE_FEED_KEY is not set/.test(warn),
+  warn.match(/Feed answered[^.]*\.[^.]*\./)?.[0] || '');
+
 // the real pull
 await p.fill('#bridgeUrl', 'http://localhost:4500/');
 await p.fill('#bridgeKey', 'test-key');

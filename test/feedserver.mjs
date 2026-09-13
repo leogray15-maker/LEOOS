@@ -8,6 +8,14 @@ http.createServer((req, res) => {
     'Content-Type': 'application/json',
   };
   if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
+  // Stands in for a shop that is deployed but not configured yet.
+  if (req.url.startsWith('/unconfigured')) {
+    res.writeHead(503, cors);
+    return res.end(JSON.stringify({
+      error: 'feed_disabled',
+      message: 'ARCANE_FEED_KEY is not set on this deployment, so the feed is switched off.',
+    }));
+  }
   if (req.headers['x-arcane-key'] !== 'test-key') {
     res.writeHead(401, cors); return res.end('{"error":"unauthorised"}');
   }
