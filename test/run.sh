@@ -17,4 +17,8 @@ FEED=$!
 trap 'kill $SITE $FEED 2>/dev/null || true' EXIT
 sleep 1.5
 
-node test/e2e.mjs
+case "${1:-}" in
+  --contrast) node test/contrast.mjs ;;
+  --clipping) node test/clipping.mjs ;;
+  *)          node test/e2e.mjs ;;
+esac

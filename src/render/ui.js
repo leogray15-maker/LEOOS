@@ -573,24 +573,32 @@ export class UI {
         <div class="stat"><span class="stat-n mono is-arcane">${this.store.totalVials()}</span><span class="stat-l">Vials on hand</span></div>
         <div class="stat"><span class="stat-n mono ${low ? 'is-flare' : 'dim'}">${low}</span><span class="stat-l">Running low</span></div>
       </div>
-      <div class="tbl is-stock">
-        <div class="tbl-head"><span>Compound</span><span>Size</span><span>Vials</span><span>Batch</span><span>COA</span><span></span></div>
+      <div class="stock-list">
         ${rows.map((r) => `
-          <div class="tbl-row is-stock">
-            <span class="tbl-code"><i class="vial is-${esc(r.tint)}"></i>${esc(r.code)}${r.src === 'peptides' ? '<i class="live-dot" title="From Arcane Peptides"></i>' : ''}</span>
-            <input class="cell-in mono dim" type="text" value="${esc(r.size)}"
-                   data-stock="${r.id}" data-field="size" aria-label="${esc(r.code)} size">
+          <div class="stock-line">
+            <span class="stock-name">
+              <i class="vial is-${esc(r.tint)}"></i>${esc(r.code)}
+              ${r.src === 'peptides' ? '<i class="live-dot" title="From Arcane Peptides"></i>' : ''}
+            </span>
             <span class="step">
-              <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="-1" aria-label="One out">−</button>
-              <input class="cell-in mono is-count ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}"
+              <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="-1"
+                      aria-label="One ${esc(r.code)} out">&minus;</button>
+              <input class="cell-in is-count mono ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}"
                      type="number" min="0" step="1" value="${r.vials}"
                      data-stock="${r.id}" data-field="vials" aria-label="${esc(r.code)} vials">
-              <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="1" aria-label="One in">+</button>
+              <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="1"
+                      aria-label="One ${esc(r.code)} in">+</button>
             </span>
-            <input class="cell-in mono dim" type="text" value="${esc(r.batch)}"
-                   data-stock="${r.id}" data-field="batch" aria-label="${esc(r.code)} batch">
-            <button class="chip ${coaChip[r.coa] || ''}" type="button" data-coa="${r.id}">${esc(r.coa)}</button>
-            <button class="row-x" type="button" data-stockdrop="${r.id}" aria-label="Close ${esc(r.code)} line">×</button>
+            <button class="row-x" type="button" data-stockdrop="${r.id}"
+                    aria-label="Close the ${esc(r.code)} line">&times;</button>
+            <span class="stock-meta">
+              <input class="cell-in is-size mono" type="text" value="${esc(r.size)}"
+                     data-stock="${r.id}" data-field="size" aria-label="${esc(r.code)} size">
+              <input class="cell-in is-batch mono" type="text" value="${esc(r.batch)}"
+                     data-stock="${r.id}" data-field="batch" aria-label="${esc(r.code)} batch">
+              <button class="chip is-coa ${coaChip[r.coa] || ''}" type="button" data-coa="${r.id}"
+                      aria-label="${esc(r.code)} certificate of analysis: ${esc(r.coa)}. Click to change.">${esc(r.coa)}</button>
+            </span>
           </div>`).join('')}
       </div>
       ${rows.length ? '' : '<p class="muted-note">No stock lines. Add the first below.</p>'}
@@ -1059,7 +1067,7 @@ export class UI {
     const b = this.store.bridge();
     const feed = b.feed;
     const state = b.error ? 'is-breach' : feed ? 'is-vital' : 'is-flare';
-    const word = b.error ? 'error' : feed ? 'connected' : 'not connected';
+    const word = b.error ? 'error' : feed ? 'connected' : b.url ? 'not pulled yet' : 'not set up';
     return `
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">Arcane Peptides</h3>
@@ -1081,6 +1089,7 @@ export class UI {
           </div>
         </form>
         ${b.error ? `<p class="warn-note">${esc(b.error)}</p>` : ''}
+        ${!b.error && this.bridgeHint ? `<p class="muted-note" style="margin-top:8px">${esc(this.bridgeHint)}</p>` : ''}
         ${feed ? `
           <div class="stat-row" style="margin-top:12px">
             <div class="stat"><span class="stat-n mono is-arcane">${money(feed.revenue, 2)}</span><span class="stat-l">Revenue</span></div>
@@ -1104,12 +1113,22 @@ export class UI {
 
   async pullBridge() {
     const b = this.store.bridge();
+    if (!b.url) {
+      // Nothing typed yet. That is a setup step, not a failure — the
+      // placeholder in the field looks like a value, so say what to do.
+      this.store.bridgeError('');
+      this.bridgeHint = 'Paste the feed URL from the shop, then Save.';
+      this.render();
+      return;
+    }
+    this.bridgeHint = '';
     this.store.bridgeError('');
     this.bridgeBusy = true;
     this.render();
     try {
       const feed = await pullFeed(b.url, b.key);
       this.store.applyFeed(feed);
+      this.bridgeHint = '';
     } catch (e) {
       this.store.bridgeError(e?.message || 'The pull failed.');
     }

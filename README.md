@@ -202,7 +202,9 @@ Worth being straight about, because the Garage lists tools for every agent:
 ```bash
 npm run dev      # serve the modular source at localhost:5173
 npm run build    # flatten to two self-contained targets
-npm test         # build, serve, and run the 64-check end-to-end suite
+npm test               # build, serve, run the 64-check end-to-end suite
+npm run test:contrast  # every text element on every screen, measured against AA
+npm run test:clipping  # anything whose content overflows its box
 ```
 
 The build emits the same page twice, because its two homes need different
@@ -218,6 +220,23 @@ or a **viewport meta**, so the page runs in quirks mode and a phone renders it
 at desktop width. The standalone target carries both, plus a theme colour, an
 inline SVG favicon and the same reset the Artifact shell applies, so the two
 render identically.
+
+## Legibility, measured
+
+Two of the three suites are there because "looks fine to me" is not a test.
+
+`npm run test:contrast` walks every rendered element on all twelve screens and
+all twenty room dashboards, finds the first opaque background actually painted
+behind each piece of text, and computes the real WCAG ratio. Everything must
+clear 4.5:1 (3:1 for large text). The palette is tuned to that: `--faint` was
+sitting at **2.6:1**, which fails even the large-text floor, and it is used on
+every muted note, stat label and table header — that was the squint. Each tone
+now carries its measured ratio as a comment beside it.
+
+`npm run test:clipping` finds any element whose content overflows its own box
+without a scroller or an ellipsis to handle it. It caught a `calc(100% + 16px)`
+hover bleed on `.order`, `.floor-row` and `.signal-row` that pushed 8px of
+horizontal overflow into every scroll container in the app.
 
 ## Deploying
 

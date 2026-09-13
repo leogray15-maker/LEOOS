@@ -11,19 +11,25 @@
   --seam:   #222230;
   --seam-lit: #33334a;
 
-  --ink:    #eceaf5;
-  --ash:    #807e96;
-  --faint:  #55536b;
+  /* Text tones are measured, not eyeballed. Every one of these clears
+     4.5:1 on --deck, so nothing on this page is a squint. The old --faint
+     sat at 2.6:1 and failed even the large-text floor. */
+  --ink:    #eceaf5;   /* 16.4:1 */
+  --ash:    #9a98b5;   /*  7.0:1 */
+  --faint:  #8380a5;   /*  5.2:1 on deck, 4.6:1 on --raised, the lightest
+                            surface it ever sits on — so it clears 4.5:1
+                            everywhere it is actually used, not just on the
+                            darkest background. */
 
   --arcane: #8b5cf6;
-  --arcane-lift: #a98bff;
+  --arcane-lift: #a98bff;   /* 7.3:1 — the one to set text in */
   --arcane-wash: rgba(139, 92, 246, 0.13);
 
-  --vital:  #3ecf8e;
-  --flare:  #e8b64c;
-  --breach: #e5484d;
-  --cyan:   #56c9f0;
-  --gold:   #d9a441;
+  --vital:  #3ecf8e;   /*  9.8:1 */
+  --flare:  #e8b64c;   /* 10.4:1 */
+  --breach: #f44d52;   /*  5.6:1 */
+  --cyan:   #56c9f0;   /* 10.2:1 */
+  --gold:   #d9a441;   /*  8.7:1 */
 
   --r-sm: 3px;
   --r-md: 6px;
@@ -201,7 +207,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .stage-tag-name { font-family: var(--f-display); font-size: 12px; letter-spacing: .24em; color: var(--ash); }
 
 .stage-screen {
-  position: absolute; inset: 0; overflow-y: auto;
+  position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
   padding: 18px 22px 28px; background: var(--void);
 }
 .stage-screen[hidden], .stage-canvas[hidden] { display: none; }
@@ -232,7 +238,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .room-overlay {
   position: absolute; top: 0; right: 0; bottom: 0;
   width: min(420px, 94%);
-  background: rgba(10, 10, 16, 0.97);
+  background: var(--deck);   /* opaque: the map behind it was bleeding into the text */
   border-left: 1px solid var(--seam-lit);
   box-shadow: -18px 0 40px rgba(0,0,0,.55);
   overflow-y: auto; padding: 16px 18px 26px; z-index: 5;
@@ -258,6 +264,17 @@ button, input, textarea { font: inherit; color: inherit; }
 .stat { background: var(--deck); padding: 10px 11px; display: flex; flex-direction: column; gap: 2px; }
 .stat-n { font-family: var(--f-data); font-size: 17px; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .stat-l { font-size: 10px; color: var(--faint); line-height: 1.3; }
+
+/* An auto-fit grid leaves the last cell stranded whenever the item count
+   is not a multiple of the column count, and the seam showing through reads
+   as a hole. Two columns divide cleanly, and an odd last cell spans both. */
+#roomOverlay .stat-row { grid-template-columns: 1fr 1fr; }
+#roomOverlay .stat-row .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+@media (max-width: 600px) {
+  .stat-row { grid-template-columns: 1fr 1fr; }
+  .stat-row .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
 
 .crew-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .crew-chip {
@@ -290,8 +307,8 @@ button, input, textarea { font: inherit; color: inherit; }
 .orders { display: flex; flex-direction: column; gap: 1px; }
 .order {
   display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: start;
-  padding: 7px 8px; margin: 0 -8px; border-radius: var(--r-sm); cursor: pointer;
-  background: transparent; border: 0; text-align: left; width: calc(100% + 16px);
+  padding: 7px 8px; border-radius: var(--r-sm); cursor: pointer;
+  background: transparent; border: 0; text-align: left; width: 100%;
 }
 .order:hover { background: var(--plate); }
 .order-box {
@@ -393,7 +410,7 @@ button, input, textarea { font: inherit; color: inherit; }
 
 .floor-row {
   display: grid; grid-template-columns: 6px 1fr auto; gap: 10px; align-items: center;
-  width: calc(100% + 16px); margin: 0 -8px; padding: 7px 8px;
+  width: 100%; padding: 7px 8px;
   background: transparent; border: 0; border-radius: var(--r-sm); text-align: left; cursor: pointer;
 }
 .floor-row:hover { background: var(--plate); }
@@ -499,57 +516,100 @@ button, input, textarea { font: inherit; color: inherit; }
 
 /* ---------- editable stock table ---------- */
 
-.tbl-head.is-stock, .tbl-row.is-stock,
-.tbl.is-stock .tbl-head, .tbl.is-stock .tbl-row {
-  grid-template-columns: 1.25fr .6fr 1fr .8fr .8fr 18px;
+/* Two rows per line rather than six grid columns: the room overlay is
+   ~384px wide, and a three-digit vial count does not fit a shared track. */
+.stock-list { border: 1px solid var(--seam); border-radius: var(--r-md); overflow: hidden; }
+.stock-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 18px;
+  grid-template-areas: 'name step drop' 'meta meta meta';
+  gap: 7px 8px; align-items: center;
+  padding: 9px 10px; border-top: 1px solid var(--seam);
 }
+.stock-line:first-child { border-top: 0; }
+.stock-line:hover { background: var(--plate); }
+
+.stock-name {
+  grid-area: name; display: flex; align-items: center; gap: 7px;
+  font-size: 12.5px; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.stock-meta { grid-area: meta; display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+
 .cell-in {
-  width: 100%; min-width: 0; background: var(--plate);
-  border: 1px solid transparent; border-radius: 4px;
-  padding: 3px 5px; font: inherit; font-size: 11.5px; color: var(--ink);
+  min-width: 0; background: var(--plate);
+  border: 1px solid var(--seam); border-radius: 4px;
+  padding: 4px 6px; font: inherit; font-size: 11.5px; color: var(--ink);
 }
-.cell-in:hover { border-color: var(--seam); }
-.cell-in:focus { border-color: var(--arcane); outline: none; background: var(--deck); color: var(--ink); }
-.cell-in.is-count { text-align: center; }
-.cell-in.is-flare { color: var(--flare); }
-/* the native spinner steals width the +/- buttons already cover */
+.cell-in:hover { border-color: var(--seam-lit); }
+.cell-in:focus { border-color: var(--arcane); outline: none; background: var(--void); }
+.cell-in.is-size, .cell-in.is-batch { width: 100%; color: var(--ash); }
+.cell-in.is-count {
+  /* room for four digits at every zoom, so 112 never clips */
+  width: 52px; text-align: center; font-size: 12.5px;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.cell-in.is-count.dim { color: var(--faint); }
+.cell-in.is-count.is-flare { color: var(--flare); }
+/* the native spinner steals the width the +/- buttons already cover */
 .cell-in[type=number]::-webkit-outer-spin-button,
 .cell-in[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .cell-in[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
-.step { display: grid; grid-template-columns: 20px 1fr 20px; gap: 3px; align-items: center; }
+.step { grid-area: step; display: flex; align-items: center; gap: 4px; }
 .step-btn {
-  height: 20px; border: 1px solid var(--seam); border-radius: 4px;
-  background: var(--plate); color: var(--ash); font-size: 13px; line-height: 1;
-  cursor: pointer; padding: 0;
+  width: 22px; height: 22px; flex: none;
+  border: 1px solid var(--seam); border-radius: 4px;
+  background: var(--plate); color: var(--ash);
+  font-size: 14px; line-height: 1; cursor: pointer; padding: 0;
+  display: grid; place-items: center;
 }
-.step-btn:hover { border-color: var(--arcane); color: var(--arcane-lift); }
-.step-btn:active { background: var(--deck); }
+.step-btn:hover { border-color: var(--arcane); color: var(--arcane-lift); background: var(--raised); }
+.step-btn:active { background: var(--void); }
 
-button.chip { cursor: pointer; font: inherit; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
-button.chip:hover { border-color: var(--arcane); }
+button.chip { cursor: pointer; font-family: var(--f-data); }
+button.chip:hover { border-color: var(--seam-lit); color: var(--ink); }
+.chip.is-coa {
+  font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 7px; white-space: nowrap;
+  min-width: 74px; text-align: center;   /* PUBLISHED is the widest */
+}
+/* the COA state is the one chip that must read at a glance */
+.chip.is-coa.is-vital  { color: var(--vital);  border-color: rgba(62,207,142,.45);  background: rgba(62,207,142,.1); }
+.chip.is-coa.is-flare  { color: var(--flare);  border-color: rgba(232,182,76,.45);  background: rgba(232,182,76,.1); }
+.chip.is-coa.is-breach { color: var(--breach); border-color: rgba(244,77,82,.45);   background: rgba(244,77,82,.1); }
+.chip.is-coa:hover { filter: brightness(1.22); }
 
 .row-x {
+  grid-area: drop; width: 18px; height: 18px;
   border: none; background: none; color: var(--faint);
-  font-size: 14px; line-height: 1; cursor: pointer; padding: 0;
+  font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
+  display: grid; place-items: center; border-radius: 3px;
 }
-.row-x:hover { color: var(--breach); }
+.row-x:hover { color: var(--breach); background: rgba(244,77,82,.12); }
 
 .add-row.is-stock {
-  display: grid; grid-template-columns: 1.4fr .7fr .7fr auto;
+  display: grid; grid-template-columns: minmax(0, 1.5fr) 66px 62px auto;
   gap: 6px; margin-top: 10px;
 }
 .add-row.is-stock input {
   min-width: 0; background: var(--plate); border: 1px solid var(--seam);
-  border-radius: var(--r-sm, 5px); padding: 7px 9px; font: inherit; font-size: 12px; color: var(--ink);
+  border-radius: var(--r-sm); padding: 7px 9px; font: inherit; font-size: 12px; color: var(--ink);
 }
+.add-row.is-stock input::placeholder { color: var(--faint); }
 .add-row.is-stock input:focus { border-color: var(--arcane); outline: none; }
 .add-row.is-stock button {
   border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
-  color: var(--arcane-lift); border-radius: var(--r-sm, 5px); padding: 7px 12px;
-  font-family: var(--f-display); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+  color: var(--arcane-lift); border-radius: var(--r-sm); padding: 7px 11px;
+  font-family: var(--f-display); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; cursor: pointer; white-space: nowrap;
 }
 .add-row.is-stock button:hover { background: rgba(139,92,246,.24); }
+
+@media (max-width: 430px) {
+  .add-row.is-stock { grid-template-columns: 1fr 1fr; }
+  .add-row.is-stock button { grid-column: 1 / -1; }
+}
 
 /* ---------- arcane peptides bridge ---------- */
 
@@ -628,7 +688,7 @@ button.chip:hover { border-color: var(--arcane); }
 
 .signal-row {
   display: grid; grid-template-columns: 3px 1fr; gap: 10px; align-items: start;
-  width: calc(100% + 16px); margin: 0 -8px; padding: 9px 8px;
+  width: 100%; padding: 9px 8px;
   background: transparent; border: 0; border-radius: var(--r-sm); text-align: left; cursor: pointer;
 }
 .signal-row:hover { background: var(--plate); }

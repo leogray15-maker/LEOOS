@@ -136,7 +136,7 @@ const openLab = async () => {
   await p.click('#stageScreen [data-room="apothecary"]'); await p.waitForTimeout(500);
 };
 await openLab();
-const stockRows = () => p.$$eval('.tbl-row.is-stock', e => e.length);
+const stockRows = () => p.$$eval('.stock-line', e => e.length);
 const rowsBefore = await stockRows();
 check('lab stock table is editable', rowsBefore > 0 && !!(await p.$('[data-stock]')), `${rowsBefore} lines`);
 
@@ -153,8 +153,8 @@ check('adding stock works', rowsAfter === rowsBefore + 1 && (await p.content()).
 
 // find that row's id
 const newId = await p.evaluate((code) => {
-  const row = [...document.querySelectorAll('.tbl-row.is-stock')]
-    .find(r => r.querySelector('.tbl-code')?.textContent.includes(code));
+  const row = [...document.querySelectorAll('.stock-line')]
+    .find(r => r.querySelector('.stock-name')?.textContent.includes(code));
   return row?.querySelector('[data-stock]')?.dataset.stock || null;
 }, CODE);
 check('new stock line is addressable', !!newId, newId || '');
@@ -237,8 +237,8 @@ await p.click('#stageScreen [data-room="apothecary"]'); await p.waitForTimeout(6
 const labText = await p.$eval('#roomOverlay', e => e.textContent);
 check('lab shows live stock', /Retatrutide/.test(labText) && /Bacteriostatic Water/.test(labText));
 const ghk = await p.evaluate(() => {
-  const row = [...document.querySelectorAll('.tbl-row.is-stock')]
-    .find(r => r.querySelector('.tbl-code')?.textContent.includes('GHK-Cu'));
+  const row = [...document.querySelectorAll('.stock-line')]
+    .find(r => r.querySelector('.stock-name')?.textContent.includes('GHK-Cu'));
   return row?.querySelector('[data-field="vials"]')?.value;
 });
 check('feed overwrote the GHK-Cu count', ghk === '34', `vials "${ghk}"`);
@@ -257,7 +257,7 @@ check('market flags orders waiting to pack', /3 orders waiting/.test(mkt));
 // paste path (the one that works inside the artifact)
 await p.click('[data-screen="system"]'); await p.waitForTimeout(400);
 await p.click('[data-bridgeclear]'); await p.waitForTimeout(600);
-check('disconnect clears the feed', /not connected/.test(await p.$eval('#stageScreen', e => e.textContent)));
+check('disconnect clears the feed', /not pulled yet|not set up/.test(await p.$eval('#stageScreen', e => e.textContent)));
 await p.click('.bridge-paste summary'); await p.waitForTimeout(200);
 await p.fill('[data-bridgepaste] [name="json"]', '{"not":"a feed"}');
 await p.click('[data-bridgepaste] button[type="submit"]'); await p.waitForTimeout(600);
@@ -316,17 +316,17 @@ const stockHtml = await p.$eval('#roomOverlay', e => e.innerHTML);
 check('added stock SURVIVES reload', stockHtml.includes('E2E-PEP'));
 check('vial count SURVIVES reload', stockHtml.includes('value="50"'));
 check('batch number SURVIVES reload', stockHtml.includes('B-2209'));
-check('COA state SURVIVES reload', /data-coa="[^"]+">published</.test(stockHtml));
+check('COA state SURVIVES reload', /data-coa="[^"]+"[^>]*>published</.test(stockHtml));
 
 // and closing a line removes it for good
 const dropId = await p.evaluate(() => {
-  const row = [...document.querySelectorAll('.tbl-row.is-stock')]
-    .find(r => r.querySelector('.tbl-code')?.textContent.includes('E2E-PEP'));
+  const row = [...document.querySelectorAll('.stock-line')]
+    .find(r => r.querySelector('.stock-name')?.textContent.includes('E2E-PEP'));
   return row?.querySelector('[data-stockdrop]')?.dataset.stockdrop || null;
 });
-const preDrop = await p.$$eval('.tbl-row.is-stock', e => e.length);
+const preDrop = await p.$$eval('.stock-line', e => e.length);
 await p.click(`[data-stockdrop="${dropId}"]`); await p.waitForTimeout(600);
-const postDrop = await p.$$eval('.tbl-row.is-stock', e => e.length);
+const postDrop = await p.$$eval('.stock-line', e => e.length);
 check('closing a stock line works', postDrop === preDrop - 1, `${preDrop} → ${postDrop}`);
 await p.reload(); await p.waitForTimeout(2000);
 await p.click('[data-screen="system"]'); await p.waitForTimeout(250);

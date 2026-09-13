@@ -43,7 +43,7 @@ export const PX = {
   arcaneLt: '#a98bff',
   vital:    '#3ecf8e',
   flare:    '#e8b64c',
-  breach:   '#e5484d',
+  breach:   '#f44d52',
   cyan:     '#56c9f0',
   gold:     '#d9a441',
   rose:     '#e0609a',
