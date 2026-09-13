@@ -63,6 +63,9 @@ export class UIWidgets extends UIScreens {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
     const rows = this.store.stock();
     const low = this.store.lowStock().length;
+    // A line nobody has counted is not a line with zero vials. The shelf
+    // ships blank on purpose, so "0" here would be an invented figure.
+    const uncounted = this.store.uncounted().length;
     const feed = this.store.feed();
     const fed = rows.filter((r) => r.src === 'peptides').length;
     return `
@@ -74,6 +77,7 @@ export class UIWidgets extends UIScreens {
         <div class="stat"><span class="stat-n mono">${rows.length}</span><span class="stat-l">Lines</span></div>
         <div class="stat"><span class="stat-n mono is-arcane">${this.store.totalVials()}</span><span class="stat-l">Vials on hand</span></div>
         <div class="stat"><span class="stat-n mono ${low ? 'is-flare' : 'dim'}">${low}</span><span class="stat-l">Running low</span></div>
+        ${uncounted ? `<div class="stat"><span class="stat-n mono is-flare">${uncounted}</span><span class="stat-l">Never counted</span></div>` : ''}
       </div>
       <div class="stock-list">
         ${rows.map((r) => `
@@ -85,9 +89,10 @@ export class UIWidgets extends UIScreens {
             <span class="step">
               <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="-1"
                       aria-label="One ${esc(r.code)} out">&minus;</button>
-              <input class="cell-in is-count mono ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}"
-                     type="number" min="0" step="1" value="${r.vials}"
-                     data-stock="${r.id}" data-field="vials" aria-label="${esc(r.code)} vials">
+              <input class="cell-in is-count mono ${!r.counted || r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}"
+                     type="number" min="0" step="1" value="${r.counted ? r.vials : ''}" placeholder="—"
+                     data-stock="${r.id}" data-field="vials"
+                     aria-label="${esc(r.code)} vials${r.counted ? '' : ', never counted'}">
               <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="1"
                       aria-label="One ${esc(r.code)} in">+</button>
             </span>
@@ -111,6 +116,7 @@ export class UIWidgets extends UIScreens {
         <button type="submit">Add stock</button>
       </form>
       ${low ? `<p class="warn-note">${low} line${low === 1 ? '' : 's'} under two weeks of cover.</p>` : ''}
+      ${uncounted ? `<p class="muted-note">${uncounted} line${uncounted === 1 ? '' : 's'} have never been counted — they read &mdash;, not zero. Type a count, or connect the shop.</p>` : ''}
       ${feed
         ? '<button class="wide-btn" type="button" data-bridgepull="1">Pull from Arcane Peptides</button>'
         : '<button class="wide-btn" type="button" data-goscreen="system">Connect Arcane Peptides</button>'}

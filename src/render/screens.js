@@ -88,6 +88,40 @@ export class UIScreens {
     if (this.store.splitTotal() !== 100) {
       out.push({ level: 'flare', room: 'vault', src: 'WARDEN · Risk', text: `The profit split totals ${this.store.splitTotal()}%. The envelopes are lying until it is 100.` });
     }
+    // THE LAB. The shelf is what actually blocks dispatch, and none of it
+    // reached this feed before — lowStock() existed and only the LAB widget
+    // ever called it, so a line could sit at zero, or unsellable without a
+    // COA, without the Bridge or Counsel ever hearing about it.
+    const out0 = this.store.outOfStock();
+    if (out0.length) {
+      out.push({ level: 'breach', room: 'apothecary', src: 'ALEMBIC · Apothecary',
+        text: `${out0.length} line${out0.length === 1 ? '' : 's'} out of stock: ${out0.map((r) => r.code).join(', ')}.` });
+    }
+    const noCoa = this.store.blockedByCoa();
+    if (noCoa.length) {
+      out.push({ level: 'breach', room: 'apothecary', src: 'ALEMBIC · Apothecary',
+        text: `${noCoa.length} held line${noCoa.length === 1 ? '' : 's'} cannot dispatch — COA not published: ${noCoa.map((r) => r.code).join(', ')}.` });
+    }
+    // Never counted is a setup task, not a stockout. Saying "out of stock"
+    // about a line nobody has counted is a claim the system cannot support.
+    const unc = this.store.uncounted();
+    if (unc.length) {
+      out.push({ level: 'flare', room: 'apothecary', src: 'ALEMBIC · Apothecary',
+        text: `${unc.length} shelf line${unc.length === 1 ? '' : 's'} have never been counted. Count them, or connect the shop.` });
+    }
+    const low = this.store.lowStock();
+    if (low.length) {
+      out.push({ level: 'flare', room: 'apothecary', src: 'ALEMBIC · Apothecary',
+        text: `${low.length} line${low.length === 1 ? '' : 's'} under 12 vials: ${low.map((r) => `${r.code} (${r.vials})`).join(', ')}.` });
+    }
+
+    // THE MARKET, once the shop is connected.
+    const feed = this.store.feed();
+    if (feed?.pending) {
+      out.push({ level: 'flare', room: 'market', src: 'LEDGER · Market',
+        text: `${feed.pending} order${feed.pending === 1 ? '' : 's'} waiting to be packed.` });
+    }
+
     const drafts = this.store.postCount();
     if (drafts) out.push({ level: 'vital', room: 'beacon', src: 'HERALD · Signalman', text: `${drafts} post${drafts === 1 ? '' : 's'} drafted from the Archives and waiting on you.` });
     const unwired = TOOLS.filter((t) => t.state === 'not wired').length;

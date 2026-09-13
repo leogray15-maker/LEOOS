@@ -62,6 +62,19 @@ for (const r of rooms) {
 }
 check(`all ${rooms.length} room dashboards open`, roomFails === 0, `${roomFails} failed`);
 
+// ---- 2b. NEVER COUNTED IS NOT A STOCKOUT -------------------------------
+// Runs before any stock is touched, so every seed line is still uncounted.
+// The shelf ships blank on purpose; reporting that as "out of stock" is a
+// claim about the business that nothing in the system knows to be true.
+await p.click('[data-screen="empire"]'); await p.waitForTimeout(400);
+const fresh = await p.$eval('#stageScreen', e => e.textContent);
+check('an uncounted shelf is not called a stockout', !/out of stock/i.test(fresh));
+check('an uncounted shelf is flagged as needing a count', /never been counted/i.test(fresh));
+const freshBrief = await p.evaluate(() => window.LEOOS.ui.brief());
+check('Counsel is told the count is unknown, not zero',
+  /NEVER COUNTED/.test(freshBrief) && !/OUT OF STOCK/.test(freshBrief));
+check('and the shelf lines say so individually', /NEVER COUNTED, batch/.test(freshBrief));
+
 // ---- 3. mutations -------------------------------------------------------
 await p.click('[data-screen="orders"]'); await p.waitForTimeout(400);
 
@@ -265,6 +278,32 @@ check('restocking tops up, no duplicate line', rowsRestock === rowsAfter && coun
 // empty submit must not create a blank line
 await p.click('[data-stockadd] button[type="submit"]'); await p.waitForTimeout(400);
 check('empty stock submit is rejected', (await stockRows()) === rowsRestock);
+
+// ---- 3b1. WHAT COUNSEL CAN SEE ----------------------------------------
+// The brief is the whole of what Counsel and the Council reason over. It
+// carried ventures, money, goals and open orders and nothing else, so both
+// were asked to advise on a peptide business while blind to its shelf.
+const brief = await p.evaluate(() => window.LEOOS.ui.brief());
+for (const section of ['VENTURES', 'MONEY', 'GOALS', 'THE LAB — STOCK', 'SHELF STATE',
+                       'THE MARKET', 'BEACON — SIGNAL QUEUE', 'ROOMS AND OPEN ORDERS',
+                       'ALREADY FLAGGED ON THE FLOOR']) {
+  check(`the brief carries "${section}"`, brief.includes(section));
+}
+check('the brief names real stock lines with COA state',
+  /GHK-Cu/.test(brief) && /COA (none|pending|published)/.test(brief));
+check('the brief says whether the shop is connected',
+  /Arcane Peptides is (CONNECTED|NOT connected)/.test(brief));
+
+// a shelf blocker must reach the Bridge, not just sit in the LAB widget
+await openLab();
+const firstStock = await p.$eval('.stock-line [data-field="vials"]', e => e.dataset.stock);
+await p.fill(`[data-stock="${firstStock}"][data-field="vials"]`, '0');
+await p.keyboard.press('Tab'); await p.waitForTimeout(450);
+await p.click('[data-screen="empire"]'); await p.waitForTimeout(400);
+const empire = await p.$eval('#stageScreen', e => e.textContent);
+check('a line at zero vials is flagged on the Bridge', /out of stock/i.test(empire));
+const brief2 = await p.evaluate(() => window.LEOOS.ui.brief());
+check('and the same blocker reaches Counsel', /OUT OF STOCK/.test(brief2));
 
 // ---- 3b2. THE ARCANE PEPTIDES BRIDGE ----------------------------------
 await p.click('[data-screen="system"]'); await p.waitForTimeout(400);

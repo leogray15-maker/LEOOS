@@ -600,7 +600,66 @@ export class UI extends UIWidgets {
     const gl = GOALS.map((g) => `${g.name}: ${Math.round(this.store.goalPct(g) * 100)}% of ${g.target}${g.unit === '£' ? '' : ' ' + g.unit}`).join('\n');
     const run = this.store.runwayMonths();
     const fin = `Revenue ${money(this.store.monthlyRevenue())}/mo, fixed costs ${money(this.store.monthlyFixed())}/mo, net ${money(this.store.monthlyNet())}/mo, cash ${money(this.store.state.budget.cash)}, runway ${run === null ? 'unknown' : run.toFixed(1) + ' months'}.`;
-    return `VENTURES\n${led}\n\nMONEY\n${fin}\n\nGOALS\n${gl}\n\nROOMS AND OPEN ORDERS\n${rooms}`;
+
+    // THE LAB. This was missing entirely, so Counsel and the Council were
+    // asked to advise on a peptide business while blind to its shelf — no
+    // vial counts, no COA state, no dispatch queue. Anything asking "what
+    // should we do next" has to see the thing that actually blocks dispatch.
+    const rows = this.store.stock();
+    const stock = rows.length
+      ? rows.map((r) => `${r.code} ${r.size}: ${r.counted ? `${r.vials} vials` : 'NEVER COUNTED'}`
+          + `, batch ${r.batch}, COA ${r.coa}`).join('\n')
+      : 'no stock lines held';
+    const low = this.store.lowStock();
+    const noCoa = this.store.blockedByCoa();
+    const out = this.store.outOfStock();
+    const unc = this.store.uncounted();
+    const shelf = [
+      low.length ? `RUNNING LOW (under 12 vials): ${low.map((r) => `${r.code} (${r.vials})`).join(', ')}` : '',
+      out.length ? `OUT OF STOCK: ${out.map((r) => r.code).join(', ')}` : '',
+      noCoa.length ? `CANNOT DISPATCH until COA is published: ${noCoa.map((r) => `${r.code} (COA ${r.coa})`).join(', ')}` : '',
+      // stated as unknown rather than as zero, so nothing downstream reasons
+      // from a count that was never taken
+      unc.length ? `NEVER COUNTED — quantity unknown, do not treat as zero: ${unc.map((r) => r.code).join(', ')}` : '',
+    ].filter(Boolean).join('\n') || 'Every held line has a published COA and is dispatchable.';
+
+    // THE MARKET, when the shop is connected.
+    const feed = this.store.feed();
+    const market = feed
+      ? `Arcane Peptides is CONNECTED (pulled ${clockTime(feed.fetchedAt)}). `
+        + `Revenue ${money(feed.revenue, 2)}, ${feed.orderCount} orders, ${feed.customers} customers, `
+        + `${feed.pending} waiting to be packed.`
+        + (feed.dispatch?.length
+          ? `\nDispatch queue: ${feed.dispatch.slice(0, 10).map((r) => `${r.ref} ${r.items} [${r.stage}]`).join('; ')}`
+          : '')
+      : 'Arcane Peptides is NOT connected, so order and revenue figures for the shop are unknown.';
+
+    // BEACON.
+    const drafts = this.store.drafts();
+    const signal = drafts.length
+      ? `${drafts.length} post${drafts.length === 1 ? '' : 's'} drafted and waiting: `
+        + drafts.slice(0, 6).map((d) => `${d.platform} — ${d.hook}`).join('; ')
+      : 'No drafts standing.';
+
+    // What the interface itself is already flagging, so Counsel and the
+    // floor cannot disagree about what is on fire.
+    const flags = this.signals();
+    const blockers = flags.length
+      ? flags.map((x) => `[${x.level}] ${x.src}: ${x.text}`).join('\n')
+      : 'Nothing flagged.';
+
+    return [
+      `NOW: ${stamp()}`,
+      '', 'VENTURES', led,
+      '', 'MONEY', fin,
+      '', 'GOALS', gl,
+      '', 'THE LAB — STOCK', stock,
+      '', 'SHELF STATE', shelf,
+      '', 'THE MARKET', market,
+      '', 'BEACON — SIGNAL QUEUE', signal,
+      '', 'ROOMS AND OPEN ORDERS', rooms,
+      '', 'ALREADY FLAGGED ON THE FLOOR', blockers,
+    ].join('\n');
   }
 
   async ask(question) {

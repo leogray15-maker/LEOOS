@@ -182,6 +182,14 @@ window.addEventListener('keydown', (e) => {
   if (hit) ui.setScreen(hit.id);
 });
 
+/* ---------- diagnostics ---------- */
+
+// One handle on the running system, for the console and for the suite.
+// `LEOOS.ui.brief()` prints exactly what Counsel and the Council are given
+// to reason over, which is the only way to check from outside that they can
+// actually see the floor rather than a fraction of it.
+window.LEOOS = { store, sim, ui, factory };
+
 /* ---------- layout ---------- */
 
 const ro = new ResizeObserver(() => factory.resize());

@@ -2286,8 +2286,13 @@ function seedState() {
   for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
   for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
   const bridge = { url: '', key: '', last: 0, error: '', feed: null };
+  // `counted` separates "never counted" from "counted, and it is zero".
+  // Stock ships blank on purpose, like the ledger, so without this every
+  // fresh install claims the whole shelf is out of stock — a statement
+  // about the business that nothing in the system actually knows.
   const stock = INVENTORY.rows.map((r) => ({
-    id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
+    id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch,
+    coa: r.coa, tint: r.tint, counted: false,
   }));
   return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
 }
@@ -2376,6 +2381,11 @@ class Store {
           batch: String(r.batch || '—').slice(0, 24),
           coa: COA_STATES.includes(r.coa) ? r.coa : 'none',
           tint: r.tint || 'clear',
+          // state saved before `counted` existed: anything with vials, a real
+          // batch or a feed behind it was plainly counted at some point
+          counted: typeof r.counted === 'boolean'
+            ? r.counted
+            : Boolean(r.vials || (r.batch && r.batch !== '—') || r.src),
           ...(r.src ? { src: String(r.src).slice(0, 20) } : {}),
         }));
     }
@@ -2472,7 +2482,18 @@ class Store {
   stock() { return this.state.stock || (this.state.stock = []); }
 
   /** Lines running down — anything held but under two weeks of cover. */
-  lowStock() { return this.stock().filter((r) => r.vials > 0 && r.vials < 12); }
+  lowStock() { return this.stock().filter((r) => r.counted && r.vials > 0 && r.vials < 12); }
+
+  /** Counted, and it came to zero — a real stockout, not an unfilled field. */
+  outOfStock() { return this.stock().filter((r) => r.counted && Number(r.vials) === 0); }
+
+  /** Never counted. A setup task, not a stockout. */
+  uncounted() { return this.stock().filter((r) => !r.counted); }
+
+  /** Held, but cannot be dispatched until its COA is published. */
+  blockedByCoa() {
+    return this.stock().filter((r) => r.counted && Number(r.vials) > 0 && r.coa !== 'published');
+  }
 
   totalVials() { return this.stock().reduce((n, r) => n + (Number(r.vials) || 0), 0); }
 
@@ -2483,6 +2504,7 @@ class Store {
     if (existing) {
       // Same compound twice means a restock, not a second shelf line.
       existing.vials = (Number(existing.vials) || 0) + (Number(vials) || 0);
+      existing.counted = true;
       this.log(`Stock in — ${existing.code} +${Number(vials) || 0} (${existing.vials} on hand)`);
       this.save();
       return existing;
@@ -2495,6 +2517,7 @@ class Store {
       batch: '—',
       coa: 'none',
       tint: tintFor(clean),
+      counted: true,
     };
     this.state.stock = [...this.stock(), row];
     this.log(`Stock line opened — ${row.code} ${row.size} × ${row.vials}`);
@@ -2507,6 +2530,7 @@ class Store {
     if (!row) return;
     if (field === 'vials') {
       row.vials = Math.max(0, Math.round(Number(value) || 0));
+      row.counted = true;
     } else if (field === 'batch') {
       row.batch = String(value).trim().slice(0, 24) || '—';
     } else if (field === 'size') {
@@ -2523,6 +2547,7 @@ class Store {
     if (!row) return;
     const before = Number(row.vials) || 0;
     row.vials = Math.max(0, before + delta);
+    row.counted = true;
     if (row.vials !== before) {
       this.log(`${delta > 0 ? 'Stock in' : 'Stock out'} — ${row.code}: ${before} → ${row.vials}`);
     }
@@ -2583,6 +2608,7 @@ class Store {
       const match = this.stock().find((r) => r.code.toLowerCase() === row.code.toLowerCase());
       if (match) {
         match.vials = row.vials;
+        match.counted = true;
         if (row.batch !== '—') match.batch = row.batch;
         match.coa = row.coa;
         match.size = row.size !== '—' ? row.size : match.size;
@@ -2590,7 +2616,7 @@ class Store {
         updated++;
       } else {
         this.state.stock = [...this.stock(), {
-          id: uid(), ...row, tint: tintFor(row.code), src: 'peptides',
+          id: uid(), ...row, tint: tintFor(row.code), src: 'peptides', counted: true,
         }];
         opened++;
       }
@@ -5189,6 +5215,40 @@ class UIScreens {
     if (this.store.splitTotal() !== 100) {
       out.push({ level: 'flare', room: 'vault', src: 'WARDEN · Risk', text: `The profit split totals ${this.store.splitTotal()}%. The envelopes are lying until it is 100.` });
     }
+    // THE LAB. The shelf is what actually blocks dispatch, and none of it
+    // reached this feed before — lowStock() existed and only the LAB widget
+    // ever called it, so a line could sit at zero, or unsellable without a
+    // COA, without the Bridge or Counsel ever hearing about it.
+    const out0 = this.store.outOfStock();
+    if (out0.length) {
+      out.push({ level: 'breach', room: 'apothecary', src: 'ALEMBIC · Apothecary',
+        text: `${out0.length} line${out0.length === 1 ? '' : 's'} out of stock: ${out0.map((r) => r.code).join(', ')}.` });
+    }
+    const noCoa = this.store.blockedByCoa();
+    if (noCoa.length) {
+      out.push({ level: 'breach', room: 'apothecary', src: 'ALEMBIC · Apothecary',
+        text: `${noCoa.length} held line${noCoa.length === 1 ? '' : 's'} cannot dispatch — COA not published: ${noCoa.map((r) => r.code).join(', ')}.` });
+    }
+    // Never counted is a setup task, not a stockout. Saying "out of stock"
+    // about a line nobody has counted is a claim the system cannot support.
+    const unc = this.store.uncounted();
+    if (unc.length) {
+      out.push({ level: 'flare', room: 'apothecary', src: 'ALEMBIC · Apothecary',
+        text: `${unc.length} shelf line${unc.length === 1 ? '' : 's'} have never been counted. Count them, or connect the shop.` });
+    }
+    const low = this.store.lowStock();
+    if (low.length) {
+      out.push({ level: 'flare', room: 'apothecary', src: 'ALEMBIC · Apothecary',
+        text: `${low.length} line${low.length === 1 ? '' : 's'} under 12 vials: ${low.map((r) => `${r.code} (${r.vials})`).join(', ')}.` });
+    }
+
+    // THE MARKET, once the shop is connected.
+    const feed = this.store.feed();
+    if (feed?.pending) {
+      out.push({ level: 'flare', room: 'market', src: 'LEDGER · Market',
+        text: `${feed.pending} order${feed.pending === 1 ? '' : 's'} waiting to be packed.` });
+    }
+
     const drafts = this.store.postCount();
     if (drafts) out.push({ level: 'vital', room: 'beacon', src: 'HERALD · Signalman', text: `${drafts} post${drafts === 1 ? '' : 's'} drafted from the Archives and waiting on you.` });
     const unwired = TOOLS.filter((t) => t.state === 'not wired').length;
@@ -5661,6 +5721,9 @@ class UIWidgets extends UIScreens {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
     const rows = this.store.stock();
     const low = this.store.lowStock().length;
+    // A line nobody has counted is not a line with zero vials. The shelf
+    // ships blank on purpose, so "0" here would be an invented figure.
+    const uncounted = this.store.uncounted().length;
     const feed = this.store.feed();
     const fed = rows.filter((r) => r.src === 'peptides').length;
     return `
@@ -5672,6 +5735,7 @@ class UIWidgets extends UIScreens {
         <div class="stat"><span class="stat-n mono">${rows.length}</span><span class="stat-l">Lines</span></div>
         <div class="stat"><span class="stat-n mono is-arcane">${this.store.totalVials()}</span><span class="stat-l">Vials on hand</span></div>
         <div class="stat"><span class="stat-n mono ${low ? 'is-flare' : 'dim'}">${low}</span><span class="stat-l">Running low</span></div>
+        ${uncounted ? `<div class="stat"><span class="stat-n mono is-flare">${uncounted}</span><span class="stat-l">Never counted</span></div>` : ''}
       </div>
       <div class="stock-list">
         ${rows.map((r) => `
@@ -5683,9 +5747,10 @@ class UIWidgets extends UIScreens {
             <span class="step">
               <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="-1"
                       aria-label="One ${esc(r.code)} out">&minus;</button>
-              <input class="cell-in is-count mono ${r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}"
-                     type="number" min="0" step="1" value="${r.vials}"
-                     data-stock="${r.id}" data-field="vials" aria-label="${esc(r.code)} vials">
+              <input class="cell-in is-count mono ${!r.counted || r.vials === 0 ? 'dim' : r.vials < 12 ? 'is-flare' : ''}"
+                     type="number" min="0" step="1" value="${r.counted ? r.vials : ''}" placeholder="—"
+                     data-stock="${r.id}" data-field="vials"
+                     aria-label="${esc(r.code)} vials${r.counted ? '' : ', never counted'}">
               <button class="step-btn" type="button" data-stockstep="${r.id}" data-delta="1"
                       aria-label="One ${esc(r.code)} in">+</button>
             </span>
@@ -5709,6 +5774,7 @@ class UIWidgets extends UIScreens {
         <button type="submit">Add stock</button>
       </form>
       ${low ? `<p class="warn-note">${low} line${low === 1 ? '' : 's'} under two weeks of cover.</p>` : ''}
+      ${uncounted ? `<p class="muted-note">${uncounted} line${uncounted === 1 ? '' : 's'} have never been counted — they read &mdash;, not zero. Type a count, or connect the shop.</p>` : ''}
       ${feed
         ? '<button class="wide-btn" type="button" data-bridgepull="1">Pull from Arcane Peptides</button>'
         : '<button class="wide-btn" type="button" data-goscreen="system">Connect Arcane Peptides</button>'}
@@ -6604,7 +6670,66 @@ class UI extends UIWidgets {
     const gl = GOALS.map((g) => `${g.name}: ${Math.round(this.store.goalPct(g) * 100)}% of ${g.target}${g.unit === '£' ? '' : ' ' + g.unit}`).join('\n');
     const run = this.store.runwayMonths();
     const fin = `Revenue ${money(this.store.monthlyRevenue())}/mo, fixed costs ${money(this.store.monthlyFixed())}/mo, net ${money(this.store.monthlyNet())}/mo, cash ${money(this.store.state.budget.cash)}, runway ${run === null ? 'unknown' : run.toFixed(1) + ' months'}.`;
-    return `VENTURES\n${led}\n\nMONEY\n${fin}\n\nGOALS\n${gl}\n\nROOMS AND OPEN ORDERS\n${rooms}`;
+
+    // THE LAB. This was missing entirely, so Counsel and the Council were
+    // asked to advise on a peptide business while blind to its shelf — no
+    // vial counts, no COA state, no dispatch queue. Anything asking "what
+    // should we do next" has to see the thing that actually blocks dispatch.
+    const rows = this.store.stock();
+    const stock = rows.length
+      ? rows.map((r) => `${r.code} ${r.size}: ${r.counted ? `${r.vials} vials` : 'NEVER COUNTED'}`
+          + `, batch ${r.batch}, COA ${r.coa}`).join('\n')
+      : 'no stock lines held';
+    const low = this.store.lowStock();
+    const noCoa = this.store.blockedByCoa();
+    const out = this.store.outOfStock();
+    const unc = this.store.uncounted();
+    const shelf = [
+      low.length ? `RUNNING LOW (under 12 vials): ${low.map((r) => `${r.code} (${r.vials})`).join(', ')}` : '',
+      out.length ? `OUT OF STOCK: ${out.map((r) => r.code).join(', ')}` : '',
+      noCoa.length ? `CANNOT DISPATCH until COA is published: ${noCoa.map((r) => `${r.code} (COA ${r.coa})`).join(', ')}` : '',
+      // stated as unknown rather than as zero, so nothing downstream reasons
+      // from a count that was never taken
+      unc.length ? `NEVER COUNTED — quantity unknown, do not treat as zero: ${unc.map((r) => r.code).join(', ')}` : '',
+    ].filter(Boolean).join('\n') || 'Every held line has a published COA and is dispatchable.';
+
+    // THE MARKET, when the shop is connected.
+    const feed = this.store.feed();
+    const market = feed
+      ? `Arcane Peptides is CONNECTED (pulled ${clockTime(feed.fetchedAt)}). `
+        + `Revenue ${money(feed.revenue, 2)}, ${feed.orderCount} orders, ${feed.customers} customers, `
+        + `${feed.pending} waiting to be packed.`
+        + (feed.dispatch?.length
+          ? `\nDispatch queue: ${feed.dispatch.slice(0, 10).map((r) => `${r.ref} ${r.items} [${r.stage}]`).join('; ')}`
+          : '')
+      : 'Arcane Peptides is NOT connected, so order and revenue figures for the shop are unknown.';
+
+    // BEACON.
+    const drafts = this.store.drafts();
+    const signal = drafts.length
+      ? `${drafts.length} post${drafts.length === 1 ? '' : 's'} drafted and waiting: `
+        + drafts.slice(0, 6).map((d) => `${d.platform} — ${d.hook}`).join('; ')
+      : 'No drafts standing.';
+
+    // What the interface itself is already flagging, so Counsel and the
+    // floor cannot disagree about what is on fire.
+    const flags = this.signals();
+    const blockers = flags.length
+      ? flags.map((x) => `[${x.level}] ${x.src}: ${x.text}`).join('\n')
+      : 'Nothing flagged.';
+
+    return [
+      `NOW: ${stamp()}`,
+      '', 'VENTURES', led,
+      '', 'MONEY', fin,
+      '', 'GOALS', gl,
+      '', 'THE LAB — STOCK', stock,
+      '', 'SHELF STATE', shelf,
+      '', 'THE MARKET', market,
+      '', 'BEACON — SIGNAL QUEUE', signal,
+      '', 'ROOMS AND OPEN ORDERS', rooms,
+      '', 'ALREADY FLAGGED ON THE FLOOR', blockers,
+    ].join('\n');
   }
 
   async ask(question) {
@@ -6843,6 +6968,14 @@ window.addEventListener('keydown', (e) => {
   if (!hit && typed.length === 2) { typed = e.key; hit = screenFor(typed); }
   if (hit) ui.setScreen(hit.id);
 });
+
+/* ---------- diagnostics ---------- */
+
+// One handle on the running system, for the console and for the suite.
+// `LEOOS.ui.brief()` prints exactly what Counsel and the Council are given
+// to reason over, which is the only way to check from outside that they can
+// actually see the floor rather than a fraction of it.
+window.LEOOS = { store, sim, ui, factory };
 
 /* ---------- layout ---------- */
 

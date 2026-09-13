@@ -40,8 +40,13 @@ function seedState() {
   for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
   for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
   const bridge = { url: '', key: '', last: 0, error: '', feed: null };
+  // `counted` separates "never counted" from "counted, and it is zero".
+  // Stock ships blank on purpose, like the ledger, so without this every
+  // fresh install claims the whole shelf is out of stock — a statement
+  // about the business that nothing in the system actually knows.
   const stock = INVENTORY.rows.map((r) => ({
-    id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
+    id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch,
+    coa: r.coa, tint: r.tint, counted: false,
   }));
   return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
 }
@@ -130,6 +135,11 @@ export class Store {
           batch: String(r.batch || '—').slice(0, 24),
           coa: COA_STATES.includes(r.coa) ? r.coa : 'none',
           tint: r.tint || 'clear',
+          // state saved before `counted` existed: anything with vials, a real
+          // batch or a feed behind it was plainly counted at some point
+          counted: typeof r.counted === 'boolean'
+            ? r.counted
+            : Boolean(r.vials || (r.batch && r.batch !== '—') || r.src),
           ...(r.src ? { src: String(r.src).slice(0, 20) } : {}),
         }));
     }
@@ -226,7 +236,18 @@ export class Store {
   stock() { return this.state.stock || (this.state.stock = []); }
 
   /** Lines running down — anything held but under two weeks of cover. */
-  lowStock() { return this.stock().filter((r) => r.vials > 0 && r.vials < 12); }
+  lowStock() { return this.stock().filter((r) => r.counted && r.vials > 0 && r.vials < 12); }
+
+  /** Counted, and it came to zero — a real stockout, not an unfilled field. */
+  outOfStock() { return this.stock().filter((r) => r.counted && Number(r.vials) === 0); }
+
+  /** Never counted. A setup task, not a stockout. */
+  uncounted() { return this.stock().filter((r) => !r.counted); }
+
+  /** Held, but cannot be dispatched until its COA is published. */
+  blockedByCoa() {
+    return this.stock().filter((r) => r.counted && Number(r.vials) > 0 && r.coa !== 'published');
+  }
 
   totalVials() { return this.stock().reduce((n, r) => n + (Number(r.vials) || 0), 0); }
 
@@ -237,6 +258,7 @@ export class Store {
     if (existing) {
       // Same compound twice means a restock, not a second shelf line.
       existing.vials = (Number(existing.vials) || 0) + (Number(vials) || 0);
+      existing.counted = true;
       this.log(`Stock in — ${existing.code} +${Number(vials) || 0} (${existing.vials} on hand)`);
       this.save();
       return existing;
@@ -249,6 +271,7 @@ export class Store {
       batch: '—',
       coa: 'none',
       tint: tintFor(clean),
+      counted: true,
     };
     this.state.stock = [...this.stock(), row];
     this.log(`Stock line opened — ${row.code} ${row.size} × ${row.vials}`);
@@ -261,6 +284,7 @@ export class Store {
     if (!row) return;
     if (field === 'vials') {
       row.vials = Math.max(0, Math.round(Number(value) || 0));
+      row.counted = true;
     } else if (field === 'batch') {
       row.batch = String(value).trim().slice(0, 24) || '—';
     } else if (field === 'size') {
@@ -277,6 +301,7 @@ export class Store {
     if (!row) return;
     const before = Number(row.vials) || 0;
     row.vials = Math.max(0, before + delta);
+    row.counted = true;
     if (row.vials !== before) {
       this.log(`${delta > 0 ? 'Stock in' : 'Stock out'} — ${row.code}: ${before} → ${row.vials}`);
     }
@@ -337,6 +362,7 @@ export class Store {
       const match = this.stock().find((r) => r.code.toLowerCase() === row.code.toLowerCase());
       if (match) {
         match.vials = row.vials;
+        match.counted = true;
         if (row.batch !== '—') match.batch = row.batch;
         match.coa = row.coa;
         match.size = row.size !== '—' ? row.size : match.size;
@@ -344,7 +370,7 @@ export class Store {
         updated++;
       } else {
         this.state.stock = [...this.stock(), {
-          id: uid(), ...row, tint: tintFor(row.code), src: 'peptides',
+          id: uid(), ...row, tint: tintFor(row.code), src: 'peptides', counted: true,
         }];
         opened++;
       }
