@@ -449,6 +449,23 @@ export class UI extends UIWidgets {
       if (focus) focus.focus();
       return;
     }
+    const ship = e.target.closest('[data-dispatch]');
+    if (ship) {
+      e.preventDefault();
+      const get = (n) => ship.querySelector(`[name="${n}"]`);
+      const res = this.store.fulfil(get('line').value, get('qty').value, get('value').value);
+      // The refusal is the point: it says which guard stopped it, so a
+      // blocked dispatch is never a button that quietly did nothing.
+      this.dispatchNote = res.ok
+        ? { ok: true, text: `${res.code} shipped. ${res.left} left on the shelf${res.booked > 0 ? `, ${money(res.booked, 2)} booked to the Vault` : ', no value recorded'}.` }
+        : { ok: false, text: res.reason };
+      if (res.ok) for (const n of ['qty', 'value']) {
+        const el = document.querySelector(`[data-dispatch] [name="${n}"]`);
+        if (el) el.value = '';
+      }
+      this.render();
+      return;
+    }
     const council = e.target.closest('[data-council]');
     if (council) {
       e.preventDefault();

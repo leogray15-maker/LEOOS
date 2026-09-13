@@ -597,27 +597,37 @@ button.chip:hover { border-color: var(--seam-lit); color: var(--ink); }
 }
 .row-x:hover { color: var(--breach); background: rgba(244,77,82,.12); }
 
-.add-row.is-stock {
+.add-row.is-stock, .add-row.is-dispatch {
   display: grid; grid-template-columns: minmax(0, 1.5fr) 66px 62px auto;
   gap: 6px; margin-top: 10px;
 }
-.add-row.is-stock input {
+/* the dispatch select carries a compound name, so it needs a wider column */
+.add-row.is-dispatch { grid-template-columns: minmax(0, 1.6fr) 62px 72px auto; }
+
+.add-row.is-stock input,
+.add-row.is-dispatch input,
+.add-row.is-dispatch select {
   min-width: 0; background: var(--plate); border: 1px solid var(--seam);
   border-radius: var(--r-sm); padding: 7px 9px; font: inherit; font-size: 12px; color: var(--ink);
 }
-.add-row.is-stock input::placeholder { color: var(--faint); }
-.add-row.is-stock input:focus { border-color: var(--arcane); outline: none; }
-.add-row.is-stock button {
+.add-row.is-stock input::placeholder,
+.add-row.is-dispatch input::placeholder { color: var(--faint); }
+.add-row.is-stock input:focus,
+.add-row.is-dispatch input:focus,
+.add-row.is-dispatch select:focus { border-color: var(--arcane); outline: none; }
+.add-row.is-stock button,
+.add-row.is-dispatch button {
   border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
   color: var(--arcane-lift); border-radius: var(--r-sm); padding: 7px 11px;
   font-family: var(--f-display); font-size: 10px; letter-spacing: .1em;
   text-transform: uppercase; cursor: pointer; white-space: nowrap;
 }
-.add-row.is-stock button:hover { background: rgba(139,92,246,.24); }
+.add-row.is-stock button:hover,
+.add-row.is-dispatch button:hover { background: rgba(139,92,246,.24); }
 
 @media (max-width: 430px) {
-  .add-row.is-stock { grid-template-columns: 1fr 1fr; }
-  .add-row.is-stock button { grid-column: 1 / -1; }
+  .add-row.is-stock, .add-row.is-dispatch { grid-template-columns: 1fr 1fr; }
+  .add-row.is-stock button, .add-row.is-dispatch button { grid-column: 1 / -1; }
 }
 
 /* ---------- arcane peptides bridge ---------- */

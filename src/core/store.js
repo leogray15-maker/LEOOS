@@ -325,6 +325,68 @@ export class Store {
     this.save();
   }
 
+  /* ---------- fulfilment ---------- */
+
+  /**
+   * Ship vials off the shelf and book what they earned, in one step.
+   *
+   * THE LAB owns the count and the COA; THE VAULT owns the money. Doing it
+   * as one mutation followed by one save() means there is no window where
+   * the shelf has moved and the ledger has not — every panel re-renders
+   * from the same state, so LAB, MARKET, VAULT and the floor cannot
+   * disagree about what just happened.
+   *
+   * Refuses rather than half-completing. Returns { ok, reason }.
+   */
+  fulfil(lineId, qty, value = 0) {
+    const row = this.stock().find((r) => r.id === lineId);
+    if (!row) return { ok: false, reason: 'That stock line no longer exists.' };
+
+    const n = Math.round(Number(qty) || 0);
+    if (n <= 0) return { ok: false, reason: 'Say how many vials are going out.' };
+
+    // A line the shop feeds is the shop's to decrement. If LEOOS moved it
+    // here, the next pull would simply overwrite the change and the ledger
+    // would be the only trace left — a silent disagreement.
+    if (row.src === 'peptides') {
+      return { ok: false, reason: `${row.code} is fed by Arcane Peptides. Fulfil it in the shop; the next pull brings the new count here.` };
+    }
+    if (!row.counted) {
+      return { ok: false, reason: `${row.code} has never been counted. Count the shelf before shipping from it.` };
+    }
+    if (row.coa !== 'published') {
+      return { ok: false, reason: `${row.code} cannot be dispatched — its COA is "${row.coa}", not published.` };
+    }
+    const have = Number(row.vials) || 0;
+    if (n > have) {
+      return { ok: false, reason: `Only ${have} ${row.code} on the shelf; ${n} requested.` };
+    }
+
+    const money = Math.max(0, Number(value) || 0);
+    row.vials = have - n;
+
+    // THE VAULT. Revenue is only booked when a figure was actually given —
+    // an unpriced dispatch moves stock and says so, rather than inventing
+    // what it was worth.
+    if (money > 0) {
+      const led = this.state.ledger.peptides || (this.state.ledger.peptides = { mrr: 0, units: 0, calibrated: false });
+      led.mrr = (Number(led.mrr) || 0) + money;
+      led.units = (Number(led.units) || 0) + n;
+      led.calibrated = true;
+    }
+
+    this.log(`Dispatched — ${row.code} ×${n} (${have} → ${row.vials})`
+      + (money > 0 ? `, £${money.toFixed(2)} to the Vault` : ', no value recorded'));
+    this.save();
+    return { ok: true, code: row.code, left: row.vials, booked: money };
+  }
+
+  /** Lines that could ship right now: counted, in stock, COA published. */
+  dispatchable() {
+    return this.stock().filter((r) => r.counted && Number(r.vials) > 0
+      && r.coa === 'published' && r.src !== 'peptides');
+  }
+
   /* ---------- arcane peptides bridge ---------- */
 
   bridge() { return this.state.bridge || (this.state.bridge = { url: '', key: '', last: 0, error: '', feed: null }); }

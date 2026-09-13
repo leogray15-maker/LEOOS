@@ -122,6 +122,7 @@ export class UIWidgets extends UIScreens {
         : '<button class="wide-btn" type="button" data-goscreen="system">Connect Arcane Peptides</button>'}
 
       <h3 class="sub-title">Dispatch</h3>
+      ${this.dispatchForm()}
       ${feed ? `
         <p class="src-note"><span class="chip is-vital">live</span> ${feed.dispatch.length} order${feed.dispatch.length === 1 ? '' : 's'} from the shop</p>
         <div class="tbl">
@@ -143,6 +144,38 @@ export class UIWidgets extends UIScreens {
               <span class="chip">${esc(r.stage)}</span>
             </div>`).join('')}
         </div>`}`;
+  }
+
+  /**
+   * Ship off the shelf and book it, in one action.
+   *
+   * Only offers lines that can actually go out — counted, in stock, COA
+   * published, and not fed by the shop, which owns its own decrements.
+   * Everything else is named with the reason it cannot ship, so the room
+   * says what is blocking dispatch rather than hiding the option.
+   */
+  dispatchForm() {
+    const ready = this.store.dispatchable();
+    const note = this.dispatchNote;
+    const blocked = [
+      ...this.store.blockedByCoa().map((r) => `${r.code} — COA ${r.coa}`),
+      ...this.store.outOfStock().map((r) => `${r.code} — none on the shelf`),
+      ...this.store.uncounted().map((r) => `${r.code} — never counted`),
+    ];
+    return `
+      ${ready.length ? `
+        <form class="add-row is-dispatch" data-dispatch="1">
+          <select name="line" aria-label="Compound to dispatch">
+            ${ready.map((r) => `<option value="${r.id}">${esc(r.code)} · ${r.vials} on hand</option>`).join('')}
+          </select>
+          <input type="number" name="qty" placeholder="Vials" min="1" step="1" aria-label="Vials out">
+          <input type="number" name="value" placeholder="£ value" min="0" step="0.01" aria-label="Order value">
+          <button type="submit">Dispatch</button>
+        </form>
+        <p class="muted-note">Takes the vials off the shelf and books the value to THE VAULT in one step.</p>`
+        : '<p class="muted-note">Nothing can ship yet — a line has to be counted, in stock and COA published.</p>'}
+      ${note ? `<p class="${note.ok ? 'src-note' : 'warn-note'}" data-dispatchnote="1">${esc(note.text)}</p>` : ''}
+      ${blocked.length ? `<p class="muted-note">Not dispatchable: ${esc(blocked.join(' · '))}.</p>` : ''}`;
   }
 
   wLibrary() {

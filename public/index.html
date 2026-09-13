@@ -619,27 +619,37 @@ button.chip:hover { border-color: var(--seam-lit); color: var(--ink); }
 }
 .row-x:hover { color: var(--breach); background: rgba(244,77,82,.12); }
 
-.add-row.is-stock {
+.add-row.is-stock, .add-row.is-dispatch {
   display: grid; grid-template-columns: minmax(0, 1.5fr) 66px 62px auto;
   gap: 6px; margin-top: 10px;
 }
-.add-row.is-stock input {
+/* the dispatch select carries a compound name, so it needs a wider column */
+.add-row.is-dispatch { grid-template-columns: minmax(0, 1.6fr) 62px 72px auto; }
+
+.add-row.is-stock input,
+.add-row.is-dispatch input,
+.add-row.is-dispatch select {
   min-width: 0; background: var(--plate); border: 1px solid var(--seam);
   border-radius: var(--r-sm); padding: 7px 9px; font: inherit; font-size: 12px; color: var(--ink);
 }
-.add-row.is-stock input::placeholder { color: var(--faint); }
-.add-row.is-stock input:focus { border-color: var(--arcane); outline: none; }
-.add-row.is-stock button {
+.add-row.is-stock input::placeholder,
+.add-row.is-dispatch input::placeholder { color: var(--faint); }
+.add-row.is-stock input:focus,
+.add-row.is-dispatch input:focus,
+.add-row.is-dispatch select:focus { border-color: var(--arcane); outline: none; }
+.add-row.is-stock button,
+.add-row.is-dispatch button {
   border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
   color: var(--arcane-lift); border-radius: var(--r-sm); padding: 7px 11px;
   font-family: var(--f-display); font-size: 10px; letter-spacing: .1em;
   text-transform: uppercase; cursor: pointer; white-space: nowrap;
 }
-.add-row.is-stock button:hover { background: rgba(139,92,246,.24); }
+.add-row.is-stock button:hover,
+.add-row.is-dispatch button:hover { background: rgba(139,92,246,.24); }
 
 @media (max-width: 430px) {
-  .add-row.is-stock { grid-template-columns: 1fr 1fr; }
-  .add-row.is-stock button { grid-column: 1 / -1; }
+  .add-row.is-stock, .add-row.is-dispatch { grid-template-columns: 1fr 1fr; }
+  .add-row.is-stock button, .add-row.is-dispatch button { grid-column: 1 / -1; }
 }
 
 /* ---------- arcane peptides bridge ---------- */
@@ -2569,6 +2579,68 @@ class Store {
     this.state.stock = this.stock().filter((r) => r.id !== id);
     this.log(`Stock line closed — ${row.code}`);
     this.save();
+  }
+
+  /* ---------- fulfilment ---------- */
+
+  /**
+   * Ship vials off the shelf and book what they earned, in one step.
+   *
+   * THE LAB owns the count and the COA; THE VAULT owns the money. Doing it
+   * as one mutation followed by one save() means there is no window where
+   * the shelf has moved and the ledger has not — every panel re-renders
+   * from the same state, so LAB, MARKET, VAULT and the floor cannot
+   * disagree about what just happened.
+   *
+   * Refuses rather than half-completing. Returns { ok, reason }.
+   */
+  fulfil(lineId, qty, value = 0) {
+    const row = this.stock().find((r) => r.id === lineId);
+    if (!row) return { ok: false, reason: 'That stock line no longer exists.' };
+
+    const n = Math.round(Number(qty) || 0);
+    if (n <= 0) return { ok: false, reason: 'Say how many vials are going out.' };
+
+    // A line the shop feeds is the shop's to decrement. If LEOOS moved it
+    // here, the next pull would simply overwrite the change and the ledger
+    // would be the only trace left — a silent disagreement.
+    if (row.src === 'peptides') {
+      return { ok: false, reason: `${row.code} is fed by Arcane Peptides. Fulfil it in the shop; the next pull brings the new count here.` };
+    }
+    if (!row.counted) {
+      return { ok: false, reason: `${row.code} has never been counted. Count the shelf before shipping from it.` };
+    }
+    if (row.coa !== 'published') {
+      return { ok: false, reason: `${row.code} cannot be dispatched — its COA is "${row.coa}", not published.` };
+    }
+    const have = Number(row.vials) || 0;
+    if (n > have) {
+      return { ok: false, reason: `Only ${have} ${row.code} on the shelf; ${n} requested.` };
+    }
+
+    const money = Math.max(0, Number(value) || 0);
+    row.vials = have - n;
+
+    // THE VAULT. Revenue is only booked when a figure was actually given —
+    // an unpriced dispatch moves stock and says so, rather than inventing
+    // what it was worth.
+    if (money > 0) {
+      const led = this.state.ledger.peptides || (this.state.ledger.peptides = { mrr: 0, units: 0, calibrated: false });
+      led.mrr = (Number(led.mrr) || 0) + money;
+      led.units = (Number(led.units) || 0) + n;
+      led.calibrated = true;
+    }
+
+    this.log(`Dispatched — ${row.code} ×${n} (${have} → ${row.vials})`
+      + (money > 0 ? `, £${money.toFixed(2)} to the Vault` : ', no value recorded'));
+    this.save();
+    return { ok: true, code: row.code, left: row.vials, booked: money };
+  }
+
+  /** Lines that could ship right now: counted, in stock, COA published. */
+  dispatchable() {
+    return this.stock().filter((r) => r.counted && Number(r.vials) > 0
+      && r.coa === 'published' && r.src !== 'peptides');
   }
 
   /* ---------- arcane peptides bridge ---------- */
@@ -5780,6 +5852,7 @@ class UIWidgets extends UIScreens {
         : '<button class="wide-btn" type="button" data-goscreen="system">Connect Arcane Peptides</button>'}
 
       <h3 class="sub-title">Dispatch</h3>
+      ${this.dispatchForm()}
       ${feed ? `
         <p class="src-note"><span class="chip is-vital">live</span> ${feed.dispatch.length} order${feed.dispatch.length === 1 ? '' : 's'} from the shop</p>
         <div class="tbl">
@@ -5801,6 +5874,38 @@ class UIWidgets extends UIScreens {
               <span class="chip">${esc(r.stage)}</span>
             </div>`).join('')}
         </div>`}`;
+  }
+
+  /**
+   * Ship off the shelf and book it, in one action.
+   *
+   * Only offers lines that can actually go out — counted, in stock, COA
+   * published, and not fed by the shop, which owns its own decrements.
+   * Everything else is named with the reason it cannot ship, so the room
+   * says what is blocking dispatch rather than hiding the option.
+   */
+  dispatchForm() {
+    const ready = this.store.dispatchable();
+    const note = this.dispatchNote;
+    const blocked = [
+      ...this.store.blockedByCoa().map((r) => `${r.code} — COA ${r.coa}`),
+      ...this.store.outOfStock().map((r) => `${r.code} — none on the shelf`),
+      ...this.store.uncounted().map((r) => `${r.code} — never counted`),
+    ];
+    return `
+      ${ready.length ? `
+        <form class="add-row is-dispatch" data-dispatch="1">
+          <select name="line" aria-label="Compound to dispatch">
+            ${ready.map((r) => `<option value="${r.id}">${esc(r.code)} · ${r.vials} on hand</option>`).join('')}
+          </select>
+          <input type="number" name="qty" placeholder="Vials" min="1" step="1" aria-label="Vials out">
+          <input type="number" name="value" placeholder="£ value" min="0" step="0.01" aria-label="Order value">
+          <button type="submit">Dispatch</button>
+        </form>
+        <p class="muted-note">Takes the vials off the shelf and books the value to THE VAULT in one step.</p>`
+        : '<p class="muted-note">Nothing can ship yet — a line has to be counted, in stock and COA published.</p>'}
+      ${note ? `<p class="${note.ok ? 'src-note' : 'warn-note'}" data-dispatchnote="1">${esc(note.text)}</p>` : ''}
+      ${blocked.length ? `<p class="muted-note">Not dispatchable: ${esc(blocked.join(' · '))}.</p>` : ''}`;
   }
 
   wLibrary() {
@@ -6517,6 +6622,23 @@ class UI extends UIWidgets {
       }
       const focus = document.querySelector('[data-stockadd] [name="code"]');
       if (focus) focus.focus();
+      return;
+    }
+    const ship = e.target.closest('[data-dispatch]');
+    if (ship) {
+      e.preventDefault();
+      const get = (n) => ship.querySelector(`[name="${n}"]`);
+      const res = this.store.fulfil(get('line').value, get('qty').value, get('value').value);
+      // The refusal is the point: it says which guard stopped it, so a
+      // blocked dispatch is never a button that quietly did nothing.
+      this.dispatchNote = res.ok
+        ? { ok: true, text: `${res.code} shipped. ${res.left} left on the shelf${res.booked > 0 ? `, ${money(res.booked, 2)} booked to the Vault` : ', no value recorded'}.` }
+        : { ok: false, text: res.reason };
+      if (res.ok) for (const n of ['qty', 'value']) {
+        const el = document.querySelector(`[data-dispatch] [name="${n}"]`);
+        if (el) el.value = '';
+      }
+      this.render();
       return;
     }
     const council = e.target.closest('[data-council]');

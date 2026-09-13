@@ -279,6 +279,59 @@ check('restocking tops up, no duplicate line', rowsRestock === rowsAfter && coun
 await p.click('[data-stockadd] button[type="submit"]'); await p.waitForTimeout(400);
 check('empty stock submit is rejected', (await stockRows()) === rowsRestock);
 
+// ---- 3b0. DISPATCH: SHELF AND LEDGER MOVE TOGETHER --------------------
+await openLab();
+
+// a line that can actually ship: counted, in stock, COA published
+await p.fill('[data-stockadd] [name="code"]', 'E2E-SHIP');
+await p.fill('[data-stockadd] [name="size"]', '5mg');
+await p.fill('[data-stockadd] [name="vials"]', '10');
+await p.click('[data-stockadd] button[type="submit"]'); await p.waitForTimeout(450);
+const shipId = await p.evaluate(() =>
+  window.LEOOS.store.stock().find(r => r.code === 'E2E-SHIP')?.id);
+check('a shippable line can be opened', !!shipId);
+
+// COA starts at none, so dispatch must refuse before it is published
+const refusedCoa = await p.evaluate((id) => window.LEOOS.store.fulfil(id, 2, 50), shipId);
+check('dispatch refuses while the COA is unpublished',
+  refusedCoa.ok === false && /COA/.test(refusedCoa.reason), refusedCoa.reason);
+
+await p.click(`[data-coa="${shipId}"]`); await p.waitForTimeout(280);   // none -> pending
+await p.click(`[data-coa="${shipId}"]`); await p.waitForTimeout(420);   // pending -> published
+
+// and refuses to ship more than the shelf holds
+const refusedQty = await p.evaluate((id) => window.LEOOS.store.fulfil(id, 999, 10), shipId);
+check('dispatch refuses more vials than are held',
+  refusedQty.ok === false && /Only 10/.test(refusedQty.reason), refusedQty.reason);
+
+const revBefore = await p.evaluate(() => window.LEOOS.store.monthlyRevenue());
+const vialsBefore = await p.evaluate((id) =>
+  window.LEOOS.store.stock().find(r => r.id === id).vials, shipId);
+
+// the real thing, through the form the room actually shows
+await p.selectOption('[data-dispatch] [name="line"]', shipId);
+await p.fill('[data-dispatch] [name="qty"]', '3');
+await p.fill('[data-dispatch] [name="value"]', '150');
+await p.click('[data-dispatch] button[type="submit"]'); await p.waitForTimeout(550);
+
+const vialsAfter = await p.evaluate((id) =>
+  window.LEOOS.store.stock().find(r => r.id === id).vials, shipId);
+const revAfter = await p.evaluate(() => window.LEOOS.store.monthlyRevenue());
+check('dispatch takes the vials off the shelf', vialsAfter === vialsBefore - 3,
+  `${vialsBefore} → ${vialsAfter}`);
+check('and books the value to the Vault in the same step', revAfter === revBefore + 150,
+  `${revBefore} → ${revAfter}`);
+check('the room reports what shipped',
+  /E2E-SHIP shipped/.test(await p.$eval('#roomOverlay', e => e.textContent)));
+
+// the Vault must show it too — same state, different room
+await p.click('[data-screen="factory"]'); await p.waitForTimeout(150);
+await p.click('[data-screen="system"]'); await p.waitForTimeout(200);
+await p.click('#stageScreen [data-room="vault"]'); await p.waitForTimeout(420);
+check('THE VAULT sees the revenue the LAB booked',
+  (await p.$eval('#roomOverlay', e => e.textContent)).includes(revAfter.toLocaleString('en-GB')),
+  `looking for ${revAfter}`);
+
 // ---- 3b1. WHAT COUNSEL CAN SEE ----------------------------------------
 // The brief is the whole of what Counsel and the Council reason over. It
 // carried ventures, money, goals and open orders and nothing else, so both
@@ -346,6 +399,15 @@ const ghk = await p.evaluate(() => {
 });
 check('feed overwrote the GHK-Cu count', ghk === '34', `vials "${ghk}"`);
 check('lab shows the live dispatch queue', /#1041/.test(labText));
+
+// A line the shop feeds is the shop's to decrement. Fulfilling it here would
+// be overwritten by the next pull, leaving the ledger as the only trace.
+const fedId = await p.evaluate(() =>
+  window.LEOOS.store.stock().find(r => r.src === 'peptides')?.id);
+check('the feed marks its own lines', !!fedId);
+const refusedFed = await p.evaluate((id) => window.LEOOS.store.fulfil(id, 1, 10), fedId);
+check('dispatch refuses a line the shop owns',
+  refusedFed.ok === false && /Arcane Peptides/.test(refusedFed.reason), refusedFed.reason);
 
 // a hand count the shop does not know about must survive the pull
 check('hand-counted lines survive a pull', /Cerebrolysin/.test(labText));
