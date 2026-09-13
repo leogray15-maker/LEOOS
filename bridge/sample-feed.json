@@ -9,7 +9,8 @@
     { "code": "BPC-157",             "size": "5mg",  "vials": 9,  "batch": "BP-2408", "coa": "published" },
     { "code": "KPV",                 "size": "10mg", "vials": 21, "batch": "KP-2407", "coa": "pending" },
     { "code": "Retatrutide",         "size": "10mg", "vials": 6,  "batch": "RT-2409", "coa": "none" },
-    { "code": "Bacteriostatic Water","size": "10ml", "vials": 58, "batch": "BW-2406", "coa": "published" }
+    { "code": "Bacteriostatic Water","size": "10ml", "vials": 58, "batch": "BW-2406", "coa": "published" },
+    { "code": "MOTS-c",              "size": "10mg",               "batch": "MT-2409", "coa": "published" }
   ],
   "orders": [
     { "ref": "#1041", "items": "1× GHK-Cu 50mg, 1× Bacteriostatic Water", "stage": "pending",   "total": 74.00 },

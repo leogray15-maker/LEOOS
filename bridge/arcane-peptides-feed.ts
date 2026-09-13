@@ -1,16 +1,23 @@
 /**
- * Drop this into the Arcane Peptides app as
- *   app/api/leoos-feed/route.ts        (App Router)
- * or adapt it to pages/api/leoos-feed.ts (Pages Router).
+ * REFERENCE ONLY — this is now implemented.
+ *
+ * The live route is `app/api/leoos-feed/route.ts` in the arcane-peptides repo.
+ * It reads Firestore with the Admin SDK, checks `x-arcane-key` against
+ * `ARCANE_FEED_KEY`, and scopes CORS with `LEOOS_ORIGIN`. This file stays as
+ * the written contract: the shape below is what `src/core/bridge.js` reads,
+ * and any other shop can be wired up by matching it.
+ *
+ * One convention worth knowing: a stock row may omit `vials` (or send null)
+ * when the shop doesn't count stock. That is "I don't know", not zero, and
+ * LEOOS leaves the hand count in THE LAB alone. Send a number only when the
+ * shop genuinely knows it.
  *
  * It is a READ. It selects, it never writes, and it exposes no customer
- * names, emails or addresses — only counts, totals and what is on the
- * shelf. Set ARCANE_FEED_KEY in the project's environment variables and
- * paste the same value into LEOOS under System → Arcane Peptides.
+ * names, emails or addresses — only counts, totals and what is on the shelf.
  *
- * Swap the three loaders below for however this app actually reads its
- * data (Prisma, Supabase, Drizzle, a plain SQL client). Nothing else
- * needs to change — LEOOS normalises the shapes it gets.
+ * Swap the three loaders below for however a shop actually reads its data
+ * (Prisma, Supabase, Drizzle, a plain SQL client). Nothing else needs to
+ * change — LEOOS normalises the shapes it gets.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

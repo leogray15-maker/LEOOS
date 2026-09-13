@@ -202,6 +202,15 @@ check('restocking tops up, no duplicate line', rowsRestock === rowsAfter && coun
 await p.click('[data-stockadd] button[type="submit"]'); await p.waitForTimeout(400);
 check('empty stock submit is rejected', (await stockRows()) === rowsRestock);
 
+// a hand count on a line the shop names but cannot count must survive the pull
+const motsId = await p.evaluate(() => {
+  const row = [...document.querySelectorAll('.stock-line')]
+    .find(r => r.querySelector('.stock-name')?.textContent.includes('MOTS-c'));
+  return row?.querySelector('[data-stock]')?.dataset.stock || null;
+});
+await p.fill(`[data-stock="${motsId}"][data-field="vials"]`, '7');
+await p.keyboard.press('Tab'); await p.waitForTimeout(400);
+
 // ---- 3b2. THE ARCANE PEPTIDES BRIDGE ----------------------------------
 await p.click('[data-screen="system"]'); await p.waitForTimeout(400);
 check('system screen offers the peptides bridge', !!(await p.$('#bridgeUrl')));
@@ -242,6 +251,17 @@ const ghk = await p.evaluate(() => {
   return row?.querySelector('[data-field="vials"]')?.value;
 });
 check('feed overwrote the GHK-Cu count', ghk === '34', `vials "${ghk}"`);
+// The shop sent MOTS-c with no count — the hand count stands, the COA doesn't.
+const mots = await p.evaluate(() => {
+  const row = [...document.querySelectorAll('.stock-line')]
+    .find(r => r.querySelector('.stock-name')?.textContent.includes('MOTS-c'));
+  return {
+    vials: row?.querySelector('[data-field="vials"]')?.value,
+    text: row?.textContent || '',
+  };
+});
+check('a countless feed line leaves the hand count alone', mots.vials === '7', `vials "${mots.vials}"`);
+check('a countless feed line still updates COA', /published/i.test(mots.text), mots.text.slice(0, 60));
 check('lab shows the live dispatch queue', /#1041/.test(labText));
 
 // a hand count the shop does not know about must survive the pull
