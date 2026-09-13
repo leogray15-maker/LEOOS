@@ -8,6 +8,7 @@ import {
   AGENTS, COUNCIL, CAPS, TOOLS, GRADE_TONE,
 } from '../config/empire.js';
 import { ROOM_BY_ID, WINGS } from '../config/facility.js';
+import { pullFeed, parseFeed } from '../core/bridge.js';
 import {
   INVENTORY, DISPATCH, PDF_PRODUCTS, COHORTS, BUILD_QUEUE,
   MANUSCRIPTS, PROTOCOL, DOCTRINE, ROOM_WIDGET,
@@ -75,6 +76,8 @@ export class UI {
       el.addEventListener('click', (e) => this.onClick(e));
       el.addEventListener('submit', (e) => this.onSubmit(e));
       el.addEventListener('change', (e) => this.onChange(e));
+      // `toggle` does not bubble, so catch it on the way down
+      el.addEventListener('toggle', (e) => this.onToggle(e), true);
       el.addEventListener('focusout', () => {
         if (this.dirty) setTimeout(() => this.render(), 0);
       });
@@ -153,7 +156,7 @@ export class UI {
     this.room = null;
     this.factory.selected = null;
     this.overlayEl.hidden = true;
-    this.overlayEl.innerHTML = '';
+    this.setHTML(this.overlayEl, '');
   }
 
   selectAgent(id) {
@@ -166,9 +169,21 @@ export class UI {
 
   /* ================= render ================= */
 
+  /**
+   * Write html into el only when it differs from what is already there.
+   * Once-a-second repaints then cost nothing and, more importantly, stop
+   * replacing the element under the pointer mid-click.
+   */
+  setHTML(el, html) {
+    if (el.__lastHTML === html) return false;
+    el.__lastHTML = html;
+    el.innerHTML = html;
+    return true;
+  }
+
   render() {
     const active = document.activeElement;
-    if (active && active.tagName === 'INPUT'
+    if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)
       && (this.stageEl.contains(active) || this.dashEl.contains(active) || this.overlayEl.contains(active))) {
       this.dirty = true;
       return;
@@ -182,7 +197,7 @@ export class UI {
     if (this.screen === 'factory') {
       this.renderOverlay();
     } else {
-      this.stageEl.innerHTML = this.screenBody();
+      this.setHTML(this.stageEl, this.screenBody());
     }
   }
 
@@ -223,7 +238,7 @@ export class UI {
   /* ================= room dashboard ================= */
 
   renderOverlay() {
-    if (!this.room) { this.overlayEl.hidden = true; this.overlayEl.innerHTML = ''; return; }
+    if (!this.room) { this.overlayEl.hidden = true; this.setHTML(this.overlayEl, ''); return; }
     const room = ROOM_BY_ID[this.room];
     const tasks = this.store.tasks(room.id);
     const open = tasks.filter((t) => !t.done);
@@ -233,7 +248,7 @@ export class UI {
     const elsewhere = this.sim.agents.filter((a) => a.deck !== room.id);
 
     this.overlayEl.hidden = false;
-    this.overlayEl.innerHTML = `
+    this.setHTML(this.overlayEl, `
       <div class="room-head is-${room.accent}">
         <div>
           <span class="eyebrow">Room dashboard</span>
@@ -282,10 +297,8 @@ export class UI {
           <button class="crew-chip" type="button" data-send="${a.id}" data-to="${room.id}">
             <span class="dot" style="background:${a.colour}"></span>${esc(a.name)}
           </button>`).join('')}
-      </div>`;
+      </div>`);
   }
-
-
 
   /* ================= the empire ================= */
 
@@ -500,6 +513,7 @@ export class UI {
   roomWidget(roomId) {
     switch (ROOM_WIDGET[roomId]) {
       case 'lab': return this.wLab();
+      case 'market': return this.wMarket();
       case 'library': return this.wLibrary();
       case 'cohorts': return this.wCohorts();
       case 'build': return this.wBuild();
@@ -518,10 +532,13 @@ export class UI {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
     const rows = this.store.stock();
     const low = this.store.lowStock().length;
+    const feed = this.store.feed();
+    const fed = rows.filter((r) => r.src === 'peptides').length;
     return `
       <h3 class="sub-title">Stock</h3>
-      <p class="muted-note">Counted here, saved on this device. Type a count, or tap −/+ as vials move.
-        Click the COA chip to cycle none → pending → published.</p>
+      ${feed
+        ? `<p class="src-note"><span class="chip is-vital">live</span> ${fed} line${fed === 1 ? '' : 's'} from Arcane Peptides, pulled ${esc(clockTime(feed.fetchedAt))}. Hand counts below are yours and are left alone.</p>`
+        : '<p class="muted-note">Counted here, saved on this device. Type a count, or tap −/+ as vials move. Click the COA chip to cycle none → pending → published.</p>'}
       <div class="stat-row">
         <div class="stat"><span class="stat-n mono">${rows.length}</span><span class="stat-l">Lines</span></div>
         <div class="stat"><span class="stat-n mono is-arcane">${this.store.totalVials()}</span><span class="stat-l">Vials on hand</span></div>
@@ -531,7 +548,7 @@ export class UI {
         <div class="tbl-head"><span>Compound</span><span>Size</span><span>Vials</span><span>Batch</span><span>COA</span><span></span></div>
         ${rows.map((r) => `
           <div class="tbl-row is-stock">
-            <span class="tbl-code"><i class="vial is-${esc(r.tint)}"></i>${esc(r.code)}</span>
+            <span class="tbl-code"><i class="vial is-${esc(r.tint)}"></i>${esc(r.code)}${r.src === 'peptides' ? '<i class="live-dot" title="From Arcane Peptides"></i>' : ''}</span>
             <input class="cell-in mono dim" type="text" value="${esc(r.size)}"
                    data-stock="${r.id}" data-field="size" aria-label="${esc(r.code)} size">
             <span class="step">
@@ -555,18 +572,32 @@ export class UI {
         <button type="submit">Add stock</button>
       </form>
       ${low ? `<p class="warn-note">${low} line${low === 1 ? '' : 's'} under two weeks of cover.</p>` : ''}
+      ${feed
+        ? '<button class="wide-btn" type="button" data-bridgepull="1">Pull from Arcane Peptides</button>'
+        : '<button class="wide-btn" type="button" data-goscreen="system">Connect Arcane Peptides</button>'}
 
       <h3 class="sub-title">Dispatch</h3>
-      ${this.srcNote(DISPATCH.source)}
-      <p class="muted-note">${esc(DISPATCH.note)}</p>
-      <div class="tbl">
-        ${DISPATCH.rows.map((r) => `
-          <div class="tbl-row is-2">
-            <span class="mono dim">${esc(r.ref)}</span>
-            <span>${esc(r.items)}</span>
-            <span class="chip">${esc(r.stage)}</span>
-          </div>`).join('')}
-      </div>`;
+      ${feed ? `
+        <p class="src-note"><span class="chip is-vital">live</span> ${feed.dispatch.length} order${feed.dispatch.length === 1 ? '' : 's'} from the shop</p>
+        <div class="tbl">
+          ${feed.dispatch.slice(0, 12).map((r) => `
+            <div class="tbl-row is-2">
+              <span class="mono dim">${esc(r.ref)}</span>
+              <span>${esc(r.items)}</span>
+              <span class="chip ${/pend|unfulfil|await/i.test(r.stage) ? 'is-flare' : 'is-vital'}">${esc(r.stage)}</span>
+            </div>`).join('') || '<div class="tbl-row is-2"><span class="mono dim">—</span><span>Nothing waiting.</span><span></span></div>'}
+        </div>`
+      : `
+        ${this.srcNote(DISPATCH.source)}
+        <p class="muted-note">${esc(DISPATCH.note)}</p>
+        <div class="tbl">
+          ${DISPATCH.rows.map((r) => `
+            <div class="tbl-row is-2">
+              <span class="mono dim">${esc(r.ref)}</span>
+              <span>${esc(r.items)}</span>
+              <span class="chip">${esc(r.stage)}</span>
+            </div>`).join('')}
+        </div>`}`;
   }
 
   wLibrary() {
@@ -982,6 +1013,7 @@ export class UI {
           <span class="chip">06:00 daily</span></div>
         <p class="muted-note">Reads The Arcane Archives, drafts three posts, writes them into this system. Notion is read-only — the agent never creates, edits or deletes anything there.</p>
       </section>
+      ${this.bridgeBlock()}
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">The floor</h3></div>
         <p class="muted-note">${DECKS.length} rooms, ${CREW.length} crew and one commander. Click a room to open its dashboard — ARCANE walks there and the crew drift toward wherever the attention is.</p>
@@ -992,6 +1024,126 @@ export class UI {
       </section>`;
   }
 
+  /* ================= arcane peptides bridge ================= */
+
+  bridgeBlock() {
+    const b = this.store.bridge();
+    const feed = b.feed;
+    const state = b.error ? 'is-breach' : feed ? 'is-vital' : 'is-flare';
+    const word = b.error ? 'error' : feed ? 'connected' : 'not connected';
+    return `
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Arcane Peptides</h3>
+          <span class="chip ${state}">${word}</span></div>
+        <p class="muted-note">Read-only. LEOOS pulls orders, revenue, customers and stock from the shop
+          and fills THE LAB and THE MARKET with them. It never writes anything back.</p>
+        <form class="bridge-form" data-bridgesave="1">
+          <label class="field-l" for="bridgeUrl">Feed URL</label>
+          <input id="bridgeUrl" type="url" name="url" autocomplete="off" spellcheck="false"
+                 placeholder="https://arcanepeptides.vercel.app/api/leoos-feed"
+                 value="${esc(b.url)}">
+          <label class="field-l" for="bridgeKey">Read key</label>
+          <input id="bridgeKey" type="password" name="key" autocomplete="off"
+                 placeholder="the ARCANE_FEED_KEY you set on the shop" value="${esc(b.key)}">
+          <div class="bridge-btns">
+            <button type="submit">Save</button>
+            <button type="button" data-bridgepull="1">Pull now</button>
+            ${feed ? '<button type="button" class="is-quiet" data-bridgeclear="1">Disconnect</button>' : ''}
+          </div>
+        </form>
+        ${b.error ? `<p class="warn-note">${esc(b.error)}</p>` : ''}
+        ${feed ? `
+          <div class="stat-row" style="margin-top:12px">
+            <div class="stat"><span class="stat-n mono is-arcane">${money(feed.revenue, 2)}</span><span class="stat-l">Revenue</span></div>
+            <div class="stat"><span class="stat-n mono">${feed.orderCount}</span><span class="stat-l">Orders</span></div>
+            <div class="stat"><span class="stat-n mono ${feed.pending ? 'is-flare' : 'dim'}">${feed.pending}</span><span class="stat-l">Pending</span></div>
+            <div class="stat"><span class="stat-n mono">${feed.customers}</span><span class="stat-l">Customers</span></div>
+          </div>
+          <p class="src-note"><span class="chip is-vital">live</span> Last pull ${esc(clockTime(b.last))} · ${feed.stock.length} stock line${feed.stock.length === 1 ? '' : 's'}</p>`
+        : ''}
+        <details class="bridge-paste" data-pastebox="1" ${this.pasteOpen ? 'open' : ''}>
+          <summary>Paste feed instead</summary>
+          <p class="muted-note">On claude.ai this page cannot call out to the shop, so open the feed URL
+            in a tab, copy the JSON, and drop it here.</p>
+          <form data-bridgepaste="1">
+            <textarea name="json" rows="4" placeholder='{"revenue":1420.02,"orders":[…],"stock":[…]}'>${esc(this.pasteDraft || '')}</textarea>
+            <button type="submit">Import</button>
+          </form>
+        </details>
+      </section>`;
+  }
+
+  async pullBridge() {
+    const b = this.store.bridge();
+    this.store.bridgeError('');
+    this.bridgeBusy = true;
+    this.render();
+    try {
+      const feed = await pullFeed(b.url, b.key);
+      this.store.applyFeed(feed);
+    } catch (e) {
+      this.store.bridgeError(e?.message || 'The pull failed.');
+    }
+    this.bridgeBusy = false;
+    this.render();
+  }
+
+  importBridge(raw) {
+    try {
+      this.store.applyFeed(parseFeed(raw));
+      this.pasteOpen = false;
+      this.pasteDraft = '';
+    } catch (e) {
+      // Hold on to what was pasted — losing it to a re-render is worse
+      // than the error that caused it.
+      this.store.bridgeError(e?.message || 'That feed could not be read.');
+      this.pasteOpen = true;
+      this.pasteDraft = String(raw || '').slice(0, 200000);
+    }
+    this.render();
+  }
+
+  /* ================= the market ================= */
+
+  wMarket() {
+    const feed = this.store.feed();
+    if (!feed) {
+      return `
+        <h3 class="sub-title">The funnel</h3>
+        ${this.srcNote('Not connected. Open System → Arcane Peptides and point this at the shop.')}
+        <p class="muted-note">Once the feed is in, this room shows real visitors, orders,
+          repeat rate and average order value — straight from arcanepeptides.vercel.app.</p>
+        <button class="wide-btn" type="button" data-goscreen="system">Connect the shop</button>`;
+    }
+    const aov = feed.orderCount ? feed.revenue / feed.orderCount : 0;
+    const perCustomer = feed.customers ? feed.orderCount / feed.customers : 0;
+    const conv = feed.visitors ? (feed.orderCount / feed.visitors) * 100 : null;
+    return `
+      <h3 class="sub-title">The funnel</h3>
+      <p class="src-note"><span class="chip is-vital">live</span> Arcane Peptides · pulled ${esc(clockTime(feed.fetchedAt))}</p>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${money(feed.revenue, 2)}</span><span class="stat-l">Revenue</span></div>
+        <div class="stat"><span class="stat-n mono">${feed.orderCount}</span><span class="stat-l">Orders</span></div>
+        <div class="stat"><span class="stat-n mono">${feed.customers}</span><span class="stat-l">Customers</span></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono">${money(aov, 2)}</span><span class="stat-l">Average order</span></div>
+        <div class="stat"><span class="stat-n mono">${perCustomer.toFixed(2)}</span><span class="stat-l">Orders per customer</span></div>
+        <div class="stat"><span class="stat-n mono ${conv === null ? 'dim' : ''}">${conv === null ? '—' : `${conv.toFixed(1)}%`}</span><span class="stat-l">Visitor → order</span></div>
+      </div>
+      ${feed.pending ? `<p class="warn-note">${feed.pending} order${feed.pending === 1 ? '' : 's'} waiting to be packed.</p>` : ''}
+      <h3 class="sub-title">Latest orders</h3>
+      <div class="tbl">
+        ${feed.dispatch.slice(0, 10).map((r) => `
+          <div class="tbl-row is-2">
+            <span class="mono dim">${esc(r.ref)}</span>
+            <span>${esc(r.items)}</span>
+            <span class="chip">${esc(r.stage)}</span>
+          </div>`).join('') || '<div class="tbl-row is-2"><span class="mono dim">—</span><span>No orders in the feed.</span><span></span></div>'}
+      </div>
+      <button class="wide-btn" type="button" data-bridgepull="1">Pull again</button>`;
+  }
+
   /* ================= right rail ================= */
 
   renderTelemetry() {
@@ -1000,7 +1152,7 @@ export class UI {
     const hot = DECKS.map((d) => ({ d, open: this.store.openCount(d.id) }))
       .sort((a, b) => b.open - a.open).slice(0, 4);
 
-    this.dashEl.innerHTML = `
+    this.setHTML(this.dashEl, `
       <section class="panel">
         <div class="panel-head"><h2 class="panel-title">Floor</h2>
           <span class="chip mono">${this.store.totalOpen()} open</span></div>
@@ -1039,7 +1191,7 @@ export class UI {
           <input type="text" id="counselInput" placeholder="Speak to the network…" autocomplete="off" ${this.counselBusy ? 'disabled' : ''}>
           <button type="submit" ${this.counselBusy ? 'disabled' : ''}>${this.counselBusy ? '···' : 'Ask'}</button>
         </form>
-      </section>`;
+      </section>`);
   }
 
   renderTicker() {
@@ -1076,6 +1228,8 @@ export class UI {
     if (copy) { this.copyPost(copy.dataset.copy, copy); return; }
     const posted = t('[data-posted]');
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
+    if (t('[data-bridgepull]')) { this.pullBridge(); return; }
+    if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
     if (step) { this.store.adjustStock(step.dataset.stockstep, Number(step.dataset.delta)); return; }
     const coa = t('[data-coa]');
@@ -1095,6 +1249,21 @@ export class UI {
       const issued = this.store.addTask(id, input.value);
       const fresh = document.querySelector(`[data-add="${id}"] input`);
       if (fresh) { if (issued) fresh.value = ''; fresh.focus(); }
+      return;
+    }
+    const bsave = e.target.closest('[data-bridgesave]');
+    if (bsave) {
+      e.preventDefault();
+      this.store.setBridge('url', bsave.querySelector('[name="url"]').value);
+      this.store.setBridge('key', bsave.querySelector('[name="key"]').value);
+      this.store.bridgeError('');
+      this.pullBridge();
+      return;
+    }
+    const bpaste = e.target.closest('[data-bridgepaste]');
+    if (bpaste) {
+      e.preventDefault();
+      this.importBridge(bpaste.querySelector('[name="json"]').value);
       return;
     }
     const stock = e.target.closest('[data-stockadd]');
@@ -1123,6 +1292,11 @@ export class UI {
       input.value = '';
       this.ask(q);
     }
+  }
+
+  onToggle(e) {
+    const box = e.target.closest('[data-pastebox]');
+    if (box) this.pasteOpen = box.open;
   }
 
   onChange(e) {

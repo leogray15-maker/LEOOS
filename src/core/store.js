@@ -39,10 +39,11 @@ function seedState() {
   const budget = { cash: 0, fixed: {}, split: {} };
   for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
   for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
+  const bridge = { url: '', key: '', last: 0, error: '', feed: null };
   const stock = INVENTORY.rows.map((r) => ({
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
   }));
-  return { decks, ledger, goals, budget, stock, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
 }
 
 export class Store {
@@ -129,7 +130,18 @@ export class Store {
           batch: String(r.batch || '—').slice(0, 24),
           coa: COA_STATES.includes(r.coa) ? r.coa : 'none',
           tint: r.tint || 'clear',
+          ...(r.src ? { src: String(r.src).slice(0, 20) } : {}),
         }));
+    }
+    if (body.bridge && typeof body.bridge === 'object') {
+      const b = body.bridge;
+      this.state.bridge = {
+        url: String(b.url || '').slice(0, 300),
+        key: String(b.key || '').slice(0, 200),
+        last: Number(b.last) || 0,
+        error: String(b.error || '').slice(0, 200),
+        feed: b.feed && typeof b.feed === 'object' ? b.feed : null,
+      };
     }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
@@ -164,6 +176,7 @@ export class Store {
       goals: this.state.goals,
       budget: this.state.budget,
       stock: this.state.stock,
+      bridge: this.state.bridge,
     };
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
@@ -284,6 +297,73 @@ export class Store {
     if (!row) return;
     this.state.stock = this.stock().filter((r) => r.id !== id);
     this.log(`Stock line closed — ${row.code}`);
+    this.save();
+  }
+
+  /* ---------- arcane peptides bridge ---------- */
+
+  bridge() { return this.state.bridge || (this.state.bridge = { url: '', key: '', last: 0, error: '', feed: null }); }
+
+  feed() { return this.bridge().feed; }
+
+  setBridge(field, value) {
+    const b = this.bridge();
+    if (field === 'url') b.url = String(value).trim().slice(0, 300);
+    else if (field === 'key') b.key = String(value).trim().slice(0, 200);
+    else return;
+    this.save();
+  }
+
+  bridgeError(message) {
+    const b = this.bridge();
+    b.error = String(message || '').slice(0, 200);
+    this.save();
+  }
+
+  /**
+   * Take a pulled feed as the truth for the compounds it names, and
+   * leave every line Leo counted by hand that the shop does not know
+   * about exactly where it is.
+   */
+  applyFeed(feed) {
+    const b = this.bridge();
+    b.feed = feed;
+    b.last = feed.fetchedAt || Date.now();
+    b.error = '';
+
+    let updated = 0;
+    let opened = 0;
+    for (const row of feed.stock || []) {
+      const match = this.stock().find((r) => r.code.toLowerCase() === row.code.toLowerCase());
+      if (match) {
+        match.vials = row.vials;
+        if (row.batch !== '—') match.batch = row.batch;
+        match.coa = row.coa;
+        match.size = row.size !== '—' ? row.size : match.size;
+        match.src = 'peptides';
+        updated++;
+      } else {
+        this.state.stock = [...this.stock(), {
+          id: uid(), ...row, tint: tintFor(row.code), src: 'peptides',
+        }];
+        opened++;
+      }
+    }
+
+    this.log(`Arcane Peptides synced — ${updated} line${updated === 1 ? '' : 's'} updated`
+      + `${opened ? `, ${opened} opened` : ''}, ${feed.orderCount} order${feed.orderCount === 1 ? '' : 's'}`);
+    this.save();
+    return { updated, opened };
+  }
+
+  /** Drop the connection and everything it filled in, leaving hand counts. */
+  clearFeed() {
+    const b = this.bridge();
+    b.feed = null;
+    b.last = 0;
+    b.error = '';
+    this.state.stock = this.stock().map((r) => { const { src, ...rest } = r; return rest; });
+    this.log('Arcane Peptides feed disconnected');
     this.save();
   }
 

@@ -573,6 +573,47 @@ button.chip:hover { border-color: var(--arcane); }
 }
 .add-row.is-stock button:hover { background: rgba(139,92,246,.24); }
 
+/* ---------- arcane peptides bridge ---------- */
+
+.bridge-form { display: grid; gap: 4px; margin-top: 10px; }
+.bridge-form input {
+  background: var(--plate); border: 1px solid var(--seam); border-radius: var(--r-sm);
+  padding: 7px 9px; font: inherit; font-size: 12px; color: var(--ink); width: 100%;
+  margin-bottom: 6px;
+}
+.bridge-form input:focus { border-color: var(--arcane); outline: none; }
+.bridge-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.bridge-btns button, .bridge-paste button, .wide-btn {
+  border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
+  color: var(--arcane-lift); border-radius: var(--r-sm); padding: 7px 12px;
+  font-family: var(--f-display); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; cursor: pointer;
+}
+.bridge-btns button:hover, .bridge-paste button:hover, .wide-btn:hover { background: rgba(139,92,246,.24); }
+.bridge-btns button.is-quiet { border-color: var(--seam); background: none; color: var(--faint); }
+.bridge-btns button.is-quiet:hover { color: var(--breach); border-color: rgba(229,72,77,.42); background: none; }
+
+.wide-btn { width: 100%; margin-top: 10px; }
+
+.bridge-paste { margin-top: 12px; border-top: 1px solid var(--seam); padding-top: 10px; }
+.bridge-paste summary {
+  cursor: pointer; font-family: var(--f-display); font-size: 10px;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+}
+.bridge-paste summary:hover { color: var(--arcane-lift); }
+.bridge-paste textarea {
+  width: 100%; background: var(--plate); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 8px 9px; color: var(--ink);
+  font-family: var(--f-mono, ui-monospace, monospace); font-size: 11px;
+  resize: vertical; margin: 6px 0;
+}
+.bridge-paste textarea:focus { border-color: var(--arcane); outline: none; }
+
+.live-dot {
+  width: 5px; height: 5px; border-radius: 50%; flex: none; display: inline-block;
+  background: var(--vital); box-shadow: 0 0 5px var(--vital); margin-left: 5px;
+}
+
 @media (max-width: 560px) {
   .tbl.is-stock .tbl-head { display: none; }
   .tbl.is-stock .tbl-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
@@ -1457,6 +1498,7 @@ const DOCTRINE = [
 /** Which dataset a room shows. */
 const ROOM_WIDGET = {
   apothecary: 'lab',
+  market: 'market',
   archives: 'library',
   vitals: 'cohorts',
   forge: 'build',
@@ -1991,6 +2033,126 @@ The goal was never to make them feel bad. It's to make them see that if someone 
   },
 ];
 
+/* ==== src/core/bridge.js ==== */
+/**
+ * The Arcane Peptides bridge.
+ *
+ * The shop at arcanepeptides.vercel.app already knows the truth about
+ * orders, revenue, customers and what is on the shelf. This pulls that
+ * truth in, read-only, and hands it to the rooms that care:
+ * THE LAB gets stock and dispatch, THE MARKET gets the funnel.
+ *
+ * Two ways in, because the two places LEOOS runs have different rules:
+ *
+ *   live  — fetch the feed URL directly. Works on the Vercel deployment
+ *           and anywhere the page is served from a normal origin.
+ *   paste — drop the JSON in by hand. The published artifact on
+ *           claude.ai runs under a CSP that blocks outbound fetch, so
+ *           this is the way in there.
+ *
+ * Nothing here ever writes back to the shop. It is a read.
+ */
+
+const COA_WORDS = ['none', 'pending', 'published'];
+
+const toNum = (v) => {
+  const n = Number(String(v ?? '').replace(/[^0-9.\-]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+};
+const text = (v, max = 60) => String(v ?? '').trim().slice(0, max);
+
+/** Accept several shapes, because a shop's admin API rarely matches ours. */
+function normaliseStock(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 120).map((r) => ({
+    code: text(r.code ?? r.name ?? r.product ?? r.sku, 40),
+    size: text(r.size ?? r.strength ?? r.variant ?? '', 16) || '—',
+    vials: Math.max(0, Math.round(toNum(r.vials ?? r.stock ?? r.quantity ?? r.qty ?? r.inventory))),
+    batch: text(r.batch ?? r.lot ?? '', 24) || '—',
+    coa: COA_WORDS.includes(r.coa) ? r.coa
+      : (r.coa === true || r.coaUrl || r.coa_url) ? 'published' : 'none',
+  })).filter((r) => r.code);
+}
+
+function normaliseDispatch(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 40).map((r) => ({
+    ref: text(r.ref ?? r.id ?? r.number ?? r.orderId, 20) || '—',
+    items: text(r.items ?? r.summary ?? r.products ?? '', 80) || '—',
+    stage: text(r.stage ?? r.status ?? r.state ?? 'pending', 20),
+    total: toNum(r.total ?? r.amount ?? r.value),
+  })).filter((r) => r.ref !== '—' || r.items !== '—');
+}
+
+/** Fold whatever the shop sent into the one shape the rooms read. */
+function normaliseFeed(body) {
+  if (!body || typeof body !== 'object') throw new Error('Feed is not a JSON object.');
+  const src = body.data && typeof body.data === 'object' ? body.data : body;
+  const orders = src.orders && !Array.isArray(src.orders) ? src.orders : {};
+  const list = Array.isArray(src.orders) ? src.orders
+    : Array.isArray(src.recentOrders) ? src.recentOrders
+      : Array.isArray(src.dispatch) ? src.dispatch : [];
+
+  const feed = {
+    fetchedAt: Date.now(),
+    currency: text(src.currency || 'GBP', 4),
+    revenue: toNum(src.revenue ?? src.totalRevenue ?? orders.revenue),
+    orderCount: Math.round(toNum(src.orderCount ?? orders.total ?? list.length)),
+    pending: Math.round(toNum(src.pending ?? orders.pending)),
+    customers: Math.round(toNum(src.customers ?? src.customerCount)),
+    visitors: Math.round(toNum(src.visitors ?? src.sessions)),
+    stock: normaliseStock(src.stock ?? src.inventory ?? src.products),
+    dispatch: normaliseDispatch(list),
+  };
+
+  const empty = !feed.revenue && !feed.orderCount && !feed.customers
+    && !feed.stock.length && !feed.dispatch.length;
+  if (empty) throw new Error('Feed parsed, but carried no orders, customers or stock.');
+  return feed;
+}
+
+/**
+ * Pull the feed over the network.
+ * Resolves to a normalised feed, or throws with a message worth showing.
+ */
+async function pullFeed(url, key, { timeoutMs = 9000 } = {}) {
+  const target = String(url || '').trim();
+  if (!/^https?:\/\//i.test(target)) throw new Error('Give the full feed URL, starting with https://');
+
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
+  let res;
+  try {
+    res = await fetch(target, {
+      method: 'GET',
+      headers: key ? { 'x-arcane-key': String(key) } : {},
+      signal: ctl ? ctl.signal : undefined,
+      cache: 'no-store',
+    });
+  } catch (e) {
+    // A CSP block and a dead host both land here, so say what to do next.
+    throw new Error(e?.name === 'AbortError'
+      ? 'The shop did not answer in time.'
+      : 'Could not reach the feed. On claude.ai the page cannot call out — use Paste feed instead.');
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+
+  if (res.status === 401 || res.status === 403) throw new Error('Feed refused the key.');
+  if (!res.ok) throw new Error(`Feed answered ${res.status}.`);
+
+  let body;
+  try { body = await res.json(); } catch { throw new Error('Feed did not return JSON.'); }
+  return normaliseFeed(body);
+}
+
+/** The paste path: same validation, no network. */
+function parseFeed(raw) {
+  let body;
+  try { body = JSON.parse(String(raw)); } catch { throw new Error('That is not valid JSON.'); }
+  return normaliseFeed(body);
+}
+
 /* ==== src/core/store.js ==== */
 /**
  * Persistence for LEOOS.
@@ -2032,10 +2194,11 @@ function seedState() {
   const budget = { cash: 0, fixed: {}, split: {} };
   for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
   for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
+  const bridge = { url: '', key: '', last: 0, error: '', feed: null };
   const stock = INVENTORY.rows.map((r) => ({
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
   }));
-  return { decks, ledger, goals, budget, stock, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
 }
 
 class Store {
@@ -2122,7 +2285,18 @@ class Store {
           batch: String(r.batch || '—').slice(0, 24),
           coa: COA_STATES.includes(r.coa) ? r.coa : 'none',
           tint: r.tint || 'clear',
+          ...(r.src ? { src: String(r.src).slice(0, 20) } : {}),
         }));
+    }
+    if (body.bridge && typeof body.bridge === 'object') {
+      const b = body.bridge;
+      this.state.bridge = {
+        url: String(b.url || '').slice(0, 300),
+        key: String(b.key || '').slice(0, 200),
+        last: Number(b.last) || 0,
+        error: String(b.error || '').slice(0, 200),
+        feed: b.feed && typeof b.feed === 'object' ? b.feed : null,
+      };
     }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
@@ -2157,6 +2331,7 @@ class Store {
       goals: this.state.goals,
       budget: this.state.budget,
       stock: this.state.stock,
+      bridge: this.state.bridge,
     };
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
@@ -2277,6 +2452,73 @@ class Store {
     if (!row) return;
     this.state.stock = this.stock().filter((r) => r.id !== id);
     this.log(`Stock line closed — ${row.code}`);
+    this.save();
+  }
+
+  /* ---------- arcane peptides bridge ---------- */
+
+  bridge() { return this.state.bridge || (this.state.bridge = { url: '', key: '', last: 0, error: '', feed: null }); }
+
+  feed() { return this.bridge().feed; }
+
+  setBridge(field, value) {
+    const b = this.bridge();
+    if (field === 'url') b.url = String(value).trim().slice(0, 300);
+    else if (field === 'key') b.key = String(value).trim().slice(0, 200);
+    else return;
+    this.save();
+  }
+
+  bridgeError(message) {
+    const b = this.bridge();
+    b.error = String(message || '').slice(0, 200);
+    this.save();
+  }
+
+  /**
+   * Take a pulled feed as the truth for the compounds it names, and
+   * leave every line Leo counted by hand that the shop does not know
+   * about exactly where it is.
+   */
+  applyFeed(feed) {
+    const b = this.bridge();
+    b.feed = feed;
+    b.last = feed.fetchedAt || Date.now();
+    b.error = '';
+
+    let updated = 0;
+    let opened = 0;
+    for (const row of feed.stock || []) {
+      const match = this.stock().find((r) => r.code.toLowerCase() === row.code.toLowerCase());
+      if (match) {
+        match.vials = row.vials;
+        if (row.batch !== '—') match.batch = row.batch;
+        match.coa = row.coa;
+        match.size = row.size !== '—' ? row.size : match.size;
+        match.src = 'peptides';
+        updated++;
+      } else {
+        this.state.stock = [...this.stock(), {
+          id: uid(), ...row, tint: tintFor(row.code), src: 'peptides',
+        }];
+        opened++;
+      }
+    }
+
+    this.log(`Arcane Peptides synced — ${updated} line${updated === 1 ? '' : 's'} updated`
+      + `${opened ? `, ${opened} opened` : ''}, ${feed.orderCount} order${feed.orderCount === 1 ? '' : 's'}`);
+    this.save();
+    return { updated, opened };
+  }
+
+  /** Drop the connection and everything it filled in, leaving hand counts. */
+  clearFeed() {
+    const b = this.bridge();
+    b.feed = null;
+    b.last = 0;
+    b.error = '';
+    this.state.stock = this.stock().map((r) => { const { src, ...rest } = r; return rest; });
+    this.log('Arcane Peptides feed disconnected');
     this.save();
   }
 
@@ -4741,6 +4983,7 @@ class Factory {
 
 
 
+
 const $ = (sel, root = document) => root.querySelector(sel);
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
@@ -4803,6 +5046,8 @@ class UI {
       el.addEventListener('click', (e) => this.onClick(e));
       el.addEventListener('submit', (e) => this.onSubmit(e));
       el.addEventListener('change', (e) => this.onChange(e));
+      // `toggle` does not bubble, so catch it on the way down
+      el.addEventListener('toggle', (e) => this.onToggle(e), true);
       el.addEventListener('focusout', () => {
         if (this.dirty) setTimeout(() => this.render(), 0);
       });
@@ -4881,7 +5126,7 @@ class UI {
     this.room = null;
     this.factory.selected = null;
     this.overlayEl.hidden = true;
-    this.overlayEl.innerHTML = '';
+    this.setHTML(this.overlayEl, '');
   }
 
   selectAgent(id) {
@@ -4894,9 +5139,21 @@ class UI {
 
   /* ================= render ================= */
 
+  /**
+   * Write html into el only when it differs from what is already there.
+   * Once-a-second repaints then cost nothing and, more importantly, stop
+   * replacing the element under the pointer mid-click.
+   */
+  setHTML(el, html) {
+    if (el.__lastHTML === html) return false;
+    el.__lastHTML = html;
+    el.innerHTML = html;
+    return true;
+  }
+
   render() {
     const active = document.activeElement;
-    if (active && active.tagName === 'INPUT'
+    if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)
       && (this.stageEl.contains(active) || this.dashEl.contains(active) || this.overlayEl.contains(active))) {
       this.dirty = true;
       return;
@@ -4910,7 +5167,7 @@ class UI {
     if (this.screen === 'factory') {
       this.renderOverlay();
     } else {
-      this.stageEl.innerHTML = this.screenBody();
+      this.setHTML(this.stageEl, this.screenBody());
     }
   }
 
@@ -4951,7 +5208,7 @@ class UI {
   /* ================= room dashboard ================= */
 
   renderOverlay() {
-    if (!this.room) { this.overlayEl.hidden = true; this.overlayEl.innerHTML = ''; return; }
+    if (!this.room) { this.overlayEl.hidden = true; this.setHTML(this.overlayEl, ''); return; }
     const room = ROOM_BY_ID[this.room];
     const tasks = this.store.tasks(room.id);
     const open = tasks.filter((t) => !t.done);
@@ -4961,7 +5218,7 @@ class UI {
     const elsewhere = this.sim.agents.filter((a) => a.deck !== room.id);
 
     this.overlayEl.hidden = false;
-    this.overlayEl.innerHTML = `
+    this.setHTML(this.overlayEl, `
       <div class="room-head is-${room.accent}">
         <div>
           <span class="eyebrow">Room dashboard</span>
@@ -5010,10 +5267,8 @@ class UI {
           <button class="crew-chip" type="button" data-send="${a.id}" data-to="${room.id}">
             <span class="dot" style="background:${a.colour}"></span>${esc(a.name)}
           </button>`).join('')}
-      </div>`;
+      </div>`);
   }
-
-
 
   /* ================= the empire ================= */
 
@@ -5228,6 +5483,7 @@ class UI {
   roomWidget(roomId) {
     switch (ROOM_WIDGET[roomId]) {
       case 'lab': return this.wLab();
+      case 'market': return this.wMarket();
       case 'library': return this.wLibrary();
       case 'cohorts': return this.wCohorts();
       case 'build': return this.wBuild();
@@ -5246,10 +5502,13 @@ class UI {
     const coaChip = { published: 'is-vital', pending: 'is-flare', none: 'is-breach' };
     const rows = this.store.stock();
     const low = this.store.lowStock().length;
+    const feed = this.store.feed();
+    const fed = rows.filter((r) => r.src === 'peptides').length;
     return `
       <h3 class="sub-title">Stock</h3>
-      <p class="muted-note">Counted here, saved on this device. Type a count, or tap −/+ as vials move.
-        Click the COA chip to cycle none → pending → published.</p>
+      ${feed
+        ? `<p class="src-note"><span class="chip is-vital">live</span> ${fed} line${fed === 1 ? '' : 's'} from Arcane Peptides, pulled ${esc(clockTime(feed.fetchedAt))}. Hand counts below are yours and are left alone.</p>`
+        : '<p class="muted-note">Counted here, saved on this device. Type a count, or tap −/+ as vials move. Click the COA chip to cycle none → pending → published.</p>'}
       <div class="stat-row">
         <div class="stat"><span class="stat-n mono">${rows.length}</span><span class="stat-l">Lines</span></div>
         <div class="stat"><span class="stat-n mono is-arcane">${this.store.totalVials()}</span><span class="stat-l">Vials on hand</span></div>
@@ -5259,7 +5518,7 @@ class UI {
         <div class="tbl-head"><span>Compound</span><span>Size</span><span>Vials</span><span>Batch</span><span>COA</span><span></span></div>
         ${rows.map((r) => `
           <div class="tbl-row is-stock">
-            <span class="tbl-code"><i class="vial is-${esc(r.tint)}"></i>${esc(r.code)}</span>
+            <span class="tbl-code"><i class="vial is-${esc(r.tint)}"></i>${esc(r.code)}${r.src === 'peptides' ? '<i class="live-dot" title="From Arcane Peptides"></i>' : ''}</span>
             <input class="cell-in mono dim" type="text" value="${esc(r.size)}"
                    data-stock="${r.id}" data-field="size" aria-label="${esc(r.code)} size">
             <span class="step">
@@ -5283,18 +5542,32 @@ class UI {
         <button type="submit">Add stock</button>
       </form>
       ${low ? `<p class="warn-note">${low} line${low === 1 ? '' : 's'} under two weeks of cover.</p>` : ''}
+      ${feed
+        ? '<button class="wide-btn" type="button" data-bridgepull="1">Pull from Arcane Peptides</button>'
+        : '<button class="wide-btn" type="button" data-goscreen="system">Connect Arcane Peptides</button>'}
 
       <h3 class="sub-title">Dispatch</h3>
-      ${this.srcNote(DISPATCH.source)}
-      <p class="muted-note">${esc(DISPATCH.note)}</p>
-      <div class="tbl">
-        ${DISPATCH.rows.map((r) => `
-          <div class="tbl-row is-2">
-            <span class="mono dim">${esc(r.ref)}</span>
-            <span>${esc(r.items)}</span>
-            <span class="chip">${esc(r.stage)}</span>
-          </div>`).join('')}
-      </div>`;
+      ${feed ? `
+        <p class="src-note"><span class="chip is-vital">live</span> ${feed.dispatch.length} order${feed.dispatch.length === 1 ? '' : 's'} from the shop</p>
+        <div class="tbl">
+          ${feed.dispatch.slice(0, 12).map((r) => `
+            <div class="tbl-row is-2">
+              <span class="mono dim">${esc(r.ref)}</span>
+              <span>${esc(r.items)}</span>
+              <span class="chip ${/pend|unfulfil|await/i.test(r.stage) ? 'is-flare' : 'is-vital'}">${esc(r.stage)}</span>
+            </div>`).join('') || '<div class="tbl-row is-2"><span class="mono dim">—</span><span>Nothing waiting.</span><span></span></div>'}
+        </div>`
+      : `
+        ${this.srcNote(DISPATCH.source)}
+        <p class="muted-note">${esc(DISPATCH.note)}</p>
+        <div class="tbl">
+          ${DISPATCH.rows.map((r) => `
+            <div class="tbl-row is-2">
+              <span class="mono dim">${esc(r.ref)}</span>
+              <span>${esc(r.items)}</span>
+              <span class="chip">${esc(r.stage)}</span>
+            </div>`).join('')}
+        </div>`}`;
   }
 
   wLibrary() {
@@ -5710,6 +5983,7 @@ class UI {
           <span class="chip">06:00 daily</span></div>
         <p class="muted-note">Reads The Arcane Archives, drafts three posts, writes them into this system. Notion is read-only — the agent never creates, edits or deletes anything there.</p>
       </section>
+      ${this.bridgeBlock()}
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">The floor</h3></div>
         <p class="muted-note">${DECKS.length} rooms, ${CREW.length} crew and one commander. Click a room to open its dashboard — ARCANE walks there and the crew drift toward wherever the attention is.</p>
@@ -5720,6 +5994,126 @@ class UI {
       </section>`;
   }
 
+  /* ================= arcane peptides bridge ================= */
+
+  bridgeBlock() {
+    const b = this.store.bridge();
+    const feed = b.feed;
+    const state = b.error ? 'is-breach' : feed ? 'is-vital' : 'is-flare';
+    const word = b.error ? 'error' : feed ? 'connected' : 'not connected';
+    return `
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Arcane Peptides</h3>
+          <span class="chip ${state}">${word}</span></div>
+        <p class="muted-note">Read-only. LEOOS pulls orders, revenue, customers and stock from the shop
+          and fills THE LAB and THE MARKET with them. It never writes anything back.</p>
+        <form class="bridge-form" data-bridgesave="1">
+          <label class="field-l" for="bridgeUrl">Feed URL</label>
+          <input id="bridgeUrl" type="url" name="url" autocomplete="off" spellcheck="false"
+                 placeholder="https://arcanepeptides.vercel.app/api/leoos-feed"
+                 value="${esc(b.url)}">
+          <label class="field-l" for="bridgeKey">Read key</label>
+          <input id="bridgeKey" type="password" name="key" autocomplete="off"
+                 placeholder="the ARCANE_FEED_KEY you set on the shop" value="${esc(b.key)}">
+          <div class="bridge-btns">
+            <button type="submit">Save</button>
+            <button type="button" data-bridgepull="1">Pull now</button>
+            ${feed ? '<button type="button" class="is-quiet" data-bridgeclear="1">Disconnect</button>' : ''}
+          </div>
+        </form>
+        ${b.error ? `<p class="warn-note">${esc(b.error)}</p>` : ''}
+        ${feed ? `
+          <div class="stat-row" style="margin-top:12px">
+            <div class="stat"><span class="stat-n mono is-arcane">${money(feed.revenue, 2)}</span><span class="stat-l">Revenue</span></div>
+            <div class="stat"><span class="stat-n mono">${feed.orderCount}</span><span class="stat-l">Orders</span></div>
+            <div class="stat"><span class="stat-n mono ${feed.pending ? 'is-flare' : 'dim'}">${feed.pending}</span><span class="stat-l">Pending</span></div>
+            <div class="stat"><span class="stat-n mono">${feed.customers}</span><span class="stat-l">Customers</span></div>
+          </div>
+          <p class="src-note"><span class="chip is-vital">live</span> Last pull ${esc(clockTime(b.last))} · ${feed.stock.length} stock line${feed.stock.length === 1 ? '' : 's'}</p>`
+        : ''}
+        <details class="bridge-paste" data-pastebox="1" ${this.pasteOpen ? 'open' : ''}>
+          <summary>Paste feed instead</summary>
+          <p class="muted-note">On claude.ai this page cannot call out to the shop, so open the feed URL
+            in a tab, copy the JSON, and drop it here.</p>
+          <form data-bridgepaste="1">
+            <textarea name="json" rows="4" placeholder='{"revenue":1420.02,"orders":[…],"stock":[…]}'>${esc(this.pasteDraft || '')}</textarea>
+            <button type="submit">Import</button>
+          </form>
+        </details>
+      </section>`;
+  }
+
+  async pullBridge() {
+    const b = this.store.bridge();
+    this.store.bridgeError('');
+    this.bridgeBusy = true;
+    this.render();
+    try {
+      const feed = await pullFeed(b.url, b.key);
+      this.store.applyFeed(feed);
+    } catch (e) {
+      this.store.bridgeError(e?.message || 'The pull failed.');
+    }
+    this.bridgeBusy = false;
+    this.render();
+  }
+
+  importBridge(raw) {
+    try {
+      this.store.applyFeed(parseFeed(raw));
+      this.pasteOpen = false;
+      this.pasteDraft = '';
+    } catch (e) {
+      // Hold on to what was pasted — losing it to a re-render is worse
+      // than the error that caused it.
+      this.store.bridgeError(e?.message || 'That feed could not be read.');
+      this.pasteOpen = true;
+      this.pasteDraft = String(raw || '').slice(0, 200000);
+    }
+    this.render();
+  }
+
+  /* ================= the market ================= */
+
+  wMarket() {
+    const feed = this.store.feed();
+    if (!feed) {
+      return `
+        <h3 class="sub-title">The funnel</h3>
+        ${this.srcNote('Not connected. Open System → Arcane Peptides and point this at the shop.')}
+        <p class="muted-note">Once the feed is in, this room shows real visitors, orders,
+          repeat rate and average order value — straight from arcanepeptides.vercel.app.</p>
+        <button class="wide-btn" type="button" data-goscreen="system">Connect the shop</button>`;
+    }
+    const aov = feed.orderCount ? feed.revenue / feed.orderCount : 0;
+    const perCustomer = feed.customers ? feed.orderCount / feed.customers : 0;
+    const conv = feed.visitors ? (feed.orderCount / feed.visitors) * 100 : null;
+    return `
+      <h3 class="sub-title">The funnel</h3>
+      <p class="src-note"><span class="chip is-vital">live</span> Arcane Peptides · pulled ${esc(clockTime(feed.fetchedAt))}</p>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${money(feed.revenue, 2)}</span><span class="stat-l">Revenue</span></div>
+        <div class="stat"><span class="stat-n mono">${feed.orderCount}</span><span class="stat-l">Orders</span></div>
+        <div class="stat"><span class="stat-n mono">${feed.customers}</span><span class="stat-l">Customers</span></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono">${money(aov, 2)}</span><span class="stat-l">Average order</span></div>
+        <div class="stat"><span class="stat-n mono">${perCustomer.toFixed(2)}</span><span class="stat-l">Orders per customer</span></div>
+        <div class="stat"><span class="stat-n mono ${conv === null ? 'dim' : ''}">${conv === null ? '—' : `${conv.toFixed(1)}%`}</span><span class="stat-l">Visitor → order</span></div>
+      </div>
+      ${feed.pending ? `<p class="warn-note">${feed.pending} order${feed.pending === 1 ? '' : 's'} waiting to be packed.</p>` : ''}
+      <h3 class="sub-title">Latest orders</h3>
+      <div class="tbl">
+        ${feed.dispatch.slice(0, 10).map((r) => `
+          <div class="tbl-row is-2">
+            <span class="mono dim">${esc(r.ref)}</span>
+            <span>${esc(r.items)}</span>
+            <span class="chip">${esc(r.stage)}</span>
+          </div>`).join('') || '<div class="tbl-row is-2"><span class="mono dim">—</span><span>No orders in the feed.</span><span></span></div>'}
+      </div>
+      <button class="wide-btn" type="button" data-bridgepull="1">Pull again</button>`;
+  }
+
   /* ================= right rail ================= */
 
   renderTelemetry() {
@@ -5728,7 +6122,7 @@ class UI {
     const hot = DECKS.map((d) => ({ d, open: this.store.openCount(d.id) }))
       .sort((a, b) => b.open - a.open).slice(0, 4);
 
-    this.dashEl.innerHTML = `
+    this.setHTML(this.dashEl, `
       <section class="panel">
         <div class="panel-head"><h2 class="panel-title">Floor</h2>
           <span class="chip mono">${this.store.totalOpen()} open</span></div>
@@ -5767,7 +6161,7 @@ class UI {
           <input type="text" id="counselInput" placeholder="Speak to the network…" autocomplete="off" ${this.counselBusy ? 'disabled' : ''}>
           <button type="submit" ${this.counselBusy ? 'disabled' : ''}>${this.counselBusy ? '···' : 'Ask'}</button>
         </form>
-      </section>`;
+      </section>`);
   }
 
   renderTicker() {
@@ -5804,6 +6198,8 @@ class UI {
     if (copy) { this.copyPost(copy.dataset.copy, copy); return; }
     const posted = t('[data-posted]');
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
+    if (t('[data-bridgepull]')) { this.pullBridge(); return; }
+    if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
     if (step) { this.store.adjustStock(step.dataset.stockstep, Number(step.dataset.delta)); return; }
     const coa = t('[data-coa]');
@@ -5823,6 +6219,21 @@ class UI {
       const issued = this.store.addTask(id, input.value);
       const fresh = document.querySelector(`[data-add="${id}"] input`);
       if (fresh) { if (issued) fresh.value = ''; fresh.focus(); }
+      return;
+    }
+    const bsave = e.target.closest('[data-bridgesave]');
+    if (bsave) {
+      e.preventDefault();
+      this.store.setBridge('url', bsave.querySelector('[name="url"]').value);
+      this.store.setBridge('key', bsave.querySelector('[name="key"]').value);
+      this.store.bridgeError('');
+      this.pullBridge();
+      return;
+    }
+    const bpaste = e.target.closest('[data-bridgepaste]');
+    if (bpaste) {
+      e.preventDefault();
+      this.importBridge(bpaste.querySelector('[name="json"]').value);
       return;
     }
     const stock = e.target.closest('[data-stockadd]');
@@ -5851,6 +6262,11 @@ class UI {
       input.value = '';
       this.ask(q);
     }
+  }
+
+  onToggle(e) {
+    const box = e.target.closest('[data-pastebox]');
+    if (box) this.pasteOpen = box.open;
   }
 
   onChange(e) {

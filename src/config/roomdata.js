@@ -117,6 +117,7 @@ export const DOCTRINE = [
 /** Which dataset a room shows. */
 export const ROOM_WIDGET = {
   apothecary: 'lab',
+  market: 'market',
   archives: 'library',
   vitals: 'cohorts',
   forge: 'build',

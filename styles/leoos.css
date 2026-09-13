@@ -551,6 +551,47 @@ button.chip:hover { border-color: var(--arcane); }
 }
 .add-row.is-stock button:hover { background: rgba(139,92,246,.24); }
 
+/* ---------- arcane peptides bridge ---------- */
+
+.bridge-form { display: grid; gap: 4px; margin-top: 10px; }
+.bridge-form input {
+  background: var(--plate); border: 1px solid var(--seam); border-radius: var(--r-sm);
+  padding: 7px 9px; font: inherit; font-size: 12px; color: var(--ink); width: 100%;
+  margin-bottom: 6px;
+}
+.bridge-form input:focus { border-color: var(--arcane); outline: none; }
+.bridge-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.bridge-btns button, .bridge-paste button, .wide-btn {
+  border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
+  color: var(--arcane-lift); border-radius: var(--r-sm); padding: 7px 12px;
+  font-family: var(--f-display); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; cursor: pointer;
+}
+.bridge-btns button:hover, .bridge-paste button:hover, .wide-btn:hover { background: rgba(139,92,246,.24); }
+.bridge-btns button.is-quiet { border-color: var(--seam); background: none; color: var(--faint); }
+.bridge-btns button.is-quiet:hover { color: var(--breach); border-color: rgba(229,72,77,.42); background: none; }
+
+.wide-btn { width: 100%; margin-top: 10px; }
+
+.bridge-paste { margin-top: 12px; border-top: 1px solid var(--seam); padding-top: 10px; }
+.bridge-paste summary {
+  cursor: pointer; font-family: var(--f-display); font-size: 10px;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+}
+.bridge-paste summary:hover { color: var(--arcane-lift); }
+.bridge-paste textarea {
+  width: 100%; background: var(--plate); border: 1px solid var(--seam);
+  border-radius: var(--r-sm); padding: 8px 9px; color: var(--ink);
+  font-family: var(--f-mono, ui-monospace, monospace); font-size: 11px;
+  resize: vertical; margin: 6px 0;
+}
+.bridge-paste textarea:focus { border-color: var(--arcane); outline: none; }
+
+.live-dot {
+  width: 5px; height: 5px; border-radius: 50%; flex: none; display: inline-block;
+  background: var(--vital); box-shadow: 0 0 5px var(--vital); margin-left: 5px;
+}
+
 @media (max-width: 560px) {
   .tbl.is-stock .tbl-head { display: none; }
   .tbl.is-stock .tbl-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }

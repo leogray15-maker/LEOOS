@@ -17,6 +17,7 @@ const ORDER = [
   'src/config/roomdata.js',
   'src/config/agents.js',
   'src/config/empire.js',
+  'src/core/bridge.js',
   'src/core/store.js',
   'src/core/sim.js',
   'src/render/props.js',
