@@ -80,9 +80,36 @@ check('and nothing was written into it',
   execFileSync('find', [bare, '-type', 'f'], { encoding: 'utf8' }).trim() === '');
 
 let missing = false;
+let missingErr = '';
 try { execFileSync('node', ['tools/vault.js', path.join(box, 'nope')], { stdio: 'pipe' }); }
-catch { missing = true; }
+catch (e) { missing = true; missingErr = String(e.stderr || ''); }
 check('a path that does not exist is refused, not created', missing && !fs.existsSync(path.join(box, 'nope')));
+check('and the refusal says how to find a real one', /find ~ -maxdepth|Obsidian knows about/.test(missingErr));
+
+/* ---------- it asks Obsidian where the vaults are ---------- */
+
+// Obsidian keeps a register of every vault opened. A fake HOME lets the
+// discovery path be tested without an Obsidian install.
+const home = path.join(box, 'home');
+const real = path.join(home, 'Documents', 'Arcane Brain');
+const gone = path.join(home, 'Documents', 'Deleted Vault');
+fs.mkdirSync(path.join(real, '.obsidian'), { recursive: true });
+fs.mkdirSync(path.join(home, '.config', 'obsidian'), { recursive: true });
+fs.writeFileSync(path.join(home, '.config/obsidian/obsidian.json'),
+  JSON.stringify({ vaults: { a: { path: real }, b: { path: gone } } }));
+
+const listed = execFileSync('node', ['tools/vault.js', '--list'],
+  { encoding: 'utf8', env: { ...process.env, HOME: home } });
+check('--list finds a registered vault', listed.includes(real));
+check('a vault in the register that is gone from disk is dropped', !listed.includes(gone));
+
+let hinted = '';
+try {
+  execFileSync('node', ['tools/vault.js', path.join(box, 'nope')],
+    { encoding: 'utf8', stdio: 'pipe', env: { ...process.env, HOME: home } });
+} catch (e) { hinted = String(e.stderr || ''); }
+check('a bad path is answered with a real one', hinted.includes(real));
+check('and a path with a space in it is quoted', hinted.includes(`"${real}"`));
 
 fs.rmSync(box, { recursive: true, force: true });
 

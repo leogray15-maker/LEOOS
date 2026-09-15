@@ -31,6 +31,44 @@ import { VENTURES, GOALS, CATALOGUE, OPERATOR, DECKS, SEED_TASKS } from '../src/
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+/* ---------- finding the vault ---------- */
+
+/**
+ * Obsidian keeps its own register of every vault you have opened. Read
+ * it rather than making someone remember a path — the error that sent
+ * you here should say what to type next, not just what was wrong.
+ */
+function knownVaults() {
+  const home = process.env.HOME || '';
+  const spots = [
+    path.join(home, 'Library/Application Support/obsidian/obsidian.json'), // macOS
+    path.join(home, '.config/obsidian/obsidian.json'),                     // Linux
+    path.join(process.env.APPDATA || '', 'obsidian/obsidian.json'),        // Windows
+  ];
+  for (const spot of spots) {
+    try {
+      const reg = JSON.parse(fs.readFileSync(spot, 'utf8'));
+      const found = Object.values(reg.vaults || {})
+        .map((v) => v.path)
+        .filter((p) => p && fs.existsSync(p));
+      if (found.length) return found;
+    } catch { /* not this platform, or Obsidian has never run */ }
+  }
+  return [];
+}
+
+/** Print what we know, so the next command can be copied rather than guessed. */
+function suggest() {
+  const vaults = knownVaults();
+  if (!vaults.length) {
+    console.error('\nObsidian has no vaults registered on this machine. To find one by hand:\n'
+      + '  find ~ -maxdepth 6 -name .obsidian -type d 2>/dev/null');
+    return;
+  }
+  console.error(`\nObsidian knows about ${vaults.length} vault${vaults.length === 1 ? '' : 's'} here:\n`);
+  for (const v of vaults) console.error(`  node tools/vault.js "${v}" --write`);
+}
+
 /* ---------- arguments ---------- */
 
 const args = process.argv.slice(2);
@@ -38,12 +76,25 @@ const write = args.includes('--write');
 const force = args.includes('--force');
 const target = args.find((a) => !a.startsWith('--'));
 
+if (args.includes('--list')) {
+  const vaults = knownVaults();
+  if (vaults.length) {
+    console.log(`Obsidian vaults on this machine:\n`);
+    for (const v of vaults) console.log(`  ${v}`);
+  } else {
+    console.log('Obsidian has no vaults registered on this machine.');
+  }
+  process.exit(0);
+}
+
 if (!target) {
   console.error(`Usage: node tools/vault.js <vault-path> [--write] [--force]
 
   <vault-path>  the Obsidian vault folder on this machine
   --write       actually write; without it you get the plan and nothing else
-  --force       proceed even if the folder has no .obsidian/ in it`);
+  --force       proceed even if the folder has no .obsidian/ in it
+  --list        print the vaults Obsidian knows about, and exit`);
+  suggest();
   process.exit(1);
 }
 
@@ -52,6 +103,7 @@ const VAULT = path.resolve(target.replace(/^~(?=$|\/)/, process.env.HOME || '~')
 if (!fs.existsSync(VAULT)) {
   console.error(`No such folder: ${VAULT}\n`
     + 'Point this at a vault that already exists — it will not invent one.');
+  suggest();
   process.exit(1);
 }
 if (!fs.statSync(VAULT).isDirectory()) {
@@ -61,6 +113,7 @@ if (!fs.statSync(VAULT).isDirectory()) {
 if (!fs.existsSync(path.join(VAULT, '.obsidian')) && !force) {
   console.error(`${VAULT} has no .obsidian/ in it, so it is probably not the vault.\n`
     + 'Open it in Obsidian once, or pass --force if you are sure.');
+  suggest();
   process.exit(1);
 }
 

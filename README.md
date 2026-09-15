@@ -525,9 +525,13 @@ approval` to `allow` and the note quietly becomes a lie. So the vault is
 an output, the same way `dist/` and `public/` are:
 
 ```bash
+node tools/vault.js --list                        # which vaults Obsidian knows about
 node tools/vault.js ~/Documents/MyVault           # the plan, writes nothing
 node tools/vault.js ~/Documents/MyVault --write   # apply it
 ```
+
+It reads Obsidian's own vault register, so a wrong path is answered with
+the right one rather than just refused.
 
 Change a grade in the config, regenerate, and exactly two notes move: that
 agent's profile and the matrix. The vault and the running system cannot
