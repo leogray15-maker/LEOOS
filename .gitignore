@@ -6,3 +6,9 @@ __pycache__/
 *.pyc
 trading/results.json
 .firebase/
+
+# Firebase service account keys — admin credentials that bypass every
+# security rule. They have no business in a browser app or in git.
+*serviceAccount*.json
+*service-account*.json
+*-adminsdk-*.json

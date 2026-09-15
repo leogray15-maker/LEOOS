@@ -413,6 +413,7 @@ export class UI extends UIWidgets {
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
     if (t('[data-cloudin]')) { this.signInCloud(); return; }
     if (t('[data-cloudout]')) { this.signOutCloud(); return; }
+    if (t('[data-cloudretry]')) { this.retryCloud(); return; }
     if (t('[data-bridgepull]')) { this.pullBridge(); return; }
     if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
@@ -503,6 +504,20 @@ export class UI extends UIWidgets {
     if (!this.cloud) return;
     this.render();
     await this.cloud.signIn();
+    this.render();
+  }
+
+  /**
+   * Try the database again on the session already signed in. This is the
+   * button you press after publishing the rules, rather than signing out
+   * and back in to prove the same account still works.
+   */
+  async retryCloud() {
+    if (!this.cloud?.adapter) return;
+    this.cloud.state = 'live';
+    this.cloud.error = '';
+    this.render();
+    await this.store.attach(this.cloud.adapter, 'cloud');
     this.render();
   }
 

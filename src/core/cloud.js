@@ -31,8 +31,25 @@ export const CLOUD_COPY = {
   'signed-out': 'Configured and waiting. Sign in with Google to sync this device.',
   live: 'Live. Orders, money, goals and stock are written to Firestore and follow you to every signed-in device.',
   denied: `That account is not ${FIREBASE_OWNER}. The empire admits one operator.`,
+  refused: 'Signed in, but the database refused. The rules in the console are still the default lockdown — deploy firestore.rules, or paste it into Firestore → Rules → Publish.',
   error: 'Firebase returned an error.',
 };
+
+/**
+ * Firestore's own wording for the two failures that actually happen here
+ * says what went wrong and nothing about what to do. Say the second part.
+ */
+export function cloudReason(e) {
+  const code = e?.code || '';
+  const text = String(e?.message || e);
+  if (code === 'permission-denied' || /insufficient permissions/i.test(text)) {
+    return 'The database refused this account. firestore.rules has not been deployed — the console is still on its default deny.';
+  }
+  if (code === 'unauthenticated') return 'Not signed in. Sign in with Google to reach the database.';
+  if (code === 'unavailable') return 'Firestore is unreachable from here. Check the network, then try again.';
+  if (code === 'failed-precondition') return 'No Firestore database in this project yet. Create one in the console, then reconnect.';
+  return text.slice(0, 200);
+}
 
 /** Named so a re-connect can find the old app and delete it. */
 const APP_NAME = 'leoos';
@@ -209,6 +226,16 @@ export class Cloud {
       return null;
     }
     return this.adapter;
+  }
+
+  /**
+   * The store could sign in but not read. That is a rules problem, not an
+   * auth one, and the panel must not keep saying "live" through it.
+   */
+  refuse(message) {
+    if (this.state !== 'live') return;
+    this.state = 'refused';
+    this.error = message || '';
   }
 
   async signOut() {

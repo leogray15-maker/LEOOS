@@ -2434,8 +2434,25 @@ const CLOUD_COPY = {
   'signed-out': 'Configured and waiting. Sign in with Google to sync this device.',
   live: 'Live. Orders, money, goals and stock are written to Firestore and follow you to every signed-in device.',
   denied: `That account is not ${FIREBASE_OWNER}. The empire admits one operator.`,
+  refused: 'Signed in, but the database refused. The rules in the console are still the default lockdown — deploy firestore.rules, or paste it into Firestore → Rules → Publish.',
   error: 'Firebase returned an error.',
 };
+
+/**
+ * Firestore's own wording for the two failures that actually happen here
+ * says what went wrong and nothing about what to do. Say the second part.
+ */
+function cloudReason(e) {
+  const code = e?.code || '';
+  const text = String(e?.message || e);
+  if (code === 'permission-denied' || /insufficient permissions/i.test(text)) {
+    return 'The database refused this account. firestore.rules has not been deployed — the console is still on its default deny.';
+  }
+  if (code === 'unauthenticated') return 'Not signed in. Sign in with Google to reach the database.';
+  if (code === 'unavailable') return 'Firestore is unreachable from here. Check the network, then try again.';
+  if (code === 'failed-precondition') return 'No Firestore database in this project yet. Create one in the console, then reconnect.';
+  return text.slice(0, 200);
+}
 
 /** Named so a re-connect can find the old app and delete it. */
 const APP_NAME = 'leoos';
@@ -2614,6 +2631,16 @@ class Cloud {
     return this.adapter;
   }
 
+  /**
+   * The store could sign in but not read. That is a rules problem, not an
+   * auth one, and the panel must not keep saying "live" through it.
+   */
+  refuse(message) {
+    if (this.state !== 'live') return;
+    this.state = 'refused';
+    this.error = message || '';
+  }
+
   async signOut() {
     this.deniedEmail = '';
     if (!this.auth) { this.state = this.configured ? 'signed-out' : 'off'; return; }
@@ -2637,6 +2664,7 @@ class Cloud {
  * the real thing through the same three calls. Everything below this
  * line is written against that shape and never learns which it got.
  */
+
 
 
 
@@ -2762,7 +2790,12 @@ class Store {
       if (snap.exists) this.merge(snap.data());
       else await db.doc(FIREBASE_DOC).set(this.body());
     } catch (e) {
-      this.remoteError = String(e?.message || e).slice(0, 200);
+      // Signing in and being allowed to read are two different permissions.
+      // Where the second one fails, say so on the panel that claimed the
+      // first one succeeded.
+      this.remoteError = cloudReason(e);
+      if (mode === 'cloud') this.cloud?.refuse(this.remoteError);
+      this.emit();
       return false;
     }
     this.unwatch?.();
@@ -2777,7 +2810,8 @@ class Store {
         this.emit();
       },
       (e) => {
-        this.remoteError = String(e?.message || e).slice(0, 200);
+        this.remoteError = cloudReason(e);
+        if (mode === 'cloud') this.cloud?.refuse(this.remoteError);
         this.detach();
       },
     );
@@ -6082,11 +6116,14 @@ class UIScreens {
     if (!cloud) return '';
     const state = cloud.state;
     const tone = { live: 'is-vital', 'signed-out': 'is-flare', off: 'is-flare',
-      denied: 'is-breach', error: 'is-breach', blocked: '', loading: '' }[state] ?? '';
+      denied: 'is-breach', refused: 'is-breach', error: 'is-breach',
+      blocked: '', loading: '' }[state] ?? '';
     const word = { live: 'live', 'signed-out': 'signed out', off: 'not configured',
-      denied: 'wrong account', error: 'error', blocked: 'unavailable here',
-      loading: 'connecting' }[state] ?? state;
-    const bad = state === 'error' || state === 'denied';
+      denied: 'wrong account', refused: 'rules not deployed', error: 'error',
+      blocked: 'unavailable here', loading: 'connecting' }[state] ?? state;
+    const bad = state === 'error' || state === 'denied' || state === 'refused';
+    // Signed in, whether or not the database is letting us read.
+    const on = state === 'live' || state === 'refused';
     return `
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">Cloud</h3>
@@ -6097,8 +6134,9 @@ class UIScreens {
         ${bad ? `<p class="warn-note">${esc(cloud.copy)}</p>`
           : `<p class="muted-note">${esc(cloud.copy)}</p>`}
         <div class="bridge-btns">
-          ${state === 'live'
-            ? `<span class="chip is-vital">${esc(cloud.email)}</span>
+          ${on
+            ? `<span class="chip ${state === 'live' ? 'is-vital' : 'is-breach'}">${esc(cloud.email)}</span>
+               ${state === 'refused' ? '<button type="button" data-cloudretry="1">Retry</button>' : ''}
                <button type="button" class="is-quiet" data-cloudout="1">Sign out</button>`
             : state === 'blocked'
               ? ''
@@ -7017,6 +7055,7 @@ class UI extends UIWidgets {
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
     if (t('[data-cloudin]')) { this.signInCloud(); return; }
     if (t('[data-cloudout]')) { this.signOutCloud(); return; }
+    if (t('[data-cloudretry]')) { this.retryCloud(); return; }
     if (t('[data-bridgepull]')) { this.pullBridge(); return; }
     if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
@@ -7107,6 +7146,20 @@ class UI extends UIWidgets {
     if (!this.cloud) return;
     this.render();
     await this.cloud.signIn();
+    this.render();
+  }
+
+  /**
+   * Try the database again on the session already signed in. This is the
+   * button you press after publishing the rules, rather than signing out
+   * and back in to prove the same account still works.
+   */
+  async retryCloud() {
+    if (!this.cloud?.adapter) return;
+    this.cloud.state = 'live';
+    this.cloud.error = '';
+    this.render();
+    await this.store.attach(this.cloud.adapter, 'cloud');
     this.render();
   }
 

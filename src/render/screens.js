@@ -480,11 +480,14 @@ export class UIScreens {
     if (!cloud) return '';
     const state = cloud.state;
     const tone = { live: 'is-vital', 'signed-out': 'is-flare', off: 'is-flare',
-      denied: 'is-breach', error: 'is-breach', blocked: '', loading: '' }[state] ?? '';
+      denied: 'is-breach', refused: 'is-breach', error: 'is-breach',
+      blocked: '', loading: '' }[state] ?? '';
     const word = { live: 'live', 'signed-out': 'signed out', off: 'not configured',
-      denied: 'wrong account', error: 'error', blocked: 'unavailable here',
-      loading: 'connecting' }[state] ?? state;
-    const bad = state === 'error' || state === 'denied';
+      denied: 'wrong account', refused: 'rules not deployed', error: 'error',
+      blocked: 'unavailable here', loading: 'connecting' }[state] ?? state;
+    const bad = state === 'error' || state === 'denied' || state === 'refused';
+    // Signed in, whether or not the database is letting us read.
+    const on = state === 'live' || state === 'refused';
     return `
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">Cloud</h3>
@@ -495,8 +498,9 @@ export class UIScreens {
         ${bad ? `<p class="warn-note">${esc(cloud.copy)}</p>`
           : `<p class="muted-note">${esc(cloud.copy)}</p>`}
         <div class="bridge-btns">
-          ${state === 'live'
-            ? `<span class="chip is-vital">${esc(cloud.email)}</span>
+          ${on
+            ? `<span class="chip ${state === 'live' ? 'is-vital' : 'is-breach'}">${esc(cloud.email)}</span>
+               ${state === 'refused' ? '<button type="button" data-cloudretry="1">Retry</button>' : ''}
                <button type="button" class="is-quiet" data-cloudout="1">Sign out</button>`
             : state === 'blocked'
               ? ''

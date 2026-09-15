@@ -17,6 +17,7 @@
 import { DECKS, VENTURES, SEED_TASKS, SEED_POSTS, GOALS, BUDGET } from '../config/empire.js';
 import { INVENTORY } from '../config/roomdata.js';
 import { FIREBASE_DOC } from '../config/firebase.js';
+import { cloudReason } from './cloud.js';
 
 const LS_KEY = 'leoos.v1';
 
@@ -139,7 +140,12 @@ export class Store {
       if (snap.exists) this.merge(snap.data());
       else await db.doc(FIREBASE_DOC).set(this.body());
     } catch (e) {
-      this.remoteError = String(e?.message || e).slice(0, 200);
+      // Signing in and being allowed to read are two different permissions.
+      // Where the second one fails, say so on the panel that claimed the
+      // first one succeeded.
+      this.remoteError = cloudReason(e);
+      if (mode === 'cloud') this.cloud?.refuse(this.remoteError);
+      this.emit();
       return false;
     }
     this.unwatch?.();
@@ -154,7 +160,8 @@ export class Store {
         this.emit();
       },
       (e) => {
-        this.remoteError = String(e?.message || e).slice(0, 200);
+        this.remoteError = cloudReason(e);
+        if (mode === 'cloud') this.cloud?.refuse(this.remoteError);
         this.detach();
       },
     );

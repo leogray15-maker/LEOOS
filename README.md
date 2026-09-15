@@ -262,6 +262,14 @@ The web config in `src/config/firebase.js` is **not a secret**. Every visitor
 to the deployed page has it; it identifies the project, it does not authorise
 anything. `firestore.rules` is the file to be careful with.
 
+A **service account key** is the opposite of that, and LEOOS never wants one.
+It is an admin credential that bypasses every rule above, including the
+one-operator check — it exists for server-side Admin SDK work, which this
+project has none of. There is nowhere in a browser app to put one safely.
+`.gitignore` refuses the usual filenames so one cannot be committed by
+accident; if a key is ever exposed, delete it under Project settings →
+Service accounts and issue a new one.
+
 ### Standing it up
 
 1. **Register the web app.** Firebase console → Project settings → Your apps →
@@ -290,6 +298,22 @@ anything. `firestore.rules` is the file to be careful with.
 Deploying rules before the page matters. A database created in test mode is
 open to the world for thirty days, and the ledger is not something to leave
 lying around for thirty days.
+
+### When it refuses
+
+Signing in and being allowed to read are two different permissions, and
+the gap between them is where this goes wrong. A fresh database is created
+with `allow read, write: if false` — Google will sign you in happily and
+Firestore will then refuse every read.
+
+The deck reports that as its own state rather than papering over it: the
+Cloud panel reads **rules not deployed**, storage stays on `LOCAL`, and the
+note names the fix instead of quoting Firestore's *Missing or insufficient
+permissions* at you. Publish the rules and press **Retry** — the session is
+already signed in, so there is nothing to do twice.
+
+`test/store.mjs` drives that path against fake databases that fail the way
+the real one does, because there is no Firestore in CI to refuse anything.
 
 ### Spark plan
 
@@ -322,7 +346,8 @@ Worth being straight about, because AGENTS lists tools for every agent:
 ```bash
 npm run dev      # serve the modular source at localhost:5173
 npm run build    # flatten to two self-contained targets
-npm test               # build, serve, run the 75-check end-to-end suite
+npm test               # the store suite, then the end-to-end suite
+npm run test:store     # the persistence rungs, no browser, no server
 npm run test:dev       # the same screens and rooms on the real ES modules
 npm run test:contrast  # every text element on every screen, measured against AA
 npm run test:clipping  # anything whose content overflows its box
@@ -435,7 +460,7 @@ src/render/sprites.js   character matrices, baked once and blitted
 bridge/                 the feed route to drop into the shop, and a sample
 firebase.json           hosting and firestore deploy
 firestore.rules         one operator, enforced
-test/                   e2e, dev-graph, contrast and clipping suites
+test/                   store, e2e, dev-graph, contrast and clipping suites
 trading/                the backtester — separate from the OS, see below
 ```
 

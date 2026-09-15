@@ -11,6 +11,7 @@
     "test:contrast": "bash test/run.sh --contrast",
     "test:clipping": "bash test/run.sh --clipping",
     "test:dev": "bash test/run.sh --dev",
+    "test:store": "bash test/run.sh --store",
     "deploy": "firebase deploy --only hosting,firestore:rules",
     "deploy:rules": "firebase deploy --only firestore:rules"
   },

@@ -25,5 +25,8 @@ case "${1:-}" in
   --contrast) node test/contrast.mjs ;;
   --clipping) node test/clipping.mjs ;;
   --dev)      node test/dev.mjs ;;
-  *)          node test/e2e.mjs ;;
+  --store)    node test/store.mjs ;;
+  # The store suite needs no browser and no server, so it rides along with
+  # the e2e run rather than waiting to be asked for.
+  *)          node test/store.mjs && echo && node test/e2e.mjs ;;
 esac
