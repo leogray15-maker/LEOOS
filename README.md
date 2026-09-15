@@ -336,8 +336,9 @@ Worth being straight about, because AGENTS lists tools for every agent:
   synced across devices. Real storage; still not an agent acting on its own.
 - **simulation** — the floor. Crew route, walk and drift toward attention. They
   do not perform the work their labels describe.
-- **waiting** — the Signal Forge Routine exists but has no connector attached,
-  so it cannot read the Archives yet.
+- **live** — the Signal Forge. Three seats chain on one piece of work, and
+  WARDEN's fence runs in code rather than in a prompt. Needs `sample`, so
+  the published page; the copy of the Archives it draws on is already here.
 - **not wired** — the `tools` array on each agent describes what that agent is
   *for*. No agent calls a tool on its own. Control → *What actually runs today*
   says the same thing inside the interface.
@@ -349,6 +350,7 @@ npm run dev      # serve the modular source at localhost:5173
 npm run build    # flatten to two self-contained targets
 npm test               # the store suite, then the end-to-end suite
 npm run test:store     # the persistence rungs, no browser, no server
+npm run test:forge     # the content fence, and what it refuses to let through
 npm run test:vault     # the vault generator, including what it refuses to touch
 npm run test:dev       # the same screens and rooms on the real ES modules
 npm run test:contrast  # every text element on every screen, measured against AA
@@ -448,6 +450,8 @@ src/config/firebase.js  the Firebase project, and the paste-at-runtime override
 src/config/roomdata.js  per-room dashboard rows, and which room has a widget
 src/core/store.js       persistence: artifact db → Firestore → localStorage → memory
 src/core/cloud.js       the Firebase link: lazy SDK, Google sign-in, one document
+src/core/forge.js       the Signal Forge: ORACLE picks, HERALD drafts, WARDEN screens
+src/config/archives.js  a read-only copy of the Archives, and the compound list
 src/core/sim.js         crew routing and behaviour
 src/core/bridge.js      the Arcane Peptides feed, pulled or pasted
 src/render/format.js    presentation helpers — no store, no DOM
@@ -463,7 +467,7 @@ src/render/sprites.js   character matrices, baked once and blitted
 bridge/                 the feed route to drop into the shop, and a sample
 firebase.json           hosting and firestore deploy
 firestore.rules         one operator, enforced
-test/                   store, vault, e2e, dev-graph, contrast and clipping suites
+test/                   store, forge, vault, e2e, dev-graph, contrast and clipping suites
 tools/vault.js          generate the Obsidian brain from the config
 trading/                the backtester — separate from the OS, see below
 ```
@@ -489,147 +493,64 @@ you type a real one in.
 
 ## The Signal Forge
 
-A scheduled agent that reads The Arcane Archives and drafts posts you can paste
-straight into Threads, X, Instagram, TikTok or an email.
+The content creator. Three seats touch one piece of work, in order, each
+doing the thing its entry in `agents.js` says it is for:
 
-**Notion is read-only.** The agent fetches module pages and nothing else — it
-never creates, edits, moves or deletes anything in the workspace. Drafts are
-delivered into this artifact's own database and surface on the BEACON deck,
-where each one has a Copy button.
-
-How it works:
-
-1. It keeps its own map of the Archives in `forge/state` — `{id, title, course}`
-   per module, plus a `covered` list of what it has already used. It walks six
-   new course pages per run, so ~3,300 modules index over about a week without
-   hammering Notion.
-2. Each morning it picks three uncovered modules from three different courses,
-   reads what you actually wrote, and drafts one post per module.
-3. The drafts go to the front of `system/ship.posts`, trimmed to 30.
-
-It writes drafts only. There is no auto-posting step anywhere in the system.
-
-Peptide content is fenced: no claim that a compound treats, cures, prevents or
-diagnoses anything, no dosing, and no named compound paired with a health
-outcome. A module that cannot clear that bar is skipped.
-
-## The Brain
-
-`11 THE BRAIN` draws the network as a graph. The facility shows where the
-crew *are*; this shows how they are **wired** — who answers to the
-commander, who sits on the Council, and which tools each agent can
-actually reach. Every node and edge is read from `src/config/agents.js`
-and from the live simulation, so the picture cannot describe a network
-the system does not have.
-
-### Why it is not a force simulation
-
-The obvious build is springs and repulsion. It looks like a thrown
-handful of gravel: the commander buried in a lopsided blob, and a tool
-nobody points at flung into the far corner, stretching the frame around
-empty space. Force layout is for graphs whose shape you do not know.
-
-This shape is known, and it is hierarchical — a commander, nine seats,
-the rest of the crew, the tools at the rim — so it is drawn as the four
-orbits it actually is. Deterministic, legible, and **stable between
-frames**, which is the point: the sizes move, so the layout must not.
-Tools sit at the mean heading of the agents that use them, which keeps
-their links short and mostly off the rings.
-
-Two details earn their keep. The council ring is turned half a step so
-top-dead-centre is a gap rather than a seat, because that is where the
-ring's own label goes. And `memory` is on every agent's list — drawing
-all nineteen of those edges says only "everyone has memory", at the cost
-of nineteen lines straight through the middle, so a tool the whole
-network reaches gets one edge to the commander and says so in its
-caption instead.
-
-### What is live
-
-- a node **swells** with the open orders standing in that agent's room
-- an agent the simulation has walking **pulses**, and its edges brighten
-- a tool's colour is its real wiring state, and an edge to a tool that is
-  **not wired is dashed** — that link carries nothing yet
-- hovering names the agent, its room, its Council seat and its open count;
-  clicking opens its profile
-
-The view fits itself to the frame, so the same picture works on a laptop
-and on a phone without touching the orbits. `prefers-reduced-motion`
-stills the pulse.
-
-## The Obsidian brain
-
-The vault is the readable half of the system: agent profiles, the
-permission matrix, daily memory logs and a task board, in a folder
-Obsidian opens and greps instantly.
-
-It is **generated, not written**. Nineteen agents already exist in
-`src/config/agents.js` with a domain, a brief, a toolset and a grade per
-capability; the facility, ventures and goals are config too. Typing
-`03-Agents/MERIDIAN.md` by hand forks all of that — change `change:
-approval` to `allow` and the note quietly becomes a lie. So the vault is
-an output, the same way `dist/` and `public/` are:
-
-```bash
-node tools/vault.js --list                        # which vaults Obsidian knows about
-node tools/vault.js ~/Documents/MyVault           # the plan, writes nothing
-node tools/vault.js ~/Documents/MyVault --write   # apply it
-```
-
-It reads Obsidian's own vault register, so a wrong path is answered with
-the right one rather than just refused.
-
-Change a grade in the config, regenerate, and exactly two notes move: that
-agent's profile and the matrix. The vault and the running system cannot
-disagree.
-
-### It will not eat your notes
-
-This writes into somebody's real second brain, so it is built to be
-boring about it:
-
-- **Nothing without `--write`.** The default prints a plan and exits.
-- **`generated: true` or hands off.** Every note it owns carries that flag
-  in its frontmatter. Strip the flag — or write a note it never made — and
-  it is reported as *kept* and left byte-for-byte alone.
-- **Nothing is ever deleted**, and a folder with no `.obsidian/` in it is
-  refused unless you pass `--force`, so a mistyped path cannot scatter
-  notes across your home directory.
-- An unchanged note keeps its old `updated:` stamp, so "what moved today"
-  stays a real question.
-
-`test/vault.mjs` runs the real script against a throwaway vault and
-asserts every one of those.
-
-### What lands
-
-| Folder | What goes in it | From |
+| Seat | Role | What it does here |
 | --- | --- | --- |
-| `01-System/` | control note, permission matrix, tool wiring | `agents.js` |
-| `02-Memory/Daily-Logs/` | one log per day, seeded, appended by agents | — |
-| `03-Agents/` | one profile per agent, 19 of them | `agents.js` |
-| `04-Knowledge/` | ventures, goals, the facility | `empire.js`, `facility.js` |
-| `05-Tasks/` | the board, grouped by room and staffed | `empire.js` |
+| **ORACLE** | Archivist | picks a module the queue has not drawn on |
+| **HERALD** | Signalman | drafts one post per platform from it |
+| **WARDEN** | Risk & Control | screens every draft before it is queued |
 
-It also writes a `CLAUDE.md` at the vault root, so a Claude Code session
-opened in that folder inherits the frontmatter standard, the wikilink
-rule and the logging directives without being told again. That file says
-plainly which notes are generated, so a session there does not try to
-edit a note that will be overwritten on the next run.
+That order is the point. WARDEN holds `write: recommend` and the audit
+trail, and its whole job is to say no — so the content fence is **not a
+line in a prompt asking the model nicely**. It is `screen()` in
+`src/core/forge.js`, running in code, after the model has spoken. A
+prompt can be talked out of a rule. A regex cannot.
 
-### Where it runs
+### Notion is never written to, and cannot be
 
-Obsidian is a desktop app and the vault is a folder on your Mac, so this
-runs **locally**, not from a cloud session:
+`src/config/archives.js` is a **copy** taken out of the workspace with
+read-only tools. The Forge drafts from that copy, or from text pasted
+into BEACON at runtime. Nothing in the drafting path holds a handle that
+could write to Notion — which is a stronger guarantee than a promise not
+to use one, and `test/forge.mjs` asserts it against the source.
 
-```bash
-git clone https://github.com/leogray15-maker/LEOOS.git
-cd LEOOS
-node tools/vault.js ~/path/to/your/vault --write
-```
+Refreshing the copy means copying the pages out again and replacing what
+is in that file. The workspace is never the thing being edited.
 
-Keeping the vault inside a git repo with the Obsidian Git plugin is the
-other way round — then a remote session can maintain it directly.
+### What the fence actually blocks
+
+The rule is not "never mention a compound" — the shop sells them and the
+word has to be sayable. It is that a named compound may not appear beside
+an outcome, a dose, or an instruction to take it.
+
+| Text | Verdict |
+| --- | --- |
+| `Every batch of BPC-157 we ship carries a COA against it.` | **allowed** — stock, not a claim |
+| `BPC-157 is what I use to heal an injury faster.` | refused — compound beside an outcome |
+| `I run GHK-Cu at 2mg a day.` | refused — compound beside a dose |
+| `Take it at 250mcg twice a day on a cycle.` | refused — reads as dosing advice |
+
+The hook is screened together with the body, because a clean post under a
+hook that breaks the rule is still a post that breaks the rule. Courses
+whose whole subject is compounds — *Biohacking*, *Health Ascendance*,
+*The Deep Work System* — are marked `fenced` in the index and never
+offered at all.
+
+**A refused draft is shown, not swallowed.** SIGNALS renders what WARDEN
+blocked and why. A fence nobody can see is one nobody can trust.
+
+### Running it
+
+SIGNALS → **Draft from the Archives** takes the next uncovered module.
+**Paste a module instead** takes anything you copy out of a page, drafted
+the same way. Both need `sample`, so both only work on the published page
+at claude.ai — the panel says `needs Claude` rather than pretending.
+
+Drafts land at the front of the Signal queue with a Copy button, their
+source module and a link back to the page they came from. There is no
+auto-posting step in this file or anywhere else.
 
 ## The trading bot
 

@@ -12,6 +12,7 @@ import { UIWidgets } from './widgets.js';
 import { ARCANE, COUNCIL, DECKS, GOALS, OPERATOR, SCREENS, SCREEN_GROUPS, VENTURES } from '../config/empire.js';
 import { ROOM_BY_ID } from '../config/facility.js';
 import { Brain } from './brain.js';
+import { forge, nextModule } from '../core/forge.js';
 import { setFirebaseConfig } from '../config/firebase.js';
 import { $, SYNC_WORD, clockTime, esc, meter, money, num, stamp } from './format.js';
 
@@ -30,6 +31,9 @@ export class UI extends UIWidgets {
     // Set by the boot once the Firebase link exists; the panel copes
     // either way, so a page built without one simply has no Cloud block.
     this.cloud = null;
+    this.forgeBusy = false;
+    this.forgeError = '';
+    this.modOpen = false;
     this.brain = null;
     this.reduceMotion = false;
     this.cloudOpen = false;
@@ -459,6 +463,7 @@ export class UI extends UIWidgets {
     if (t('[data-cloudin]')) { this.signInCloud(); return; }
     if (t('[data-cloudout]')) { this.signOutCloud(); return; }
     if (t('[data-cloudretry]')) { this.retryCloud(); return; }
+    if (t('[data-forgerun]')) { this.runForge(); return; }
     if (t('[data-bridgepull]')) { this.pullBridge(); return; }
     if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
@@ -489,6 +494,21 @@ export class UI extends UIWidgets {
       this.store.setBridge('key', bsave.querySelector('[name="key"]').value);
       this.store.bridgeError('');
       this.pullBridge();
+      return;
+    }
+    const modPaste = e.target.closest('[data-forgepaste]');
+    if (modPaste) {
+      e.preventDefault();
+      const get = (n) => modPaste.querySelector(`[name="${n}"]`)?.value || '';
+      const text = get('text').trim();
+      if (!text) { this.forgeError = 'Paste the module text first.'; this.render(); return; }
+      this.runForge({
+        id: `paste-${Date.now().toString(36)}`,
+        title: get('title').trim() || 'Pasted module',
+        course: get('course').trim() || 'The Arcane Archives',
+        url: '',
+        text: text.slice(0, 20000),
+      });
       return;
     }
     const csave = e.target.closest('[data-cloudsave]');
@@ -535,7 +555,50 @@ export class UI extends UIWidgets {
     const box = e.target.closest('[data-pastebox]');
     if (box) { this.pasteOpen = box.open; return; }
     const cloudBox = e.target.closest('[data-cloudbox]');
-    if (cloudBox) this.cloudOpen = cloudBox.open;
+    if (cloudBox) { this.cloudOpen = cloudBox.open; return; }
+    const modBox = e.target.closest('[data-pastemod]');
+    if (modBox) this.modOpen = modBox.open;
+  }
+
+  /* ================= the signal forge ================= */
+
+  /**
+   * Run the chain: ORACLE picks (or takes what was pasted), HERALD
+   * drafts, WARDEN screens. Nothing reaches the queue that did not clear
+   * the gate, and what was refused stays visible.
+   */
+  async runForge(module = null) {
+    if (this.forgeBusy) return;
+    const target = module || nextModule(this.store.covered());
+    if (!target) {
+      this.forgeError = 'Every module copied in has been drawn on. Paste one below, or copy more out of the Archives.';
+      this.render();
+      return;
+    }
+    if (!this.sampler) {
+      this.forgeError = 'Drafting needs Claude, which means the published page on claude.ai.';
+      this.render();
+      return;
+    }
+
+    this.forgeBusy = true;
+    this.forgeError = '';
+    this.render();
+    try {
+      const run = await forge(target, this.sampler);
+      const { added, refused } = this.store.addDrafts(run);
+      if (!added) {
+        this.forgeError = refused
+          ? `Nothing cleared the gate — ${refused} draft${refused === 1 ? '' : 's'} refused. The reasons are below.`
+          : 'The Forge returned nothing usable. Try again.';
+      }
+    } catch (err) {
+      this.forgeError = err?.code === 'rate_limited' ? 'Rate limited. Try again shortly.'
+        : err?.code === 'not_granted' ? 'The Forge needs permission from this view to reach Claude.'
+          : `The Forge could not run (${err?.code || err?.message || 'unknown'}).`;
+    }
+    this.forgeBusy = false;
+    this.render();
   }
 
   /* ================= the cloud ================= */

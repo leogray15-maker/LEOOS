@@ -18,8 +18,10 @@ const ORDER = [
   'src/config/agents.js',
   'src/config/empire.js',
   'src/config/firebase.js',
+  'src/config/archives.js',
   'src/core/bridge.js',
   'src/core/cloud.js',
+  'src/core/forge.js',
   'src/core/store.js',
   'src/core/sim.js',
   'src/render/props.js',
@@ -99,9 +101,36 @@ const sources = ORDER.map((f) => [f, read(f)]);
 const names = checkCollisions(sources);
 const js = sources.map(([f, src]) => flatten(src, f)).join('\n\n');
 
+/**
+ * Inline with a REPLACER FUNCTION, never a replacement string.
+ *
+ * `String.replace(re, string)` reads `$&`, `$1`, `` $` `` and `$'` inside
+ * the replacement as substitution patterns. Source code contains those:
+ * `str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')` is the ordinary way to
+ * escape a string for a regex, and it appears in this codebase. Inlined
+ * as a string, its `$&` expanded to the whole matched `<script …>` tag —
+ * putting a literal `</script>` in the middle of the bundle, ending the
+ * tag early, and handing the browser a syntax error that `node --check`
+ * could never see, because the file itself was valid.
+ *
+ * A function replacement takes the text exactly as given.
+ */
 let html = read('index.html')
-  .replace(/<link rel="stylesheet" href="styles\/leoos\.css">/, `<style>\n${css}\n</style>`)
-  .replace(/<script type="module" src="src\/app\.js"><\/script>/, `<script type="module">\n${js}\n</script>`);
+  .replace(/<link rel="stylesheet" href="styles\/leoos\.css">/, () => `<style>\n${css}\n</style>`)
+  .replace(/<script type="module" src="src\/app\.js"><\/script>/, () => `<script type="module">\n${js}\n</script>`);
+
+/**
+ * Nothing may close the script tag from inside it. One of these in the
+ * bundle is a page that does not boot, so it fails the build instead.
+ */
+for (const [name, out] of [['dist', html]]) {
+  const bad = out.indexOf('</script>');
+  if (bad !== -1 && bad < out.lastIndexOf('</script>')) {
+    console.error(`${name}: a "</script>" appears inside the inlined bundle at ${bad}.`);
+    console.error(out.slice(Math.max(0, bad - 120), bad + 40));
+    process.exit(1);
+  }
+}
 
 /* ------------------------------------------------------------------
    Two targets, same page.

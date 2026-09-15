@@ -842,6 +842,15 @@ button.chip:hover { border-color: var(--seam-lit); color: var(--ink); }
 /* Reserve the line so the layout does not jump as the caption changes. */
 .brain-caption { min-height: 2.6em; }
 
+/* A button that cannot be pressed must not look like one that can.
+   Muted with a real tone rather than opacity — opacity would drop the
+   label below the contrast floor the suite holds every element to. */
+.bridge-btns button:disabled, .cloud-paste button:disabled {
+  border-color: var(--seam); background: none;
+  color: var(--faint); cursor: not-allowed;
+}
+.bridge-btns button:disabled:hover, .cloud-paste button:disabled:hover { background: none; }
+
 </style>
 
 <div id="os">
@@ -2247,6 +2256,140 @@ function setFirebaseConfig(text) {
   return { ok: true };
 }
 
+/* ==== src/config/archives.js ==== */
+/**
+ * THE ARCANE ARCHIVES — a read-only copy.
+ *
+ * Every line below was **copied out** of Notion and now lives here. The
+ * Signal Forge drafts from this copy and never from the live workspace,
+ * which is the point: Notion is read-only for the entire network, and
+ * the only way to be sure of that is for the drafting side never to hold
+ * a handle that could write.
+ *
+ * Nothing in this file is written back. Refreshing it means copying the
+ * pages out again and replacing what is here — the workspace is never
+ * the thing being edited.
+ *
+ *   Workspace  2028 · The Arcane Archives
+ *   Copied     2026-09-15, read-only (search + fetch)
+ *
+ * `COURSES` is the whole index as it stands. `MODULES` holds the ones
+ * copied in full so far — the Forge drafts from those, and from anything
+ * pasted into BEACON at runtime. The index is what tells the Forge what
+ * it has *not* covered yet.
+ */
+
+/** Courses whose subject is a compound. The Forge will not draft these. */
+const COMPOUND = true;
+
+/**
+ * The index. `fenced` marks a course the content rules put out of bounds
+ * — cognitive-enhancement and peptide material, where a post would have
+ * to pair a named compound with an outcome to say anything at all.
+ */
+const COURSES = [
+  { title: 'Mind HiJacking', url: 'https://app.notion.com/p/2677f6a404fe804c8b53e10177638ec3' },
+  { title: 'Mindset Mastery', url: 'https://app.notion.com/p/2677f6a404fe804a9fccc156423ff112' },
+  { title: 'Advanced Mindset Mastery', url: 'https://app.notion.com/p/2677f6a404fe80e699fdecef3da543e0' },
+  { title: 'Productive Isolation', url: 'https://app.notion.com/p/2657f6a404fe802f8d8df4b24b9bd03b' },
+  { title: 'Never Procrastinate Again', url: 'https://app.notion.com/p/2677f6a404fe80659c7ed148ab377d1c' },
+  { title: 'First Principles / Mental Models', url: 'https://app.notion.com/p/2677f6a404fe8007aa3cc3f575c9d5f1' },
+  { title: 'Entrepreneurship Mastery', url: 'https://app.notion.com/p/2677f6a404fe800d98d4f47dc636a634' },
+  { title: 'The Journey To Getting Rich', url: 'https://app.notion.com/p/2677f6a404fe80f5a01dc15e5d3a2bb5' },
+  { title: 'Escaping Hell', url: 'https://app.notion.com/p/2657f6a404fe80a39377f818f69088e8' },
+  { title: 'Full Stoicism Course', url: 'https://app.notion.com/p/2677f6a404fe805ab4b5c4cd892a1028' },
+  { title: 'Full Thinking Course', url: 'https://app.notion.com/p/2677f6a404fe802384fcdf86577e375e' },
+  { title: 'Leadership Protocol', url: 'https://app.notion.com/p/2677f6a404fe80f8abe5fa8862d6b59d' },
+  { title: 'The Glitched Brain Protocol', url: 'https://app.notion.com/p/2677f6a404fe802b919fcbf0b041f583' },
+  { title: 'Discipline Mastery Protocol', url: 'https://app.notion.com/p/2677f6a404fe806293f5d55f7afaf658' },
+  { title: 'The Reality Shifting Entrepreneur', url: 'https://app.notion.com/p/2677f6a404fe80868f23f0d4a9e4a10f' },
+  { title: 'Mastering The Silent Grind', url: 'https://app.notion.com/p/2677f6a404fe8056a8b3d139dc8e31ec' },
+  { title: 'Top 1%', url: 'https://app.notion.com/p/2317f6a404fe80bfa2cbe3ebed76076b' },
+  { title: 'The Red Book', url: 'https://app.notion.com/p/2677f6a404fe8020acf2e1cbd9d800eb' },
+  { title: 'Premium Archive', url: 'https://app.notion.com/p/2677f6a404fe808484cac7637b635c97' },
+  { title: 'Rules For Life', url: 'https://app.notion.com/p/2677f6a404fe80b8bd14f7e1046381c7' },
+  { title: 'The Secrets Of The Rich', url: 'https://app.notion.com/p/2677f6a404fe80b68ca1d3a0b89935cb' },
+  { title: 'Dark Psych', url: 'https://app.notion.com/p/2827f6a404fe80b2a893d4fec7f346ca' },
+  { title: 'Arcane Philosophies', url: 'https://app.notion.com/p/2377f6a404fe8051ada2e45ed5081b84' },
+  { title: 'Deep Psy', url: 'https://app.notion.com/p/3027f6a404fe8082bbf6e48d25e3fa96' },
+
+  { title: 'Copywriting Accelerator', url: 'https://app.notion.com/p/2657f6a404fe8063b28befa244d242fb' },
+  { title: 'Copywriting Ebook', url: 'https://app.notion.com/p/2677f6a404fe80a5883bd11bf46f12df' },
+  { title: 'Copywriting Mastery', url: 'https://app.notion.com/p/2677f6a404fe80c0ad50cad95fe64ad8' },
+  { title: '30 Day: Build A Profitable Business', url: 'https://app.notion.com/p/2677f6a404fe808d8570d2e480640ed0' },
+  { title: 'Make A Product That Prints', url: 'https://app.notion.com/p/2677f6a404fe800f961fc556fca02dd7' },
+  { title: 'The Inbound Method', url: 'https://app.notion.com/p/2677f6a404fe803a8e7de03cb9780d01' },
+  { title: 'The Sales Mastery Protocol', url: 'https://app.notion.com/p/2677f6a404fe80aebc39fc995d17b4ca' },
+  { title: 'Advanced Content Playbook', url: 'https://app.notion.com/p/2677f6a404fe80e1b484fb5a002d6be0' },
+  { title: 'Personal Brand Mastery', url: 'https://app.notion.com/p/2677f6a404fe8001a04ddb7ac6510f10' },
+  { title: 'Human Behavioural / Emotion Vault', url: 'https://app.notion.com/p/2677f6a404fe808aa16dd9956de183e3' },
+  { title: 'Diving Into The Writing Psychology', url: 'https://app.notion.com/p/2677f6a404fe80889e57fd29dd27764c' },
+
+  { title: 'Terminate Playlist', url: 'https://app.notion.com/p/2677f6a404fe8023bd9ffa086c0964cd' },
+  { title: 'Bulking Protocol', url: 'https://app.notion.com/p/2677f6a404fe80f38c4efd11bdff48de' },
+  { title: 'Health Ascendance', url: 'https://app.notion.com/p/2677f6a404fe804b853ce30243211e3a', fenced: COMPOUND },
+  { title: 'Biohacking', url: 'https://app.notion.com/p/2677f6a404fe809a999aef95cdf1bdec', fenced: COMPOUND },
+  { title: 'Full Investing Guide', url: 'https://app.notion.com/p/2677f6a404fe800498ade17f513f47b0' },
+
+  { title: 'Daily Quests', url: 'https://app.notion.com/p/2677f6a404fe8085ada4c31614f46332' },
+  { title: 'Full AI Girl Course', url: 'https://app.notion.com/p/26d7f6a404fe8086a447d548edbcaaa8' },
+  { title: 'Full Trading Course', url: 'https://app.notion.com/p/26d7f6a404fe80cd86c8cc94b01c2d8c' },
+  { title: 'The Deep Work System', url: 'https://app.notion.com/p/3027f6a404fe806291f9ffd34e31e573', fenced: COMPOUND },
+  { title: 'Efficiency Blueprint', url: 'https://app.notion.com/p/3027f6a404fe80fe9bfdc1bf1952ed30' },
+];
+
+/**
+ * Modules copied out in full. The Forge drafts from `text` — it never
+ * reaches back to Notion for it.
+ */
+const MODULES = [
+  {
+    id: 'eb-law-1',
+    title: 'If Nothing Can Be Done In The Present, Ignore It',
+    course: 'Efficiency Blueprint',
+    section: '5 Laws Of Mental Domination',
+    url: 'https://app.notion.com/p/3027f6a404fe808c958ff9df21f08066',
+    text: `Most people waste hours, days, sometimes years thinking about problems they literally cannot solve right now. You're lying in bed at 2 AM worrying about a meeting next week. A flight delay that already happened. A business problem you can't fix until Monday. Nothing can be done. You're just burning mental energy and losing sleep, which makes tomorrow harder.
+
+THE AIRPORT TEST. You're stuck in an airport due to a weather delay. Most people sit there stressed, checking their phone every 2 minutes. Complete waste. You can't control the weather. You can't make the plane leave faster. The productive move: pull out your laptop, work on something you were going to do next week. Turn dead time into productive time instead of anxiety time.
+
+THE TRADING PARALLEL. You enter a trade. The market moves against you. Option 1: sit there refreshing the chart every 30 seconds, losing sleep. Option 2: accept the trade is open, you can't change it right now, and move on. The trader who can ignore what he can't control performs better. Traders are mentally exhausted not from trading, but from worrying about trades they already placed. Same with business. You launched a product. You sent the email. Refreshing your inbox 50 times won't make people respond faster.
+
+HOW TO APPLY IT. When an issue pops into your head, ask one question: can I do something about this RIGHT NOW? If yes, do it immediately. If no, delete it from your mind. Most of what you worry about falls into the no category. Traffic. Someone's opinion of you. Market conditions. Your genetics. A delayed flight.
+
+THE SLEEP TEST. You're about to sleep and your brain starts racing. None of it can be solved at midnight. You're sabotaging your sleep, which makes tomorrow worse, which makes you less capable of solving the actual problems when you can. Write it down if you must, then delete it until morning.
+
+For the next 7 days, every time you catch yourself thinking about something, ask whether you can act on it now. Week 1 you'll catch yourself 20+ times a day. By week 4 it'll be under 5. By month 3 it's automatic.`,
+  },
+  {
+    id: 'eb-law-3',
+    title: 'True Mastery = Delegation',
+    course: 'Efficiency Blueprint',
+    section: '5 Laws Of Mental Domination',
+    url: 'https://app.notion.com/p/3027f6a404fe805ebc42c084f0fe6115',
+    text: `Most people think mastery means you're the best at something. Wrong. True mastery means you've systematized it so well that someone else can execute it at 80-90% of your level. When you can hand off a task and it still gets done properly, that's when you've actually mastered it. Until then you're just skilled. Not free.
+
+Time is your only non-renewable resource. If you're still doing everything yourself, you're capped — there are only 24 hours in a day. Teach others to do what you do and you've multiplied your time.
+
+THE BUSINESS REALITY. McDonald's doesn't need the founder flipping burgers; they systematized it so a 16-year-old can do it. Amazon doesn't need Bezos packing boxes. Your favourite creator doesn't edit their own videos. The goal is to work yourself out of the execution and into the strategy. You design the system. Others execute it.
+
+THE TRADING APPLICATION. True mastery isn't being profitable yourself — it's being able to teach the strategy so clearly someone else could follow it and get similar results. If you can't explain your edge in simple terms, you don't understand it, you're getting lucky. When I started making money I couldn't explain why my setups worked. It was feel. That's not mastery, that's gambling with better instincts. Real mastery came when I could write the rules down clearly enough for someone else to follow: entry criteria, risk management, position sizing, exit rules.
+
+THE DELEGATION TEST. Can you write the process down, hand it to someone with basic competence, and get 80%+ of your results? If yes, you've mastered it — delegate it. If no, systematize it further. Most people skip this because "no one can do it as well as me". That's ego, not mastery. If you can't teach it, you don't understand it well enough.
+
+THE TIME FREEDOM EQUATION. Your time freedom is directly related to how much you can delegate. Doing everything yourself is zero freedom. 90% delegated is 90% freedom. The goal is to only do the things that only you can do: strategy, high-level decisions, creative direction, relationships. Everything else goes to people executing your systems.
+
+Make a list of everything you do in a week. Circle the tasks only you can do. Everything else gets documented and delegated within 90 days. If you're not working toward this, you're choosing to stay the bottleneck.`,
+  },
+];
+
+/** Compounds the shop carries. Named here so the fence can screen for them. */
+const COMPOUNDS = [
+  'GHK-Cu', 'BPC-157', 'TB-500', 'KPV', 'MOTS-c', 'SS-31', 'VIP', 'Cerebrolysin',
+  'NAD+', 'Semaglutide', 'Retatrutide', 'Tirzepatide', 'Ipamorelin', 'CJC-1295',
+  'Tesamorelin', 'Melanotan', 'PT-141', 'Epitalon', 'Thymosin', 'Selank', 'Semax',
+];
+
 /* ==== src/core/bridge.js ==== */
 /**
  * The Arcane Peptides bridge.
@@ -2689,6 +2832,197 @@ class Cloud {
   }
 }
 
+/* ==== src/core/forge.js ==== */
+/**
+ * THE SIGNAL FORGE — the content creator, and the only chain in this
+ * system where more than one agent touches the same piece of work.
+ *
+ * Three seats, each doing the thing its entry in `agents.js` says it is
+ * for, in order:
+ *
+ *   ORACLE  (Archivist)      picks a module the network has not used yet
+ *   HERALD  (Signalman)      drafts a post from it, per platform
+ *   WARDEN  (Risk & Control) screens every draft before it is queued
+ *
+ * That order matters. WARDEN holds `write: recommend` and the audit
+ * trail, and its whole job is to say no — so the fence is not a line in
+ * a prompt asking the model nicely, it is `screen()` below, running in
+ * code, after the model has spoken. A prompt can be talked out of a
+ * rule. A regex cannot.
+ *
+ * **Notion is never written to, and cannot be.** The Forge drafts from
+ * `src/config/archives.js`, which is a copy taken out of the workspace,
+ * or from text pasted in at runtime. Nothing in this path holds a handle
+ * that could write to Notion, which is a stronger guarantee than a
+ * promise not to use one.
+ *
+ * Drafts go to the front of the Signal queue and wait. There is no
+ * auto-posting step anywhere in this file, or anywhere else.
+ */
+
+
+/** Where a draft is written for. Each gets its own shape and length. */
+const PLATFORMS = ['Threads', 'X', 'Instagram', 'TikTok', 'Email'];
+
+/** Claims that may never attach to a named compound. */
+const OUTCOME = /\b(heal|heals|healing|healed|cure|cures|cured|treat|treats|treated|treatment|prevent|prevents|prevented|diagnos\w*|reverse[sd]?|fix(?:es|ed)?|boost\w*|burn\s+fat|lose\s+weight|repair\w*|recover\w*|anti[-\s]?ag\w*|inflammation|injury|injuries|wound\w*|depress\w*|anxiet\w*|libido|muscle\s+growth|immune)\b/i;
+
+/** Anything shaped like a dose. */
+const DOSE = /\b\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ug|ml|iu)\b|\b(?:once|twice|three times)\s+(?:a|per)\s+(?:day|week)\b|\b\d+\s?x\s?(?:daily|weekly|per week|a week)\b/i;
+
+/** Advice framing — telling a reader to take something. */
+const TAKE_IT = /\b(?:stack|cycle|protocol|dose|dosing|inject\w*|administer\w*|take\s+(?:it|this|these))\b/i;
+
+const draftId = () => Math.random().toString(36).slice(2, 10);
+
+/** Every compound name as one matcher, longest first so TB-500 beats TB. */
+function compoundPattern() {
+  const names = [...COMPOUNDS].sort((a, b) => b.length - a.length)
+    .map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`\\b(${names.join('|')})\\b`, 'i');
+}
+const COMPOUND_RE = compoundPattern();
+
+/**
+ * WARDEN's gate. Returns the compound names found and every rule broken.
+ *
+ * The rule is not "never mention a compound" — the shop sells them and
+ * the word has to be sayable. It is that a named compound may not appear
+ * beside an outcome, a dose, or an instruction to take it.
+ */
+function screen(text) {
+  const body = String(text || '');
+  const found = body.match(new RegExp(COMPOUND_RE, 'gi')) || [];
+  const reasons = [];
+
+  if (found.length) {
+    if (OUTCOME.test(body)) reasons.push('names a compound beside a health outcome');
+    if (DOSE.test(body)) reasons.push('names a compound beside a dose');
+    if (TAKE_IT.test(body)) reasons.push('tells the reader to take a compound');
+  }
+  // A dose with no compound named is still dosing advice.
+  if (!found.length && DOSE.test(body) && TAKE_IT.test(body)) {
+    reasons.push('reads as dosing advice');
+  }
+
+  return {
+    ok: reasons.length === 0,
+    compounds: [...new Set(found.map((f) => f.trim()))],
+    reasons,
+  };
+}
+
+/**
+ * ORACLE's pick: a module the queue has not drawn on yet.
+ *
+ * `covered` is the set of module ids already used. Courses the index
+ * marks `fenced` are never offered — their whole subject is compounds,
+ * so a post about them would have to break the rule to say anything.
+ */
+function nextModule(covered = [], pool = MODULES) {
+  const blocked = new Set(COURSES.filter((c) => c.fenced).map((c) => c.title));
+  const open = pool.filter((m) => !covered.includes(m.id) && !blocked.has(m.course));
+  if (!open.length) return null;
+  return open[Math.floor(Math.random() * open.length)];
+}
+
+/** What the Forge has left to draw on, and what it has spent. */
+function coverage(covered = [], pool = MODULES) {
+  const blocked = new Set(COURSES.filter((c) => c.fenced).map((c) => c.title));
+  const usable = pool.filter((m) => !blocked.has(m.course));
+  return {
+    courses: COURSES.length,
+    fenced: COURSES.filter((c) => c.fenced).length,
+    modules: pool.length,
+    usable: usable.length,
+    used: usable.filter((m) => covered.includes(m.id)).length,
+  };
+}
+
+/** HERALD's brief. One call, every platform, grounded in the module. */
+function forgePrompt(module, platforms = PLATFORMS) {
+  return [
+    'You write for Leo, who runs THE ARCANE: Arcane Peptides (UK research compounds),',
+    'Arcane Track (skin healing tracker), The Arcane Archives (£128/mo education platform),',
+    'and The Codex (books). You are HERALD, his Signalman.',
+    '',
+    'Below is ONE module Leo wrote, copied out of his Archives. Draft one post per platform',
+    'from it. The thinking is his — your job is to carry it, not to improve it.',
+    '',
+    `MODULE: ${module.title}`,
+    `COURSE: ${module.course}${module.section ? ` — ${module.section}` : ''}`,
+    '',
+    module.text,
+    '',
+    'Rules:',
+    '- Write in his voice: direct, second person, short lines, no hedging, no throat-clearing.',
+    '- No emoji. No hashtags. No "in this post I will". No calls to action begging for engagement.',
+    '- Use only what the module says. Do not invent an example, a statistic or a study.',
+    '- Never name a peptide or compound. Never mention a dose, a stack, a protocol, or a health',
+    '  outcome. This module is not about compounds and the post must not become about them.',
+    '- Give the idea away completely. A post that withholds the point to sell the course is worthless.',
+    '',
+    'Shape per platform:',
+    '- Threads: 80-150 words, one idea, hard first line.',
+    '- X: under 280 characters, the sharpest single reframe in the module.',
+    '- Instagram: 100-180 words, more rhythm, line breaks between beats.',
+    '- TikTok: a spoken script, 45-70 words, written to be said out loud.',
+    '- Email: 150-250 words, subject line as the hook, signs off without a pitch.',
+    '',
+    `Platforms to write: ${platforms.join(', ')}.`,
+    '',
+    'Return ONLY JSON:',
+    '{"drafts":[{"platform":"<one of the above>","hook":"<the first line, alone>",',
+    ' "post":"<the full text>","angle":"<why this lands, max 15 words>"}]}',
+  ].join('\n');
+}
+
+/**
+ * Run the chain for one module.
+ *
+ * Returns the drafts that cleared the gate and the ones that did not,
+ * with WARDEN's reason on each. A blocked draft is never silently
+ * dropped — the Signal panel shows what was refused and why, because a
+ * fence you cannot see is one you cannot trust.
+ */
+async function forge(module, sampler, { platforms = PLATFORMS } = {}) {
+  if (!module) throw Object.assign(new Error('No module to draft from.'), { code: 'no_module' });
+  if (!sampler) throw Object.assign(new Error('Drafting needs Claude.'), { code: 'no_sampler' });
+
+  const res = await sampler.json(forgePrompt(module, platforms), { modelTier: 'complex' });
+  const data = res && typeof res === 'object' ? (res.json ?? res) : {};
+  const raw = Array.isArray(data.drafts) ? data.drafts : [];
+
+  const passed = [];
+  const blocked = [];
+  for (const d of raw) {
+    const platform = PLATFORMS.includes(d?.platform) ? d.platform : 'Threads';
+    const post = String(d?.post || '').trim();
+    const hook = String(d?.hook || post.split('\n')[0] || '').trim();
+    if (!post) continue;
+
+    // WARDEN reads the hook and the body together — a clean post under a
+    // hook that breaks the rule is still a post that breaks the rule.
+    const verdict = screen(`${hook}\n${post}`);
+    const draft = {
+      id: `sf-${draftId()}`,
+      platform,
+      hook: hook.slice(0, 200),
+      post: post.slice(0, 4000),
+      source: module.title,
+      course: module.course,
+      sourceUrl: module.url,
+      angle: String(d?.angle || '').slice(0, 120),
+      status: 'draft',
+      ts: Date.now(),
+    };
+    if (verdict.ok) passed.push(draft);
+    else blocked.push({ ...draft, status: 'blocked', reasons: verdict.reasons, compounds: verdict.compounds });
+  }
+
+  return { module, drafts: passed, blocked };
+}
+
 /* ==== src/core/store.js ==== */
 /**
  * Persistence for LEOOS.
@@ -2740,10 +3074,14 @@ function seedState() {
   for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
   for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
   const bridge = { url: '', key: '', last: 0, error: '', feed: null };
+  // What the Signal Forge has drawn on, and what WARDEN refused. The
+  // refusals are kept deliberately: a fence nobody can see is one nobody
+  // can trust.
+  const forge = { covered: [], blocked: [], last: 0 };
   const stock = INVENTORY.rows.map((r) => ({
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
   }));
-  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, forge, log: [], posts: SEED_POSTS.slice() };
 }
 
 class Store {
@@ -2906,6 +3244,14 @@ class Store {
         feed: b.feed && typeof b.feed === 'object' ? b.feed : null,
       };
     }
+    if (body.forge && typeof body.forge === 'object') {
+      const f = body.forge;
+      this.state.forge = {
+        covered: Array.isArray(f.covered) ? f.covered.slice(0, 4000).map(String) : [],
+        blocked: Array.isArray(f.blocked) ? f.blocked.slice(0, 20) : [],
+        last: Number(f.last) || 0,
+      };
+    }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
@@ -2941,6 +3287,7 @@ class Store {
       budget: this.state.budget,
       stock: this.state.stock,
       bridge: this.state.bridge,
+      forge: this.forge(),
     };
   }
 
@@ -3266,6 +3613,39 @@ class Store {
       ? `Signal sent — ${post.platform}: ${post.hook}`
       : `Signal killed — ${post.hook}`);
     this.save();
+  }
+
+  /* ---------- the signal forge ---------- */
+
+  forge() {
+    return this.state.forge || (this.state.forge = { covered: [], blocked: [], last: 0 });
+  }
+
+  /** Module ids the Forge has already drawn on. */
+  covered() { return this.forge().covered; }
+
+  /** Drafts WARDEN refused on the last run, with its reasons. */
+  blockedDrafts() { return this.forge().blocked; }
+
+  /**
+   * Take a Forge run. Drafts that cleared the gate go to the front of
+   * the queue; the module is marked covered either way, because a module
+   * that only produced refusals should not be offered again tomorrow.
+   */
+  addDrafts({ module, drafts = [], blocked = [] }) {
+    const f = this.forge();
+    if (module && !f.covered.includes(module.id)) f.covered = [...f.covered, module.id];
+    f.blocked = blocked.slice(0, 20);
+    f.last = Date.now();
+    if (drafts.length) this.state.posts = [...drafts, ...(this.state.posts || [])].slice(0, 60);
+
+    const name = module ? module.title : 'a pasted module';
+    this.log(drafts.length
+      ? `Signal Forge — ${drafts.length} draft${drafts.length === 1 ? '' : 's'} from ${name}`
+        + (blocked.length ? `, ${blocked.length} refused` : '')
+      : `Signal Forge — nothing cleared from ${name}`);
+    this.save();
+    return { added: drafts.length, refused: blocked.length };
   }
 
   /* ---------- log ---------- */
@@ -6080,6 +6460,12 @@ const SYNC_COPY = {
 
 
 
+
+/** The three seats in the Forge chain, named from the roster itself. */
+const ARCHIVIST = AGENTS.find((a) => a.id === 'oracle')?.name || 'ORACLE';
+const SIGNALMAN = AGENTS.find((a) => a.id === 'herald')?.name || 'HERALD';
+const RISK = AGENTS.find((a) => a.id === 'guard')?.name || 'WARDEN';
+
 class UIScreens {
   /* ================= the empire ================= */
 
@@ -6511,11 +6897,71 @@ class UIScreens {
       </section>`;
   }
 
+  /**
+   * The Forge's own panel.
+   *
+   * It shows the chain — who picks, who writes, who screens — and it
+   * shows what WARDEN refused, with the reason. A fence nobody can see
+   * is one nobody can trust, so a blocked draft is displayed rather than
+   * quietly dropped.
+   */
+  forgeBlock() {
+    const cover = coverage(this.store.covered());
+    const blocked = this.store.blockedDrafts();
+    const busy = this.forgeBusy;
+    return `
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">The Signal Forge</h3>
+          <span class="chip ${this.sampler ? 'is-vital' : 'is-flare'}">${this.sampler ? 'ready' : 'needs Claude'}</span></div>
+        <p class="muted-note">${esc(ARCHIVIST)} picks a module the queue has not used.
+          ${esc(SIGNALMAN)} drafts one post per platform from it. ${esc(RISK)} reads every draft
+          before it is queued and refuses anything that names a compound beside an outcome, a dose,
+          or an instruction to take it — in code, after the model has spoken, because a prompt can be
+          talked out of a rule and a check cannot.</p>
+        <p class="muted-note"><strong>Notion is never written to.</strong> The Forge drafts from a copy
+          taken out of the workspace, or from text you paste below. Nothing in this path holds a handle
+          that could write to Notion.</p>
+        <div class="stat-row" style="margin-top:12px">
+          <div class="stat"><span class="stat-n mono">${cover.courses}</span><span class="stat-l">Courses indexed</span></div>
+          <div class="stat"><span class="stat-n mono">${cover.usable}</span><span class="stat-l">Modules copied</span></div>
+          <div class="stat"><span class="stat-n mono ${cover.used ? 'is-arcane' : 'dim'}">${cover.used}</span><span class="stat-l">Drawn on</span></div>
+          <div class="stat"><span class="stat-n mono ${cover.fenced ? 'is-breach' : 'dim'}">${cover.fenced}</span><span class="stat-l">Courses fenced</span></div>
+        </div>
+        <div class="bridge-btns" style="margin-top:12px">
+          <button type="button" data-forgerun="1" ${busy || !this.sampler ? 'disabled' : ''}>
+            ${busy ? 'Drafting…' : 'Draft from the Archives'}</button>
+        </div>
+        ${this.forgeError ? `<p class="warn-note">${esc(this.forgeError)}</p>` : ''}
+        ${blocked.length ? `
+          <div class="block-head" style="margin-top:14px">
+            <h3 class="sub-title" style="margin:0">Refused by ${esc(RISK)}</h3>
+            <span class="chip is-breach">${blocked.length}</span></div>
+          ${blocked.map((b) => `
+            <div class="warn-note" style="margin-top:8px">
+              <strong>${esc(b.platform)}</strong> — ${esc(b.reasons.join('; '))}${b.compounds?.length
+                ? ` (${esc(b.compounds.join(', '))})` : ''}
+              <br><span class="dim">${esc(b.hook)}</span>
+            </div>`).join('')}` : ''}
+        <details class="cloud-paste" data-pastemod="1" ${this.modOpen ? 'open' : ''}>
+          <summary>Paste a module instead</summary>
+          <p class="muted-note">Only two modules are copied in so far. Open any Archives page, copy
+            the text, and drop it here — it is drafted exactly the same way, and it still never goes
+            back to Notion.</p>
+          <form data-forgepaste="1">
+            <input class="field-i" type="text" name="title" placeholder="Module title" autocomplete="off">
+            <input class="field-i" type="text" name="course" placeholder="Course it came from" autocomplete="off">
+            <textarea name="text" rows="5" placeholder="Paste the module text here"></textarea>
+            <button type="submit" ${busy || !this.sampler ? 'disabled' : ''}>Draft from this</button>
+          </form>
+        </details>
+      </section>`;
+  }
+
   screenSignals() {
     const drafts = this.store.drafts();
     return `
       ${this.head('Signals', `${drafts.length} draft${drafts.length === 1 ? '' : 's'}`)}
-      <p class="muted-note">The Signal Forge reads a module from the Archives each morning and drafts a post from it. Notion is never written to.</p>
+      ${this.forgeBlock()}
       ${drafts.length ? drafts.map((d) => `
         <article class="signal-card">
           <div class="signal-card-top">
@@ -7118,6 +7564,7 @@ class UIWidgets extends UIScreens {
 
 
 
+
 class UI extends UIWidgets {
   constructor(store, sim, factory) {
     super();
@@ -7133,6 +7580,9 @@ class UI extends UIWidgets {
     // Set by the boot once the Firebase link exists; the panel copes
     // either way, so a page built without one simply has no Cloud block.
     this.cloud = null;
+    this.forgeBusy = false;
+    this.forgeError = '';
+    this.modOpen = false;
     this.brain = null;
     this.reduceMotion = false;
     this.cloudOpen = false;
@@ -7562,6 +8012,7 @@ class UI extends UIWidgets {
     if (t('[data-cloudin]')) { this.signInCloud(); return; }
     if (t('[data-cloudout]')) { this.signOutCloud(); return; }
     if (t('[data-cloudretry]')) { this.retryCloud(); return; }
+    if (t('[data-forgerun]')) { this.runForge(); return; }
     if (t('[data-bridgepull]')) { this.pullBridge(); return; }
     if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
@@ -7592,6 +8043,21 @@ class UI extends UIWidgets {
       this.store.setBridge('key', bsave.querySelector('[name="key"]').value);
       this.store.bridgeError('');
       this.pullBridge();
+      return;
+    }
+    const modPaste = e.target.closest('[data-forgepaste]');
+    if (modPaste) {
+      e.preventDefault();
+      const get = (n) => modPaste.querySelector(`[name="${n}"]`)?.value || '';
+      const text = get('text').trim();
+      if (!text) { this.forgeError = 'Paste the module text first.'; this.render(); return; }
+      this.runForge({
+        id: `paste-${Date.now().toString(36)}`,
+        title: get('title').trim() || 'Pasted module',
+        course: get('course').trim() || 'The Arcane Archives',
+        url: '',
+        text: text.slice(0, 20000),
+      });
       return;
     }
     const csave = e.target.closest('[data-cloudsave]');
@@ -7638,7 +8104,50 @@ class UI extends UIWidgets {
     const box = e.target.closest('[data-pastebox]');
     if (box) { this.pasteOpen = box.open; return; }
     const cloudBox = e.target.closest('[data-cloudbox]');
-    if (cloudBox) this.cloudOpen = cloudBox.open;
+    if (cloudBox) { this.cloudOpen = cloudBox.open; return; }
+    const modBox = e.target.closest('[data-pastemod]');
+    if (modBox) this.modOpen = modBox.open;
+  }
+
+  /* ================= the signal forge ================= */
+
+  /**
+   * Run the chain: ORACLE picks (or takes what was pasted), HERALD
+   * drafts, WARDEN screens. Nothing reaches the queue that did not clear
+   * the gate, and what was refused stays visible.
+   */
+  async runForge(module = null) {
+    if (this.forgeBusy) return;
+    const target = module || nextModule(this.store.covered());
+    if (!target) {
+      this.forgeError = 'Every module copied in has been drawn on. Paste one below, or copy more out of the Archives.';
+      this.render();
+      return;
+    }
+    if (!this.sampler) {
+      this.forgeError = 'Drafting needs Claude, which means the published page on claude.ai.';
+      this.render();
+      return;
+    }
+
+    this.forgeBusy = true;
+    this.forgeError = '';
+    this.render();
+    try {
+      const run = await forge(target, this.sampler);
+      const { added, refused } = this.store.addDrafts(run);
+      if (!added) {
+        this.forgeError = refused
+          ? `Nothing cleared the gate — ${refused} draft${refused === 1 ? '' : 's'} refused. The reasons are below.`
+          : 'The Forge returned nothing usable. Try again.';
+      }
+    } catch (err) {
+      this.forgeError = err?.code === 'rate_limited' ? 'Rate limited. Try again shortly.'
+        : err?.code === 'not_granted' ? 'The Forge needs permission from this view to reach Claude.'
+          : `The Forge could not run (${err?.code || err?.message || 'unknown'}).`;
+    }
+    this.forgeBusy = false;
+    this.render();
   }
 
   /* ================= the cloud ================= */

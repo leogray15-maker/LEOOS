@@ -27,7 +27,8 @@ case "${1:-}" in
   --dev)      node test/dev.mjs ;;
   --store)    node test/store.mjs ;;
   --vault)    node test/vault.mjs ;;
+  --forge)    node test/forge.mjs ;;
   # The store suite needs no browser and no server, so it rides along with
   # the e2e run rather than waiting to be asked for.
-  *)          node test/store.mjs && echo && node test/vault.mjs && echo && node test/e2e.mjs ;;
+  *)          node test/store.mjs && echo && node test/forge.mjs && echo && node test/vault.mjs && echo && node test/e2e.mjs ;;
 esac

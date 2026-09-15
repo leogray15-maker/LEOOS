@@ -49,10 +49,14 @@ function seedState() {
   for (const f of BUDGET.fixed) budget.fixed[f.id] = f.amount;
   for (const sp of BUDGET.split) budget.split[sp.id] = sp.pct;
   const bridge = { url: '', key: '', last: 0, error: '', feed: null };
+  // What the Signal Forge has drawn on, and what WARDEN refused. The
+  // refusals are kept deliberately: a fence nobody can see is one nobody
+  // can trust.
+  const forge = { covered: [], blocked: [], last: 0 };
   const stock = INVENTORY.rows.map((r) => ({
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
   }));
-  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, forge, log: [], posts: SEED_POSTS.slice() };
 }
 
 export class Store {
@@ -215,6 +219,14 @@ export class Store {
         feed: b.feed && typeof b.feed === 'object' ? b.feed : null,
       };
     }
+    if (body.forge && typeof body.forge === 'object') {
+      const f = body.forge;
+      this.state.forge = {
+        covered: Array.isArray(f.covered) ? f.covered.slice(0, 4000).map(String) : [],
+        blocked: Array.isArray(f.blocked) ? f.blocked.slice(0, 20) : [],
+        last: Number(f.last) || 0,
+      };
+    }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
@@ -250,6 +262,7 @@ export class Store {
       budget: this.state.budget,
       stock: this.state.stock,
       bridge: this.state.bridge,
+      forge: this.forge(),
     };
   }
 
@@ -575,6 +588,39 @@ export class Store {
       ? `Signal sent — ${post.platform}: ${post.hook}`
       : `Signal killed — ${post.hook}`);
     this.save();
+  }
+
+  /* ---------- the signal forge ---------- */
+
+  forge() {
+    return this.state.forge || (this.state.forge = { covered: [], blocked: [], last: 0 });
+  }
+
+  /** Module ids the Forge has already drawn on. */
+  covered() { return this.forge().covered; }
+
+  /** Drafts WARDEN refused on the last run, with its reasons. */
+  blockedDrafts() { return this.forge().blocked; }
+
+  /**
+   * Take a Forge run. Drafts that cleared the gate go to the front of
+   * the queue; the module is marked covered either way, because a module
+   * that only produced refusals should not be offered again tomorrow.
+   */
+  addDrafts({ module, drafts = [], blocked = [] }) {
+    const f = this.forge();
+    if (module && !f.covered.includes(module.id)) f.covered = [...f.covered, module.id];
+    f.blocked = blocked.slice(0, 20);
+    f.last = Date.now();
+    if (drafts.length) this.state.posts = [...drafts, ...(this.state.posts || [])].slice(0, 60);
+
+    const name = module ? module.title : 'a pasted module';
+    this.log(drafts.length
+      ? `Signal Forge — ${drafts.length} draft${drafts.length === 1 ? '' : 's'} from ${name}`
+        + (blocked.length ? `, ${blocked.length} refused` : '')
+      : `Signal Forge — nothing cleared from ${name}`);
+    this.save();
+    return { added: drafts.length, refused: blocked.length };
   }
 
   /* ---------- log ---------- */

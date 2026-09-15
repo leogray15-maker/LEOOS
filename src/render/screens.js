@@ -11,6 +11,12 @@
 import { AGENTS, ARCANE, BUDGET, CAPS, CATALOGUE, COUNCIL, CREW, DECKS, GOALS, GRADE_TONE, OPERATOR, TOOLS, VENTURES } from '../config/empire.js';
 import { ROOM_BY_ID, WINGS } from '../config/facility.js';
 import { $, PLATFORM_CLASS, SYNC_COPY, SYNC_WORD, esc, meter, money, stamp } from './format.js';
+import { coverage } from '../core/forge.js';
+
+/** The three seats in the Forge chain, named from the roster itself. */
+const ARCHIVIST = AGENTS.find((a) => a.id === 'oracle')?.name || 'ORACLE';
+const SIGNALMAN = AGENTS.find((a) => a.id === 'herald')?.name || 'HERALD';
+const RISK = AGENTS.find((a) => a.id === 'guard')?.name || 'WARDEN';
 
 export class UIScreens {
   /* ================= the empire ================= */
@@ -443,11 +449,71 @@ export class UIScreens {
       </section>`;
   }
 
+  /**
+   * The Forge's own panel.
+   *
+   * It shows the chain — who picks, who writes, who screens — and it
+   * shows what WARDEN refused, with the reason. A fence nobody can see
+   * is one nobody can trust, so a blocked draft is displayed rather than
+   * quietly dropped.
+   */
+  forgeBlock() {
+    const cover = coverage(this.store.covered());
+    const blocked = this.store.blockedDrafts();
+    const busy = this.forgeBusy;
+    return `
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">The Signal Forge</h3>
+          <span class="chip ${this.sampler ? 'is-vital' : 'is-flare'}">${this.sampler ? 'ready' : 'needs Claude'}</span></div>
+        <p class="muted-note">${esc(ARCHIVIST)} picks a module the queue has not used.
+          ${esc(SIGNALMAN)} drafts one post per platform from it. ${esc(RISK)} reads every draft
+          before it is queued and refuses anything that names a compound beside an outcome, a dose,
+          or an instruction to take it — in code, after the model has spoken, because a prompt can be
+          talked out of a rule and a check cannot.</p>
+        <p class="muted-note"><strong>Notion is never written to.</strong> The Forge drafts from a copy
+          taken out of the workspace, or from text you paste below. Nothing in this path holds a handle
+          that could write to Notion.</p>
+        <div class="stat-row" style="margin-top:12px">
+          <div class="stat"><span class="stat-n mono">${cover.courses}</span><span class="stat-l">Courses indexed</span></div>
+          <div class="stat"><span class="stat-n mono">${cover.usable}</span><span class="stat-l">Modules copied</span></div>
+          <div class="stat"><span class="stat-n mono ${cover.used ? 'is-arcane' : 'dim'}">${cover.used}</span><span class="stat-l">Drawn on</span></div>
+          <div class="stat"><span class="stat-n mono ${cover.fenced ? 'is-breach' : 'dim'}">${cover.fenced}</span><span class="stat-l">Courses fenced</span></div>
+        </div>
+        <div class="bridge-btns" style="margin-top:12px">
+          <button type="button" data-forgerun="1" ${busy || !this.sampler ? 'disabled' : ''}>
+            ${busy ? 'Drafting…' : 'Draft from the Archives'}</button>
+        </div>
+        ${this.forgeError ? `<p class="warn-note">${esc(this.forgeError)}</p>` : ''}
+        ${blocked.length ? `
+          <div class="block-head" style="margin-top:14px">
+            <h3 class="sub-title" style="margin:0">Refused by ${esc(RISK)}</h3>
+            <span class="chip is-breach">${blocked.length}</span></div>
+          ${blocked.map((b) => `
+            <div class="warn-note" style="margin-top:8px">
+              <strong>${esc(b.platform)}</strong> — ${esc(b.reasons.join('; '))}${b.compounds?.length
+                ? ` (${esc(b.compounds.join(', '))})` : ''}
+              <br><span class="dim">${esc(b.hook)}</span>
+            </div>`).join('')}` : ''}
+        <details class="cloud-paste" data-pastemod="1" ${this.modOpen ? 'open' : ''}>
+          <summary>Paste a module instead</summary>
+          <p class="muted-note">Only two modules are copied in so far. Open any Archives page, copy
+            the text, and drop it here — it is drafted exactly the same way, and it still never goes
+            back to Notion.</p>
+          <form data-forgepaste="1">
+            <input class="field-i" type="text" name="title" placeholder="Module title" autocomplete="off">
+            <input class="field-i" type="text" name="course" placeholder="Course it came from" autocomplete="off">
+            <textarea name="text" rows="5" placeholder="Paste the module text here"></textarea>
+            <button type="submit" ${busy || !this.sampler ? 'disabled' : ''}>Draft from this</button>
+          </form>
+        </details>
+      </section>`;
+  }
+
   screenSignals() {
     const drafts = this.store.drafts();
     return `
       ${this.head('Signals', `${drafts.length} draft${drafts.length === 1 ? '' : 's'}`)}
-      <p class="muted-note">The Signal Forge reads a module from the Archives each morning and drafts a post from it. Notion is never written to.</p>
+      ${this.forgeBlock()}
       ${drafts.length ? drafts.map((d) => `
         <article class="signal-card">
           <div class="signal-card-top">
