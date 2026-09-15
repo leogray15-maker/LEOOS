@@ -7,11 +7,13 @@
   "scripts": {
     "build": "node build.js",
     "dev": "npx --yes serve . -l 5173",
+    "vault": "node tools/vault.js",
     "test": "bash test/run.sh",
     "test:contrast": "bash test/run.sh --contrast",
     "test:clipping": "bash test/run.sh --clipping",
     "test:dev": "bash test/run.sh --dev",
     "test:store": "bash test/run.sh --store",
+    "test:vault": "bash test/run.sh --vault",
     "deploy": "firebase deploy --only hosting,firestore:rules",
     "deploy:rules": "firebase deploy --only firestore:rules"
   },

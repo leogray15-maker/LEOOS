@@ -348,6 +348,7 @@ npm run dev      # serve the modular source at localhost:5173
 npm run build    # flatten to two self-contained targets
 npm test               # the store suite, then the end-to-end suite
 npm run test:store     # the persistence rungs, no browser, no server
+npm run test:vault     # the vault generator, including what it refuses to touch
 npm run test:dev       # the same screens and rooms on the real ES modules
 npm run test:contrast  # every text element on every screen, measured against AA
 npm run test:clipping  # anything whose content overflows its box
@@ -460,7 +461,8 @@ src/render/sprites.js   character matrices, baked once and blitted
 bridge/                 the feed route to drop into the shop, and a sample
 firebase.json           hosting and firestore deploy
 firestore.rules         one operator, enforced
-test/                   store, e2e, dev-graph, contrast and clipping suites
+test/                   store, vault, e2e, dev-graph, contrast and clipping suites
+tools/vault.js          generate the Obsidian brain from the config
 trading/                the backtester — separate from the OS, see below
 ```
 
@@ -508,6 +510,76 @@ It writes drafts only. There is no auto-posting step anywhere in the system.
 Peptide content is fenced: no claim that a compound treats, cures, prevents or
 diagnoses anything, no dosing, and no named compound paired with a health
 outcome. A module that cannot clear that bar is skipped.
+
+## The Obsidian brain
+
+The vault is the readable half of the system: agent profiles, the
+permission matrix, daily memory logs and a task board, in a folder
+Obsidian opens and greps instantly.
+
+It is **generated, not written**. Nineteen agents already exist in
+`src/config/agents.js` with a domain, a brief, a toolset and a grade per
+capability; the facility, ventures and goals are config too. Typing
+`03-Agents/MERIDIAN.md` by hand forks all of that — change `change:
+approval` to `allow` and the note quietly becomes a lie. So the vault is
+an output, the same way `dist/` and `public/` are:
+
+```bash
+node tools/vault.js ~/Documents/MyVault           # the plan, writes nothing
+node tools/vault.js ~/Documents/MyVault --write   # apply it
+```
+
+Change a grade in the config, regenerate, and exactly two notes move: that
+agent's profile and the matrix. The vault and the running system cannot
+disagree.
+
+### It will not eat your notes
+
+This writes into somebody's real second brain, so it is built to be
+boring about it:
+
+- **Nothing without `--write`.** The default prints a plan and exits.
+- **`generated: true` or hands off.** Every note it owns carries that flag
+  in its frontmatter. Strip the flag — or write a note it never made — and
+  it is reported as *kept* and left byte-for-byte alone.
+- **Nothing is ever deleted**, and a folder with no `.obsidian/` in it is
+  refused unless you pass `--force`, so a mistyped path cannot scatter
+  notes across your home directory.
+- An unchanged note keeps its old `updated:` stamp, so "what moved today"
+  stays a real question.
+
+`test/vault.mjs` runs the real script against a throwaway vault and
+asserts every one of those.
+
+### What lands
+
+| Folder | What goes in it | From |
+| --- | --- | --- |
+| `01-System/` | control note, permission matrix, tool wiring | `agents.js` |
+| `02-Memory/Daily-Logs/` | one log per day, seeded, appended by agents | — |
+| `03-Agents/` | one profile per agent, 19 of them | `agents.js` |
+| `04-Knowledge/` | ventures, goals, the facility | `empire.js`, `facility.js` |
+| `05-Tasks/` | the board, grouped by room and staffed | `empire.js` |
+
+It also writes a `CLAUDE.md` at the vault root, so a Claude Code session
+opened in that folder inherits the frontmatter standard, the wikilink
+rule and the logging directives without being told again. That file says
+plainly which notes are generated, so a session there does not try to
+edit a note that will be overwritten on the next run.
+
+### Where it runs
+
+Obsidian is a desktop app and the vault is a folder on your Mac, so this
+runs **locally**, not from a cloud session:
+
+```bash
+git clone https://github.com/leogray15-maker/LEOOS.git
+cd LEOOS
+node tools/vault.js ~/path/to/your/vault --write
+```
+
+Keeping the vault inside a git repo with the Obsidian Git plugin is the
+other way round — then a remote session can maintain it directly.
 
 ## The trading bot
 
