@@ -1,7 +1,7 @@
 {
   "name": "leoos",
   "version": "1.0.0",
-  "description": "LEOOS \u2014 the operating system of the Arcane empire.",
+  "description": "LEOOS — the operating system of the Arcane empire.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -10,7 +10,9 @@
     "test": "bash test/run.sh",
     "test:contrast": "bash test/run.sh --contrast",
     "test:clipping": "bash test/run.sh --clipping",
-    "test:dev": "bash test/run.sh --dev"
+    "test:dev": "bash test/run.sh --dev",
+    "deploy": "firebase deploy --only hosting,firestore:rules",
+    "deploy:rules": "firebase deploy --only firestore:rules"
   },
   "devDependencies": {
     "playwright": "^1.47.0"

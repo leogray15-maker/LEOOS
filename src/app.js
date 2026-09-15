@@ -5,6 +5,7 @@
 
 import { SCREENS } from './config/empire.js';
 import { Store } from './core/store.js';
+import { Cloud } from './core/cloud.js';
 import { Sim } from './core/sim.js';
 import { Factory } from './render/factory.js';
 import { UI } from './render/ui.js';
@@ -12,10 +13,12 @@ import { UI } from './render/ui.js';
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const store = new Store();
+const cloud = new Cloud();
 const sim = new Sim(store);
 const canvas = document.getElementById('hull');
 const factory = new Factory(canvas, sim, store);
 const ui = new UI(store, sim, factory);
+ui.cloud = cloud;
 const tooltip = document.getElementById('tooltip');
 
 store.onChange(() => {
@@ -190,7 +193,9 @@ window.addEventListener('resize', () => factory.resize());
 
 /* ---------- late capabilities ---------- */
 
-store.connect().then(() => ui.render());
+// The artifact database wins where it exists; everywhere else this is
+// where Firestore comes in. Neither blocks the first frame.
+store.connect(cloud).then(() => ui.render());
 
 // The shop's numbers go stale the moment they're stored, so refresh them on
 // open rather than waiting for someone to press Pull.

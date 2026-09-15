@@ -1,14 +1,22 @@
 /**
  * Persistence for LEOOS.
  *
- * Prefers the artifact `db` capability so the ship's state follows Leo
- * across devices. Falls back to localStorage when db is unavailable, and
- * to memory when even that is blocked (private windows, cleared storage).
- * The rest of the app never knows which one it got.
+ * Four rungs, best first:
+ *
+ *   synced  — the artifact `db` capability, on the published page
+ *   cloud   — Firestore in the `arcane-ai-os` project, everywhere else
+ *   local   — localStorage, when neither is reachable
+ *   memory  — when even that is blocked (private windows, cleared storage)
+ *
+ * The two top rungs are the same shape, which is not a coincidence: the
+ * artifact database is Firestore-shaped, so `src/core/cloud.js` presents
+ * the real thing through the same three calls. Everything below this
+ * line is written against that shape and never learns which it got.
  */
 
 import { DECKS, VENTURES, SEED_TASKS, SEED_POSTS, GOALS, BUDGET } from '../config/empire.js';
 import { INVENTORY } from '../config/roomdata.js';
+import { FIREBASE_DOC } from '../config/firebase.js';
 
 const LS_KEY = 'leoos.v1';
 
@@ -53,6 +61,11 @@ export class Store {
     this.db = null;
     this.mode = 'memory';
     this.writeTimer = null;
+    this.cloud = null;
+    this.unwatch = null;
+    this.remoteError = '';
+    /** The rung to fall back to — 'local' once localStorage proves writable. */
+    this.floor = 'memory';
   }
 
   /** Subscribe to any state change. Returns an unsubscribe function. */
@@ -65,14 +78,22 @@ export class Store {
     for (const fn of this.listeners) fn(this.state);
   }
 
-  /** Boot: try db, then localStorage. Never throws; never blocks first paint. */
-  async connect() {
+  /**
+   * Boot: localStorage first so the page has something to draw, then the
+   * best remote available. Never throws; never blocks first paint.
+   *
+   * `cloud` is optional — pass a `Cloud` and it is tried when the
+   * artifact database is absent, which is every deployment outside
+   * claude.ai.
+   */
+  async connect(cloud = null) {
     // Probe writability rather than inferring it from whether data exists —
     // a first visit has nothing saved but localStorage still works fine.
     try {
       localStorage.setItem(`${LS_KEY}.probe`, '1');
       localStorage.removeItem(`${LS_KEY}.probe`);
       this.mode = 'local';
+      this.floor = 'local';
       const local = localStorage.getItem(LS_KEY);
       if (local) this.merge(JSON.parse(local));
       this.emit();
@@ -82,27 +103,71 @@ export class Store {
     try {
       db = await window.claude?.use?.('db');
     } catch { db = null; }
-    if (!db) return this.mode;
+    if (db && await this.attach(db, 'synced')) return this.mode;
 
-    this.db = db;
-    try {
-      const snap = await db.doc('system/ship').get();
-      if (snap.exists) this.merge(snap.data());
-      this.mode = 'synced';
-      this.emit();
-      db.doc('system/ship').onSnapshot(
-        (s) => {
-          if (!s.exists || s.metadata.hasPendingWrites) return;
-          this.merge(s.data());
-          this.emit();
-        },
-        () => { this.db = null; this.mode = 'local'; this.emit(); },
-      );
-    } catch {
-      this.db = null;
-      this.mode = 'local';
-    }
+    if (cloud) await this.connectCloud(cloud);
     return this.mode;
+  }
+
+  /**
+   * Bring up the Firebase link on its own.
+   *
+   * Separate from `connect` because pasting a config mid-session must not
+   * re-read localStorage — a change made in the last half second is still
+   * sitting in the debounce, and re-merging the file would undo it.
+   */
+  async connectCloud(cloud) {
+    this.cloud = cloud;
+    // A sign-in or sign-out after boot arrives here rather than through
+    // a reload, so the deck goes live the moment the popup closes.
+    cloud.onLive = (remote) => {
+      if (remote) this.attach(remote, 'cloud');
+      else this.detach();
+    };
+    const remote = await cloud.connect();
+    if (remote) await this.attach(remote, 'cloud');
+    return this.mode;
+  }
+
+  /**
+   * Take a database, fold in whatever it already holds, and follow it.
+   * Returns false if it could not be read, leaving the store where it was.
+   */
+  async attach(db, mode) {
+    try {
+      const snap = await db.doc(FIREBASE_DOC).get();
+      if (snap.exists) this.merge(snap.data());
+      else await db.doc(FIREBASE_DOC).set(this.body());
+    } catch (e) {
+      this.remoteError = String(e?.message || e).slice(0, 200);
+      return false;
+    }
+    this.unwatch?.();
+    this.db = db;
+    this.mode = mode;
+    this.remoteError = '';
+    this.emit();
+    this.unwatch = db.doc(FIREBASE_DOC).onSnapshot(
+      (s) => {
+        if (!s.exists || s.metadata.hasPendingWrites) return;
+        this.merge(s.data());
+        this.emit();
+      },
+      (e) => {
+        this.remoteError = String(e?.message || e).slice(0, 200);
+        this.detach();
+      },
+    );
+    return true;
+  }
+
+  /** Drop back to localStorage — signed out, revoked, or the link failed. */
+  detach() {
+    this.unwatch?.();
+    this.unwatch = null;
+    this.db = null;
+    this.mode = this.floor;
+    this.emit();
   }
 
   /** Fold a stored body into live state without losing newly-added decks. */
@@ -167,8 +232,9 @@ export class Store {
     this.writeTimer = setTimeout(() => this.flush(), 450);
   }
 
-  async flush() {
-    const body = {
+  /** Everything worth keeping, and nothing derived. One document. */
+  body() {
+    return {
       decks: this.state.decks,
       ledger: this.state.ledger,
       log: this.state.log.slice(0, 50),
@@ -178,15 +244,23 @@ export class Store {
       stock: this.state.stock,
       bridge: this.state.bridge,
     };
+  }
+
+  async flush() {
+    const body = this.body();
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
     try {
-      await this.db.doc('system/ship').set(body);
+      await this.db.doc(FIREBASE_DOC).set(body);
     } catch (e) {
-      if (e && (e.code === 'revoked' || e.code === 'not_granted')) {
-        this.db = null;
-        this.mode = 'local';
-        this.emit();
+      const code = e?.code || '';
+      // `revoked`/`not_granted` come from the artifact database,
+      // `permission-denied`/`unauthenticated` from Firestore. All four
+      // mean the same thing: this page may no longer write, so stop
+      // pretending it is synced.
+      if (['revoked', 'not_granted', 'permission-denied', 'unauthenticated'].includes(code)) {
+        this.remoteError = 'Write refused — this page is no longer signed in.';
+        this.detach();
       }
     }
   }

@@ -30,3 +30,14 @@ export function meter(pct, accent) {
   const w = Math.round(Math.max(0, Math.min(1, pct)) * 100);
   return `<div class="meter"><div class="meter-fill is-${accent}" style="width:${w}%"></div></div>`;
 }
+
+/** The four persistence rungs, as the deck labels them. */
+export const SYNC_WORD = { synced: 'SYNCED', cloud: 'CLOUD', local: 'LOCAL', memory: 'MEMORY' };
+
+/** …and what each one actually means for the state you are looking at. */
+export const SYNC_COPY = {
+  synced: 'Artifact database. Orders, money and goals follow you across every device signed in to the published page.',
+  cloud: 'Firestore. Every change is written to the arcane-ai-os project and lands on every other signed-in device within the second.',
+  local: 'Local only. State is saved in this browser and goes no further.',
+  memory: 'Memory only. Storage is blocked here, so nothing survives a reload.',
+};

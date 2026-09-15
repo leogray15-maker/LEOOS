@@ -652,31 +652,31 @@ button.chip:hover { border-color: var(--seam-lit); color: var(--ink); }
 }
 .bridge-form input:focus { border-color: var(--arcane); outline: none; }
 .bridge-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-.bridge-btns button, .bridge-paste button, .wide-btn {
+.bridge-btns button, .bridge-paste button, .cloud-paste button, .wide-btn {
   border: 1px solid rgba(139,92,246,.45); background: rgba(139,92,246,.14);
   color: var(--arcane-lift); border-radius: var(--r-sm); padding: 7px 12px;
   font-family: var(--f-display); font-size: 10px; letter-spacing: .12em;
   text-transform: uppercase; cursor: pointer;
 }
-.bridge-btns button:hover, .bridge-paste button:hover, .wide-btn:hover { background: rgba(139,92,246,.24); }
+.bridge-btns button:hover, .bridge-paste button:hover, .cloud-paste button:hover, .wide-btn:hover { background: rgba(139,92,246,.24); }
 .bridge-btns button.is-quiet { border-color: var(--seam); background: none; color: var(--faint); }
 .bridge-btns button.is-quiet:hover { color: var(--breach); border-color: rgba(229,72,77,.42); background: none; }
 
 .wide-btn { width: 100%; margin-top: 10px; }
 
-.bridge-paste { margin-top: 12px; border-top: 1px solid var(--seam); padding-top: 10px; }
-.bridge-paste summary {
+.bridge-paste, .cloud-paste { margin-top: 12px; border-top: 1px solid var(--seam); padding-top: 10px; }
+.bridge-paste summary, .cloud-paste summary {
   cursor: pointer; font-family: var(--f-display); font-size: 10px;
   letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
 }
-.bridge-paste summary:hover { color: var(--arcane-lift); }
-.bridge-paste textarea {
+.bridge-paste summary:hover, .cloud-paste summary:hover { color: var(--arcane-lift); }
+.bridge-paste textarea, .cloud-paste textarea {
   width: 100%; background: var(--plate); border: 1px solid var(--seam);
   border-radius: var(--r-sm); padding: 8px 9px; color: var(--ink);
   font-family: var(--f-mono, ui-monospace, monospace); font-size: 11px;
   resize: vertical; margin: 6px 0;
 }
-.bridge-paste textarea:focus { border-color: var(--arcane); outline: none; }
+.bridge-paste textarea:focus, .cloud-paste textarea:focus { border-color: var(--arcane); outline: none; }
 
 .live-dot {
   width: 5px; height: 5px; border-radius: 50%; flex: none; display: inline-block;
@@ -1624,7 +1624,7 @@ const CAPS = [
 /** Tools the network can reach. Wiring state is honest, not aspirational. */
 const TOOLS = [
   { id: 'notion',   name: 'Notion',        state: 'read-only', note: 'The Archives. Read only, by your instruction.' },
-  { id: 'memory',   name: 'Shared memory', state: 'live',      note: 'Persistent state every agent reads before acting.' },
+  { id: 'memory',   name: 'Shared memory', state: 'live',      note: 'Firestore. One state the whole network reads before acting, on every device.' },
   { id: 'counsel',  name: 'Claude',        state: 'live',      note: 'Reasoning for Counsel and the Council.' },
   { id: 'calendar', name: 'Calendar',      state: 'not wired', note: 'Not connected yet.' },
   { id: 'email',    name: 'Email',         state: 'not wired', note: 'Not connected yet.' },
@@ -2124,6 +2124,105 @@ The goal was never to make them feel bad. It's to make them see that if someone 
   },
 ];
 
+/* ==== src/config/firebase.js ==== */
+/**
+ * The Firebase project behind LEOOS.
+ *
+ * These values are not secrets. A Firebase web config identifies the
+ * project to the browser; what actually protects the data is
+ * `firestore.rules`, which admits exactly one verified Google account.
+ * That is why it is safe to commit this file — and why the rules file
+ * is the one to be careful with.
+ *
+ * Fill `FIREBASE_CONFIG` in from the Firebase console:
+ *   Project settings → Your apps → Web app → SDK setup and configuration.
+ * Until `apiKey` and `appId` are set the cloud stays off and the store
+ * falls back to localStorage, exactly as it did before.
+ *
+ * The console values can also be pasted at runtime from System → Cloud,
+ * which writes them here-shaped into localStorage. That path exists so a
+ * new device can be brought up without a redeploy; the committed values
+ * win on a fresh browser.
+ */
+
+/** The one account the empire answers to. Mirrored in firestore.rules. */
+const FIREBASE_OWNER = 'leogray15@gmail.com';
+
+/** Where the ship's state lives. One document, read and written whole. */
+const FIREBASE_DOC = 'system/ship';
+
+/** Pinned SDK build. gstatic serves the modular ESM bundles from here. */
+const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.14.1';
+
+/** Paste-at-runtime override, so a device can be wired without a deploy. */
+const FB_OVERRIDE_KEY = 'leoos.firebase';
+
+const FIREBASE_CONFIG = {
+  apiKey: '',
+  authDomain: 'arcane-ai-os.firebaseapp.com',
+  projectId: 'arcane-ai-os',
+  storageBucket: 'arcane-ai-os.firebasestorage.app',
+  messagingSenderId: '',
+  appId: '',
+};
+
+/** The fields that have to be present before a connection is worth trying. */
+const REQUIRED = ['apiKey', 'authDomain', 'projectId', 'appId'];
+
+/** The committed config, with any pasted override folded over the top. */
+function firebaseConfig() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(FB_OVERRIDE_KEY) || 'null'); } catch { saved = null; }
+  const merged = { ...FIREBASE_CONFIG };
+  if (saved && typeof saved === 'object') {
+    for (const k of Object.keys(FIREBASE_CONFIG)) {
+      if (typeof saved[k] === 'string' && saved[k].trim()) merged[k] = saved[k].trim();
+    }
+  }
+  return merged;
+}
+
+/** True when there is enough config to attempt a connection. */
+function firebaseConfigured(cfg = firebaseConfig()) {
+  return REQUIRED.every((k) => typeof cfg[k] === 'string' && cfg[k].trim().length > 0);
+}
+
+/**
+ * Store a pasted config. Accepts either the bare object or the whole
+ * `const firebaseConfig = {…};` snippet the console hands out, because
+ * that is what actually ends up on the clipboard.
+ */
+function setFirebaseConfig(text) {
+  const raw = String(text || '').trim();
+  if (!raw) {
+    try { localStorage.removeItem(FB_OVERRIDE_KEY); } catch { /* ignore */ }
+    return { ok: true, cleared: true };
+  }
+  const body = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
+  let parsed = null;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    // The console snippet is JS, not JSON — unquoted keys and trailing
+    // commas. Pull the pairs out rather than making Leo reformat it.
+    parsed = {};
+    for (const m of body.matchAll(/["']?([A-Za-z]+)["']?\s*:\s*["']([^"']*)["']/g)) parsed[m[1]] = m[2];
+  }
+  if (!parsed || typeof parsed !== 'object') return { ok: false, error: 'That is not a Firebase config.' };
+  const next = {};
+  for (const k of Object.keys(FIREBASE_CONFIG)) {
+    if (typeof parsed[k] === 'string' && parsed[k].trim()) next[k] = parsed[k].trim();
+  }
+  const missing = REQUIRED.filter((k) => !next[k] && !FIREBASE_CONFIG[k]);
+  if (missing.length) return { ok: false, error: `Missing ${missing.join(', ')}.` };
+  try {
+    localStorage.setItem(FB_OVERRIDE_KEY, JSON.stringify(next));
+  } catch {
+    return { ok: false, error: 'Storage is blocked here, so the config cannot be kept.' };
+  }
+  return { ok: true };
+}
+
 /* ==== src/core/bridge.js ==== */
 /**
  * The Arcane Peptides bridge.
@@ -2319,15 +2418,243 @@ function parseFeed(raw) {
   return normaliseFeed(body);
 }
 
+/* ==== src/core/cloud.js ==== */
+/**
+ * The Firebase link.
+ *
+ * LEOOS already spoke a Firestore-shaped dialect, because the artifact
+ * `db` capability is Firestore-shaped: `doc(path).get()`, `.set()`,
+ * `.onSnapshot()`. This module presents that same surface on top of the
+ * real thing, so `store.js` does not care which one it is holding.
+ *
+ * Three rules govern it:
+ *
+ * 1. **It never blocks the boot.** The SDK is fetched lazily and every
+ *    failure resolves to null rather than throwing. A page with no
+ *    network, no config, or a Content-Security-Policy that forbids
+ *    gstatic — the published artifact is exactly that — falls back to
+ *    localStorage and says so in System.
+ * 2. **One account.** Sign-in is Google, and a session belonging to
+ *    anyone but `FIREBASE_OWNER` is signed straight back out. The
+ *    browser check is a courtesy; `firestore.rules` is the enforcement.
+ * 3. **The artifact wins.** Where `window.claude.use('db')` exists the
+ *    store takes it and never reaches here, so the published page keeps
+ *    its own storage and the deployed page gets Firebase.
+ */
+
+
+/** What System renders, and what each state means for the user. */
+const CLOUD_COPY = {
+  off: 'Not configured. Paste the web app config from the Firebase console to connect.',
+  loading: 'Connecting…',
+  blocked: 'The Firebase SDK could not load here. On claude.ai the page runs under a policy that forbids it — the artifact database is used instead.',
+  'signed-out': 'Configured and waiting. Sign in with Google to sync this device.',
+  live: 'Live. Orders, money, goals and stock are written to Firestore and follow you to every signed-in device.',
+  denied: `That account is not ${FIREBASE_OWNER}. The empire admits one operator.`,
+  error: 'Firebase returned an error.',
+};
+
+/** Named so a re-connect can find the old app and delete it. */
+const APP_NAME = 'leoos';
+
+/** Strip anything Firestore will not accept — `undefined`, and functions. */
+function plain(body) {
+  return JSON.parse(JSON.stringify(body));
+}
+
+/**
+ * Wrap a modular Firestore document in the artifact-db shape the store
+ * expects. The one real difference is `exists`: a snapshot method here,
+ * a property there.
+ */
+function shim(snap) {
+  return { exists: snap.exists(), data: () => snap.data(), metadata: snap.metadata };
+}
+
+class Cloud {
+  constructor() {
+    this.state = 'off';
+    this.error = '';
+    this.email = '';
+    this.auth = null;
+    this.fs = null;
+    this.sdk = null;
+    this.adapter = null;
+    /** Set by the app so a later sign-in re-attaches the store. */
+    this.onLive = null;
+    this.deniedEmail = '';
+  }
+
+  /** True when this page could plausibly connect if asked. */
+  get configured() { return firebaseConfigured(); }
+
+  get copy() { return this.error || CLOUD_COPY[this.state] || ''; }
+
+  /** Fetch the three modular bundles. Throws if the page forbids them. */
+  async load() {
+    if (this.sdk) return this.sdk;
+    const [app, auth, fs] = await Promise.all([
+      import(`${FIREBASE_SDK}/firebase-app.js`),
+      import(`${FIREBASE_SDK}/firebase-auth.js`),
+      import(`${FIREBASE_SDK}/firebase-firestore.js`),
+    ]);
+    this.sdk = { app, auth, fs };
+    return this.sdk;
+  }
+
+  /**
+   * Boot the link. Resolves with a db adapter when a signed-in owner
+   * session is already in the browser, and null in every other case —
+   * including the ordinary one where Leo simply has not signed in yet.
+   */
+  async connect() {
+    const cfg = firebaseConfig();
+    if (!firebaseConfigured(cfg)) { this.state = 'off'; return null; }
+
+    this.state = 'loading';
+    let sdk;
+    try {
+      sdk = await this.load();
+    } catch {
+      this.state = 'blocked';
+      return null;
+    }
+
+    try {
+      // A second connect follows a pasted config, and `getApp()` would hand
+      // back the app built from the previous one — new keys, old project,
+      // no error anywhere. Tear the old one down and build it again.
+      const stale = sdk.app.getApps().find((a) => a.name === APP_NAME);
+      if (stale) await sdk.app.deleteApp(stale).catch(() => { /* already gone */ });
+      const app = sdk.app.initializeApp(cfg, APP_NAME);
+      this.auth = sdk.auth.getAuth(app);
+      this.fs = sdk.fs.getFirestore(app);
+    } catch (e) {
+      this.state = 'error';
+      this.error = String(e?.message || e).slice(0, 200);
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const settle = (v) => { if (!settled) { settled = true; resolve(v); } };
+      // Firebase always fires this listener once on init. "Always" is not a
+      // thing to await forever on a button press, so it is raced.
+      const bell = setTimeout(() => {
+        if (settled) return;
+        this.state = 'error';
+        this.error = 'Firebase did not answer. Check the project is reachable.';
+        settle(null);
+      }, 15000);
+      sdk.auth.onAuthStateChanged(this.auth, (user) => {
+        clearTimeout(bell);
+        const adapter = this.receive(user);
+        if (!settled) { settle(adapter); return; }
+        // A sign-in or sign-out after boot: hand the store the change.
+        this.onLive?.(adapter);
+      }, (e) => {
+        clearTimeout(bell);
+        this.state = 'error';
+        this.error = String(e?.message || e).slice(0, 200);
+        settle(null);
+      });
+    });
+  }
+
+  /** Turn an auth state change into an adapter, or into a reason there isn't one. */
+  receive(user) {
+    if (!user) {
+      this.email = '';
+      this.adapter = null;
+      // A wrong-account sign-out lands here too; keep the real reason.
+      this.state = this.deniedEmail ? 'denied' : 'signed-out';
+      return null;
+    }
+    if (user.email !== FIREBASE_OWNER) {
+      this.deniedEmail = user.email || 'that account';
+      this.state = 'denied';
+      this.adapter = null;
+      this.sdk.auth.signOut(this.auth).catch(() => { /* already gone */ });
+      return null;
+    }
+    this.deniedEmail = '';
+    this.email = user.email;
+    this.error = '';
+    this.state = 'live';
+    this.adapter = this.build();
+    return this.adapter;
+  }
+
+  /** The artifact-db-shaped surface over Firestore. */
+  build() {
+    const { fs } = this.sdk;
+    const db = this.fs;
+    return {
+      doc: (path) => {
+        const ref = fs.doc(db, path);
+        return {
+          async get() { return shim(await fs.getDoc(ref)); },
+          set(body) { return fs.setDoc(ref, plain(body)); },
+          onSnapshot(next, fail) {
+            return fs.onSnapshot(ref, (snap) => next(shim(snap)), fail);
+          },
+        };
+      },
+    };
+  }
+
+  /** Google sign-in. Resolves once the auth listener has run. */
+  async signIn() {
+    if (!this.sdk || !this.auth) {
+      const adapter = await this.connect();
+      if (this.state === 'live') return adapter;
+      if (!this.auth) return null;
+    }
+    this.deniedEmail = '';
+    this.error = '';
+    try {
+      const provider = new this.sdk.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ login_hint: FIREBASE_OWNER, prompt: 'select_account' });
+      await this.sdk.auth.signInWithPopup(this.auth, provider);
+    } catch (e) {
+      const code = e?.code || '';
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        this.state = this.deniedEmail ? 'denied' : 'signed-out';
+        return null;
+      }
+      this.state = 'error';
+      this.error = code === 'auth/unauthorized-domain'
+        ? `${location.hostname} is not an authorised domain. Add it in Firebase → Authentication → Settings → Authorised domains.`
+        : String(e?.message || e).slice(0, 200);
+      return null;
+    }
+    return this.adapter;
+  }
+
+  async signOut() {
+    this.deniedEmail = '';
+    if (!this.auth) { this.state = this.configured ? 'signed-out' : 'off'; return; }
+    try { await this.sdk.auth.signOut(this.auth); } catch { /* already gone */ }
+  }
+}
+
 /* ==== src/core/store.js ==== */
 /**
  * Persistence for LEOOS.
  *
- * Prefers the artifact `db` capability so the ship's state follows Leo
- * across devices. Falls back to localStorage when db is unavailable, and
- * to memory when even that is blocked (private windows, cleared storage).
- * The rest of the app never knows which one it got.
+ * Four rungs, best first:
+ *
+ *   synced  — the artifact `db` capability, on the published page
+ *   cloud   — Firestore in the `arcane-ai-os` project, everywhere else
+ *   local   — localStorage, when neither is reachable
+ *   memory  — when even that is blocked (private windows, cleared storage)
+ *
+ * The two top rungs are the same shape, which is not a coincidence: the
+ * artifact database is Firestore-shaped, so `src/core/cloud.js` presents
+ * the real thing through the same three calls. Everything below this
+ * line is written against that shape and never learns which it got.
  */
+
 
 
 
@@ -2374,6 +2701,11 @@ class Store {
     this.db = null;
     this.mode = 'memory';
     this.writeTimer = null;
+    this.cloud = null;
+    this.unwatch = null;
+    this.remoteError = '';
+    /** The rung to fall back to — 'local' once localStorage proves writable. */
+    this.floor = 'memory';
   }
 
   /** Subscribe to any state change. Returns an unsubscribe function. */
@@ -2386,14 +2718,22 @@ class Store {
     for (const fn of this.listeners) fn(this.state);
   }
 
-  /** Boot: try db, then localStorage. Never throws; never blocks first paint. */
-  async connect() {
+  /**
+   * Boot: localStorage first so the page has something to draw, then the
+   * best remote available. Never throws; never blocks first paint.
+   *
+   * `cloud` is optional — pass a `Cloud` and it is tried when the
+   * artifact database is absent, which is every deployment outside
+   * claude.ai.
+   */
+  async connect(cloud = null) {
     // Probe writability rather than inferring it from whether data exists —
     // a first visit has nothing saved but localStorage still works fine.
     try {
       localStorage.setItem(`${LS_KEY}.probe`, '1');
       localStorage.removeItem(`${LS_KEY}.probe`);
       this.mode = 'local';
+      this.floor = 'local';
       const local = localStorage.getItem(LS_KEY);
       if (local) this.merge(JSON.parse(local));
       this.emit();
@@ -2403,27 +2743,71 @@ class Store {
     try {
       db = await window.claude?.use?.('db');
     } catch { db = null; }
-    if (!db) return this.mode;
+    if (db && await this.attach(db, 'synced')) return this.mode;
 
-    this.db = db;
-    try {
-      const snap = await db.doc('system/ship').get();
-      if (snap.exists) this.merge(snap.data());
-      this.mode = 'synced';
-      this.emit();
-      db.doc('system/ship').onSnapshot(
-        (s) => {
-          if (!s.exists || s.metadata.hasPendingWrites) return;
-          this.merge(s.data());
-          this.emit();
-        },
-        () => { this.db = null; this.mode = 'local'; this.emit(); },
-      );
-    } catch {
-      this.db = null;
-      this.mode = 'local';
-    }
+    if (cloud) await this.connectCloud(cloud);
     return this.mode;
+  }
+
+  /**
+   * Bring up the Firebase link on its own.
+   *
+   * Separate from `connect` because pasting a config mid-session must not
+   * re-read localStorage — a change made in the last half second is still
+   * sitting in the debounce, and re-merging the file would undo it.
+   */
+  async connectCloud(cloud) {
+    this.cloud = cloud;
+    // A sign-in or sign-out after boot arrives here rather than through
+    // a reload, so the deck goes live the moment the popup closes.
+    cloud.onLive = (remote) => {
+      if (remote) this.attach(remote, 'cloud');
+      else this.detach();
+    };
+    const remote = await cloud.connect();
+    if (remote) await this.attach(remote, 'cloud');
+    return this.mode;
+  }
+
+  /**
+   * Take a database, fold in whatever it already holds, and follow it.
+   * Returns false if it could not be read, leaving the store where it was.
+   */
+  async attach(db, mode) {
+    try {
+      const snap = await db.doc(FIREBASE_DOC).get();
+      if (snap.exists) this.merge(snap.data());
+      else await db.doc(FIREBASE_DOC).set(this.body());
+    } catch (e) {
+      this.remoteError = String(e?.message || e).slice(0, 200);
+      return false;
+    }
+    this.unwatch?.();
+    this.db = db;
+    this.mode = mode;
+    this.remoteError = '';
+    this.emit();
+    this.unwatch = db.doc(FIREBASE_DOC).onSnapshot(
+      (s) => {
+        if (!s.exists || s.metadata.hasPendingWrites) return;
+        this.merge(s.data());
+        this.emit();
+      },
+      (e) => {
+        this.remoteError = String(e?.message || e).slice(0, 200);
+        this.detach();
+      },
+    );
+    return true;
+  }
+
+  /** Drop back to localStorage — signed out, revoked, or the link failed. */
+  detach() {
+    this.unwatch?.();
+    this.unwatch = null;
+    this.db = null;
+    this.mode = this.floor;
+    this.emit();
   }
 
   /** Fold a stored body into live state without losing newly-added decks. */
@@ -2488,8 +2872,9 @@ class Store {
     this.writeTimer = setTimeout(() => this.flush(), 450);
   }
 
-  async flush() {
-    const body = {
+  /** Everything worth keeping, and nothing derived. One document. */
+  body() {
+    return {
       decks: this.state.decks,
       ledger: this.state.ledger,
       log: this.state.log.slice(0, 50),
@@ -2499,15 +2884,23 @@ class Store {
       stock: this.state.stock,
       bridge: this.state.bridge,
     };
+  }
+
+  async flush() {
+    const body = this.body();
     try { localStorage.setItem(LS_KEY, JSON.stringify(body)); } catch { /* ignore */ }
     if (!this.db) return;
     try {
-      await this.db.doc('system/ship').set(body);
+      await this.db.doc(FIREBASE_DOC).set(body);
     } catch (e) {
-      if (e && (e.code === 'revoked' || e.code === 'not_granted')) {
-        this.db = null;
-        this.mode = 'local';
-        this.emit();
+      const code = e?.code || '';
+      // `revoked`/`not_granted` come from the artifact database,
+      // `permission-denied`/`unauthenticated` from Firestore. All four
+      // mean the same thing: this page may no longer write, so stop
+      // pretending it is synced.
+      if (['revoked', 'not_granted', 'permission-denied', 'unauthenticated'].includes(code)) {
+        this.remoteError = 'Write refused — this page is no longer signed in.';
+        this.detach();
       }
     }
   }
@@ -5213,6 +5606,17 @@ function meter(pct, accent) {
   return `<div class="meter"><div class="meter-fill is-${accent}" style="width:${w}%"></div></div>`;
 }
 
+/** The four persistence rungs, as the deck labels them. */
+const SYNC_WORD = { synced: 'SYNCED', cloud: 'CLOUD', local: 'LOCAL', memory: 'MEMORY' };
+
+/** …and what each one actually means for the state you are looking at. */
+const SYNC_COPY = {
+  synced: 'Artifact database. Orders, money and goals follow you across every device signed in to the published page.',
+  cloud: 'Firestore. Every change is written to the arcane-ai-os project and lands on every other signed-in device within the second.',
+  local: 'Local only. State is saved in this browser and goes no further.',
+  memory: 'Memory only. Storage is blocked here, so nothing survives a reload.',
+};
+
 /* ==== src/render/screens.js ==== */
 /**
  * The full-screen bodies — everything the rail opens.
@@ -5682,20 +6086,65 @@ class UIScreens {
         : '<p class="muted-note">No drafts standing.</p>'}`;
   }
 
+  /**
+   * The Firebase link, and the one honest sentence about what it is for.
+   *
+   * It deliberately says *shared memory* rather than *agents running*:
+   * Firestore gives the network one durable state every seat reads and
+   * writes, on a real backend, from any device. It does not make an
+   * agent execute on its own — nothing in this system does.
+   */
+  cloudBlock() {
+    const cloud = this.cloud;
+    if (!cloud) return '';
+    const state = cloud.state;
+    const tone = { live: 'is-vital', 'signed-out': 'is-flare', off: 'is-flare',
+      denied: 'is-breach', error: 'is-breach', blocked: '', loading: '' }[state] ?? '';
+    const word = { live: 'live', 'signed-out': 'signed out', off: 'not configured',
+      denied: 'wrong account', error: 'error', blocked: 'unavailable here',
+      loading: 'connecting' }[state] ?? state;
+    const bad = state === 'error' || state === 'denied';
+    return `
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Cloud</h3>
+          <span class="chip ${tone}">${esc(word)}</span></div>
+        <p class="muted-note">Firebase project <strong>arcane-ai-os</strong>. One document, one
+          operator — the whole empire's state, written where every device can reach it. This is the
+          network's shared memory, not a licence for any agent to act on its own.</p>
+        ${bad ? `<p class="warn-note">${esc(cloud.copy)}</p>`
+          : `<p class="muted-note">${esc(cloud.copy)}</p>`}
+        <div class="bridge-btns">
+          ${state === 'live'
+            ? `<span class="chip is-vital">${esc(cloud.email)}</span>
+               <button type="button" class="is-quiet" data-cloudout="1">Sign out</button>`
+            : state === 'blocked'
+              ? ''
+              : '<button type="button" data-cloudin="1">Sign in with Google</button>'}
+        </div>
+        <details class="cloud-paste" data-cloudbox="1" ${this.cloudOpen ? 'open' : ''}>
+          <summary>Paste the web app config</summary>
+          <p class="muted-note">Firebase console → Project settings → Your apps → Web app → SDK setup
+            and configuration. Copy the <code>firebaseConfig</code> block and drop it here; it is kept
+            in this browser. These values are not secrets — the rules are what guard the data.</p>
+          <form data-cloudsave="1">
+            <textarea name="config" rows="4" placeholder='{ "apiKey": "…", "authDomain": "arcane-ai-os.firebaseapp.com", "projectId": "arcane-ai-os", "appId": "…" }'>${esc(this.cloudDraft || '')}</textarea>
+            <button type="submit">Save config</button>
+          </form>
+        </details>
+      </section>`;
+  }
+
   screenSystem() {
     const mode = this.store.mode;
-    const modeCopy = mode === 'synced'
-      ? 'Synced. Orders, money and goals follow you across every device signed in here.'
-      : mode === 'local'
-        ? 'Local only. State is saved in this browser.'
-        : 'Memory only. Storage is blocked here, so nothing survives a reload.';
     return `
       ${this.head('System', OPERATOR.system)}
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">Storage</h3>
-          <span class="chip">${mode}</span></div>
-        <p class="muted-note">${esc(modeCopy)}</p>
+          <span class="chip ${mode === 'synced' || mode === 'cloud' ? 'is-vital' : mode === 'local' ? 'is-flare' : 'is-breach'}">${esc(SYNC_WORD[mode] || mode).toLowerCase()}</span></div>
+        <p class="muted-note">${esc(SYNC_COPY[mode] || '')}</p>
+        ${this.store.remoteError ? `<p class="warn-note">${esc(this.store.remoteError)}</p>` : ''}
       </section>
+      ${this.cloudBlock()}
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">Signal Forge</h3>
           <span class="chip">06:00 daily</span></div>
@@ -6185,6 +6634,7 @@ class UIWidgets extends UIScreens {
 
 
 
+
 class UI extends UIWidgets {
   constructor(store, sim, factory) {
     super();
@@ -6197,6 +6647,11 @@ class UI extends UIWidgets {
     this.counsel = [];
     this.counselBusy = false;
     this.sampler = null;
+    // Set by the boot once the Firebase link exists; the panel copes
+    // either way, so a page built without one simply has no Cloud block.
+    this.cloud = null;
+    this.cloudOpen = false;
+    this.cloudDraft = '';
     this.mount();
   }
 
@@ -6368,8 +6823,9 @@ class UI extends UIWidgets {
 
     const mode = this.store.mode;
     const el = $('#syncMode');
-    el.textContent = mode === 'synced' ? 'SYNCED' : mode === 'local' ? 'LOCAL' : 'MEMORY';
-    el.style.color = mode === 'synced' ? 'var(--vital)' : mode === 'local' ? 'var(--flare)' : 'var(--breach)';
+    el.textContent = SYNC_WORD[mode] || 'MEMORY';
+    el.style.color = mode === 'synced' || mode === 'cloud' ? 'var(--vital)'
+      : mode === 'local' ? 'var(--flare)' : 'var(--breach)';
   }
 
   renderTop() {
@@ -6576,6 +7032,8 @@ class UI extends UIWidgets {
     if (copy) { this.copyPost(copy.dataset.copy, copy); return; }
     const posted = t('[data-posted]');
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
+    if (t('[data-cloudin]')) { this.signInCloud(); return; }
+    if (t('[data-cloudout]')) { this.signOutCloud(); return; }
     if (t('[data-bridgepull]')) { this.pullBridge(); return; }
     if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
@@ -6606,6 +7064,12 @@ class UI extends UIWidgets {
       this.store.setBridge('key', bsave.querySelector('[name="key"]').value);
       this.store.bridgeError('');
       this.pullBridge();
+      return;
+    }
+    const csave = e.target.closest('[data-cloudsave]');
+    if (csave) {
+      e.preventDefault();
+      this.saveCloudConfig(csave.querySelector('[name="config"]').value);
       return;
     }
     const bpaste = e.target.closest('[data-bridgepaste]');
@@ -6644,7 +7108,54 @@ class UI extends UIWidgets {
 
   onToggle(e) {
     const box = e.target.closest('[data-pastebox]');
-    if (box) this.pasteOpen = box.open;
+    if (box) { this.pasteOpen = box.open; return; }
+    const cloudBox = e.target.closest('[data-cloudbox]');
+    if (cloudBox) this.cloudOpen = cloudBox.open;
+  }
+
+  /* ================= the cloud ================= */
+
+  /**
+   * Sign in, and hand the store whatever comes back. The store attaches
+   * itself through `cloud.onLive`, so all this has to do is repaint —
+   * but the popup can be dismissed, and that must repaint too.
+   */
+  async signInCloud() {
+    if (!this.cloud) return;
+    this.render();
+    await this.cloud.signIn();
+    this.render();
+  }
+
+  async signOutCloud() {
+    if (!this.cloud) return;
+    await this.cloud.signOut();
+    this.render();
+  }
+
+  /**
+   * Take a pasted web app config and try the link immediately. A config
+   * that is saved but never connected is indistinguishable from a broken
+   * one, so this does not wait for a reload to find out.
+   */
+  async saveCloudConfig(text) {
+    if (!this.cloud) return;
+    this.cloudDraft = text;
+    const result = setFirebaseConfig(text);
+    if (!result.ok) {
+      this.cloud.state = 'error';
+      this.cloud.error = result.error;
+      this.render();
+      return;
+    }
+    this.cloudDraft = '';
+    this.cloudOpen = false;
+    this.cloud.error = '';
+    this.cloud.sdk = null;
+    this.cloud.auth = null;
+    const mode = await this.store.connectCloud(this.cloud);
+    if (mode !== 'cloud' && this.cloud.state === 'signed-out') await this.signInCloud();
+    this.render();
   }
 
   onChange(e) {
@@ -6845,13 +7356,16 @@ class UI extends UIWidgets {
 
 
 
+
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const store = new Store();
+const cloud = new Cloud();
 const sim = new Sim(store);
 const canvas = document.getElementById('hull');
 const factory = new Factory(canvas, sim, store);
 const ui = new UI(store, sim, factory);
+ui.cloud = cloud;
 const tooltip = document.getElementById('tooltip');
 
 store.onChange(() => {
@@ -7026,7 +7540,9 @@ window.addEventListener('resize', () => factory.resize());
 
 /* ---------- late capabilities ---------- */
 
-store.connect().then(() => ui.render());
+// The artifact database wins where it exists; everywhere else this is
+// where Firestore comes in. Neither blocks the first frame.
+store.connect(cloud).then(() => ui.render());
 
 // The shop's numbers go stale the moment they're stored, so refresh them on
 // open rather than waiting for someone to press Pull.

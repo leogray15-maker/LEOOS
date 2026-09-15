@@ -10,7 +10,7 @@
 
 import { AGENTS, ARCANE, BUDGET, CAPS, CATALOGUE, COUNCIL, CREW, DECKS, GOALS, GRADE_TONE, OPERATOR, TOOLS, VENTURES } from '../config/empire.js';
 import { ROOM_BY_ID, WINGS } from '../config/facility.js';
-import { $, PLATFORM_CLASS, esc, meter, money, stamp } from './format.js';
+import { $, PLATFORM_CLASS, SYNC_COPY, SYNC_WORD, esc, meter, money, stamp } from './format.js';
 
 export class UIScreens {
   /* ================= the empire ================= */
@@ -467,20 +467,65 @@ export class UIScreens {
         : '<p class="muted-note">No drafts standing.</p>'}`;
   }
 
+  /**
+   * The Firebase link, and the one honest sentence about what it is for.
+   *
+   * It deliberately says *shared memory* rather than *agents running*:
+   * Firestore gives the network one durable state every seat reads and
+   * writes, on a real backend, from any device. It does not make an
+   * agent execute on its own — nothing in this system does.
+   */
+  cloudBlock() {
+    const cloud = this.cloud;
+    if (!cloud) return '';
+    const state = cloud.state;
+    const tone = { live: 'is-vital', 'signed-out': 'is-flare', off: 'is-flare',
+      denied: 'is-breach', error: 'is-breach', blocked: '', loading: '' }[state] ?? '';
+    const word = { live: 'live', 'signed-out': 'signed out', off: 'not configured',
+      denied: 'wrong account', error: 'error', blocked: 'unavailable here',
+      loading: 'connecting' }[state] ?? state;
+    const bad = state === 'error' || state === 'denied';
+    return `
+      <section class="block">
+        <div class="block-head"><h3 class="sub-title" style="margin:0">Cloud</h3>
+          <span class="chip ${tone}">${esc(word)}</span></div>
+        <p class="muted-note">Firebase project <strong>arcane-ai-os</strong>. One document, one
+          operator — the whole empire's state, written where every device can reach it. This is the
+          network's shared memory, not a licence for any agent to act on its own.</p>
+        ${bad ? `<p class="warn-note">${esc(cloud.copy)}</p>`
+          : `<p class="muted-note">${esc(cloud.copy)}</p>`}
+        <div class="bridge-btns">
+          ${state === 'live'
+            ? `<span class="chip is-vital">${esc(cloud.email)}</span>
+               <button type="button" class="is-quiet" data-cloudout="1">Sign out</button>`
+            : state === 'blocked'
+              ? ''
+              : '<button type="button" data-cloudin="1">Sign in with Google</button>'}
+        </div>
+        <details class="cloud-paste" data-cloudbox="1" ${this.cloudOpen ? 'open' : ''}>
+          <summary>Paste the web app config</summary>
+          <p class="muted-note">Firebase console → Project settings → Your apps → Web app → SDK setup
+            and configuration. Copy the <code>firebaseConfig</code> block and drop it here; it is kept
+            in this browser. These values are not secrets — the rules are what guard the data.</p>
+          <form data-cloudsave="1">
+            <textarea name="config" rows="4" placeholder='{ "apiKey": "…", "authDomain": "arcane-ai-os.firebaseapp.com", "projectId": "arcane-ai-os", "appId": "…" }'>${esc(this.cloudDraft || '')}</textarea>
+            <button type="submit">Save config</button>
+          </form>
+        </details>
+      </section>`;
+  }
+
   screenSystem() {
     const mode = this.store.mode;
-    const modeCopy = mode === 'synced'
-      ? 'Synced. Orders, money and goals follow you across every device signed in here.'
-      : mode === 'local'
-        ? 'Local only. State is saved in this browser.'
-        : 'Memory only. Storage is blocked here, so nothing survives a reload.';
     return `
       ${this.head('System', OPERATOR.system)}
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">Storage</h3>
-          <span class="chip">${mode}</span></div>
-        <p class="muted-note">${esc(modeCopy)}</p>
+          <span class="chip ${mode === 'synced' || mode === 'cloud' ? 'is-vital' : mode === 'local' ? 'is-flare' : 'is-breach'}">${esc(SYNC_WORD[mode] || mode).toLowerCase()}</span></div>
+        <p class="muted-note">${esc(SYNC_COPY[mode] || '')}</p>
+        ${this.store.remoteError ? `<p class="warn-note">${esc(this.store.remoteError)}</p>` : ''}
       </section>
+      ${this.cloudBlock()}
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">Signal Forge</h3>
           <span class="chip">06:00 daily</span></div>

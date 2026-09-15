@@ -36,7 +36,7 @@ export const CAPS = [
 /** Tools the network can reach. Wiring state is honest, not aspirational. */
 export const TOOLS = [
   { id: 'notion',   name: 'Notion',        state: 'read-only', note: 'The Archives. Read only, by your instruction.' },
-  { id: 'memory',   name: 'Shared memory', state: 'live',      note: 'Persistent state every agent reads before acting.' },
+  { id: 'memory',   name: 'Shared memory', state: 'live',      note: 'Firestore. One state the whole network reads before acting, on every device.' },
   { id: 'counsel',  name: 'Claude',        state: 'live',      note: 'Reasoning for Counsel and the Council.' },
   { id: 'calendar', name: 'Calendar',      state: 'not wired', note: 'Not connected yet.' },
   { id: 'email',    name: 'Email',         state: 'not wired', note: 'Not connected yet.' },

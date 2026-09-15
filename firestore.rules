@@ -1,0 +1,46 @@
+rules_version = '2';
+
+/**
+ * LEOOS admits one operator.
+ *
+ * The web config in src/config/firebase.js is public by design — anyone
+ * who opens the deployed page has it. This file is the only thing
+ * standing between that config and the empire's books, so it is written
+ * to be read: three conditions, no wildcards that grant, and a closing
+ * deny so an unlisted path is refused rather than forgotten.
+ *
+ * `email_verified` matters. Without it an attacker can mint a token for
+ * any address through a provider that does not verify ownership, and
+ * the email check becomes decorative.
+ *
+ * Deploy with:  firebase deploy --only firestore:rules
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function operator() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'leogray15@gmail.com';
+    }
+
+    /** system/ship — orders, ledger, goals, budget, stock, the feed, the log. */
+    match /system/{document} {
+      allow read, write: if operator();
+    }
+
+    /**
+     * forge/* — the Signal Forge's own index of the Archives and what it
+     * has already drawn on. Nothing here today; the path is reserved so
+     * the agent has somewhere to keep state when it is wired.
+     */
+    match /forge/{document} {
+      allow read, write: if operator();
+    }
+
+    /** Everything else is closed. */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

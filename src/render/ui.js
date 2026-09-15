@@ -11,7 +11,8 @@
 import { UIWidgets } from './widgets.js';
 import { ARCANE, COUNCIL, DECKS, GOALS, OPERATOR, SCREENS, SCREEN_GROUPS, VENTURES } from '../config/empire.js';
 import { ROOM_BY_ID } from '../config/facility.js';
-import { $, clockTime, esc, meter, money, num, stamp } from './format.js';
+import { setFirebaseConfig } from '../config/firebase.js';
+import { $, SYNC_WORD, clockTime, esc, meter, money, num, stamp } from './format.js';
 
 export class UI extends UIWidgets {
   constructor(store, sim, factory) {
@@ -25,6 +26,11 @@ export class UI extends UIWidgets {
     this.counsel = [];
     this.counselBusy = false;
     this.sampler = null;
+    // Set by the boot once the Firebase link exists; the panel copes
+    // either way, so a page built without one simply has no Cloud block.
+    this.cloud = null;
+    this.cloudOpen = false;
+    this.cloudDraft = '';
     this.mount();
   }
 
@@ -196,8 +202,9 @@ export class UI extends UIWidgets {
 
     const mode = this.store.mode;
     const el = $('#syncMode');
-    el.textContent = mode === 'synced' ? 'SYNCED' : mode === 'local' ? 'LOCAL' : 'MEMORY';
-    el.style.color = mode === 'synced' ? 'var(--vital)' : mode === 'local' ? 'var(--flare)' : 'var(--breach)';
+    el.textContent = SYNC_WORD[mode] || 'MEMORY';
+    el.style.color = mode === 'synced' || mode === 'cloud' ? 'var(--vital)'
+      : mode === 'local' ? 'var(--flare)' : 'var(--breach)';
   }
 
   renderTop() {
@@ -404,6 +411,8 @@ export class UI extends UIWidgets {
     if (copy) { this.copyPost(copy.dataset.copy, copy); return; }
     const posted = t('[data-posted]');
     if (posted) { this.store.markPost(posted.dataset.posted, 'posted'); return; }
+    if (t('[data-cloudin]')) { this.signInCloud(); return; }
+    if (t('[data-cloudout]')) { this.signOutCloud(); return; }
     if (t('[data-bridgepull]')) { this.pullBridge(); return; }
     if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
@@ -434,6 +443,12 @@ export class UI extends UIWidgets {
       this.store.setBridge('key', bsave.querySelector('[name="key"]').value);
       this.store.bridgeError('');
       this.pullBridge();
+      return;
+    }
+    const csave = e.target.closest('[data-cloudsave]');
+    if (csave) {
+      e.preventDefault();
+      this.saveCloudConfig(csave.querySelector('[name="config"]').value);
       return;
     }
     const bpaste = e.target.closest('[data-bridgepaste]');
@@ -472,7 +487,54 @@ export class UI extends UIWidgets {
 
   onToggle(e) {
     const box = e.target.closest('[data-pastebox]');
-    if (box) this.pasteOpen = box.open;
+    if (box) { this.pasteOpen = box.open; return; }
+    const cloudBox = e.target.closest('[data-cloudbox]');
+    if (cloudBox) this.cloudOpen = cloudBox.open;
+  }
+
+  /* ================= the cloud ================= */
+
+  /**
+   * Sign in, and hand the store whatever comes back. The store attaches
+   * itself through `cloud.onLive`, so all this has to do is repaint —
+   * but the popup can be dismissed, and that must repaint too.
+   */
+  async signInCloud() {
+    if (!this.cloud) return;
+    this.render();
+    await this.cloud.signIn();
+    this.render();
+  }
+
+  async signOutCloud() {
+    if (!this.cloud) return;
+    await this.cloud.signOut();
+    this.render();
+  }
+
+  /**
+   * Take a pasted web app config and try the link immediately. A config
+   * that is saved but never connected is indistinguishable from a broken
+   * one, so this does not wait for a reload to find out.
+   */
+  async saveCloudConfig(text) {
+    if (!this.cloud) return;
+    this.cloudDraft = text;
+    const result = setFirebaseConfig(text);
+    if (!result.ok) {
+      this.cloud.state = 'error';
+      this.cloud.error = result.error;
+      this.render();
+      return;
+    }
+    this.cloudDraft = '';
+    this.cloudOpen = false;
+    this.cloud.error = '';
+    this.cloud.sdk = null;
+    this.cloud.auth = null;
+    const mode = await this.store.connectCloud(this.cloud);
+    if (mode !== 'cloud' && this.cloud.state === 'signed-out') await this.signInCloud();
+    this.render();
   }
 
   onChange(e) {

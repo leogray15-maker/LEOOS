@@ -472,6 +472,37 @@ check('peptides connection SURVIVES reload', /connected/.test(sysReload) && sysR
 const sync = await p.$eval('#syncMode', e => e.textContent);
 check('storage mode reported correctly', sync === 'LOCAL', `"${sync}"`);
 
+// ---- 6. the Firebase link ---------------------------------------------
+// No web app config ships in the repo, and this host has no route to
+// gstatic, so the panel must sit in its unconfigured state and offer the
+// way out of it — never break the boot, and never claim to be synced.
+await p.click('[data-screen="system"]'); await p.waitForTimeout(350);
+const sysCloud = await p.$eval('#stageScreen', e => e.textContent);
+check('the Cloud panel renders', /Cloud/.test(sysCloud) && /arcane-ai-os/.test(sysCloud));
+check('an unconfigured project says so', /not configured|unavailable here/.test(sysCloud));
+check('the cloud does not claim to be synced', !/Firestore\. Every change/.test(sysCloud));
+check('the storage block still reads local', /Local only/.test(sysCloud));
+
+await p.click('.cloud-paste summary'); await p.waitForTimeout(200);
+await p.fill('[data-cloudsave] [name="config"]', 'not a config at all');
+await p.click('[data-cloudsave] button[type="submit"]'); await p.waitForTimeout(500);
+check('a junk config is rejected', /error/i.test(await p.$eval('#stageScreen', e => e.textContent)));
+check('a rejected config leaves storage where it was',
+  (await p.$eval('#syncMode', e => e.textContent)) === 'LOCAL');
+
+// The console snippet is JS, not JSON. It must be accepted as pasted.
+await p.fill('[data-cloudsave] [name="config"]',
+  'const firebaseConfig = { apiKey: "AIzaTest", authDomain: "arcane-ai-os.firebaseapp.com",'
+  + ' projectId: "arcane-ai-os", appId: "1:2:web:3" };');
+await p.click('[data-cloudsave] button[type="submit"]'); await p.waitForTimeout(900);
+check('the console snippet parses', await p.evaluate(
+  () => JSON.parse(localStorage.getItem('leoos.firebase') || '{}').appId === '1:2:web:3'));
+check('a blocked SDK does not take the store down',
+  (await p.$eval('#syncMode', e => e.textContent)) === 'LOCAL');
+const ordersAfter = await p.$eval('#roOrders', e => e.textContent.trim());
+check('orders survive a failed cloud connect', Number(ordersAfter) > 0, `${ordersAfter} open`);
+await p.evaluate(() => localStorage.removeItem('leoos.firebase'));
+
 console.log('\n' + '-'.repeat(70));
 console.log(errs.length ? `CONSOLE/PAGE ERRORS (${errs.length}):\n  ` + [...new Set(errs)].join('\n  ') : 'No console or page errors.');
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);

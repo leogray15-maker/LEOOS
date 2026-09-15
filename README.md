@@ -20,7 +20,7 @@ drive. Click a room and the commander walks there while its dashboard opens.
                        │
                  AGENT NETWORK  — 18 specialists, one facility
                        │
-                    TOOLS  — Notion (read-only), Claude, memory
+                    TOOLS  — Notion (read-only), Claude, memory (Firestore)
                               calendar / email / store / CRM / web: not wired
 ```
 
@@ -210,6 +210,95 @@ counted by hand alone. Fed lines carry a green dot so it is always obvious which
 number came from where. `bridge/sample-feed.json` is a feed shaped like the real
 admin page, and `test/feedserver.mjs` serves it for the suite.
 
+## The Firebase link
+
+`arcane-ai-os` is the project behind the deck. It gives the network one
+durable state — orders, ledger, goals, budget, stock, the feed and the log —
+written where every device can reach it.
+
+Be clear about what that is and is not. Firestore is the **shared memory**
+the architecture diagram has always named. It does not make an agent execute
+on its own; nothing in this system does, and the Cloud panel says so in those
+words rather than claiming the network is live.
+
+### Four rungs
+
+`src/core/store.js` takes the best storage it can reach and tells you which
+one it got, in System and in the status line:
+
+| Mode | What it is | Where |
+| --- | --- | --- |
+| `SYNCED` | the artifact `db` capability | the published page on claude.ai |
+| `CLOUD` | Firestore, project `arcane-ai-os` | Firebase Hosting, Vercel, anywhere else |
+| `LOCAL` | localStorage | no config, or signed out |
+| `MEMORY` | nothing survives a reload | storage blocked |
+
+The top two are the same shape because the artifact database *is*
+Firestore-shaped — `doc(path).get()`, `.set()`, `.onSnapshot()`. So
+`src/core/cloud.js` presents the real SDK through those same three calls and
+the store never learns which it is holding. The artifact wins where it exists,
+so the published page keeps its own database and every deployment gets Firebase.
+
+Nothing here blocks the boot. The SDK is fetched lazily and every failure
+resolves to `null`, so a page with no config, no network, or a
+Content-Security-Policy that forbids gstatic — the published artifact is
+exactly that — falls back to localStorage and says `unavailable here`.
+
+### One operator
+
+Sign-in is Google, and `firestore.rules` admits exactly one address:
+
+```
+request.auth.token.email_verified == true
+&& request.auth.token.email == 'leogray15@gmail.com'
+```
+
+`email_verified` is not decoration. Without it a token can be minted for any
+address through a provider that never checked ownership, and the email test
+becomes theatre. The browser also signs a wrong account straight back out, but
+that is a courtesy — the rules are the enforcement.
+
+The web config in `src/config/firebase.js` is **not a secret**. Every visitor
+to the deployed page has it; it identifies the project, it does not authorise
+anything. `firestore.rules` is the file to be careful with.
+
+### Standing it up
+
+1. **Register the web app.** Firebase console → Project settings → Your apps →
+   Web. Copy the `firebaseConfig` block.
+2. **Give LEOOS the config**, either way round:
+   - commit it into `src/config/firebase.js`, or
+   - open **System → Cloud → Paste the web app config** and drop the snippet in.
+     It is kept in that browser only, and accepts the console's JS snippet as
+     pasted — unquoted keys, trailing comma and all.
+3. **Turn on Google sign-in.** Authentication → Sign-in method → Google → enable.
+4. **Create the database.** Firestore Database → Create database → production mode.
+5. **Ship the rules, then the page:**
+
+   ```bash
+   npm i -g firebase-tools
+   firebase login
+   npm run deploy:rules     # firestore.rules alone
+   npm run deploy           # build, then hosting + rules
+   ```
+
+6. **Authorise the domain.** Authentication → Settings → Authorised domains.
+   `arcane-ai-os.web.app` is there already; add the Vercel domain if the deck
+   also runs there, or sign-in fails with `auth/unauthorized-domain` — which
+   the Cloud panel reports by name, with the fix.
+
+Deploying rules before the page matters. A database created in test mode is
+open to the world for thirty days, and the ledger is not something to leave
+lying around for thirty days.
+
+### Spark plan
+
+The project is on the free tier, which carries Firestore, Auth and Hosting —
+everything above. It does **not** carry Cloud Functions, so there is no
+scheduled runtime here: the Signal Forge still has nowhere to run unattended,
+and `06:00 daily` in System describes an intention, not a cron. That needs
+Blaze, and it is a separate piece of work.
+
 ## What actually reasons
 
 Worth being straight about, because AGENTS lists tools for every agent:
@@ -218,6 +307,8 @@ Worth being straight about, because AGENTS lists tools for every agent:
   (ask the network anything). Both need `sample`, so both only work on the
   published page at claude.ai.
 - **live** — the Arcane Peptides bridge, once connected.
+- **live** — shared memory. Firestore holds one state for the whole network,
+  synced across devices. Real storage; still not an agent acting on its own.
 - **simulation** — the floor. Crew route, walk and drift toward attention. They
   do not perform the work their labels describe.
 - **waiting** — the Signal Forge Routine exists but has no connector attached,
@@ -280,6 +371,12 @@ horizontal overflow into every scroll container in the app.
 There are no dependencies to install — the build is one Node script with no
 imports beyond `node:fs` and `node:path`.
 
+`firebase.json` points Firebase Hosting at the same `public/` and runs the same
+build first, so `npm run deploy` puts the standalone target on
+`arcane-ai-os.web.app` alongside `firestore.rules`. The two hosts are
+interchangeable; both get the CLOUD rung, and both need their domain in
+Firebase's authorised list before Google sign-in will open.
+
 What does **not** work outside the Artifact viewer: `window.claude` is absent, so
 Counsel and the Council have nothing to reason with and state falls back to
 `localStorage` instead of syncing across devices. The interface says which is in
@@ -320,8 +417,10 @@ src/app.js              boot, the animation loop, pointer and keyboard
 src/config/empire.js    ventures, catalogue, goals, budget, the rail
 src/config/facility.js  the floor plan, twenty rooms and their props
 src/config/agents.js    the network: agents, tools, permission grades
+src/config/firebase.js  the Firebase project, and the paste-at-runtime override
 src/config/roomdata.js  per-room dashboard rows, and which room has a widget
-src/core/store.js       persistence: artifact db → localStorage → memory
+src/core/store.js       persistence: artifact db → Firestore → localStorage → memory
+src/core/cloud.js       the Firebase link: lazy SDK, Google sign-in, one document
 src/core/sim.js         crew routing and behaviour
 src/core/bridge.js      the Arcane Peptides feed, pulled or pasted
 src/render/format.js    presentation helpers — no store, no DOM
@@ -334,6 +433,8 @@ src/render/props.js     90 prop painters
 src/render/sprites.js   character matrices, baked once and blitted
 
 bridge/                 the feed route to drop into the shop, and a sample
+firebase.json           hosting and firestore deploy
+firestore.rules         one operator, enforced
 test/                   e2e, dev-graph, contrast and clipping suites
 trading/                the backtester — separate from the OS, see below
 ```
@@ -348,8 +449,10 @@ scope.
 
 Orders and ledger figures persist through the artifact `db` capability, so they
 follow you across every device signed in to the published page. Where that is
-unavailable the store falls back to `localStorage`, and then to memory — the
-panel at the foot of the dashboard always says which one is in force.
+unavailable the store signs in to Firestore, then falls back to `localStorage`,
+and then to memory — the panel at the foot of the dashboard always says which
+one is in force. See **The Firebase link** for the four rungs and how to stand
+the cloud one up.
 
 The ledger ships **blank on purpose**. No revenue figure appears anywhere until
 you type a real one in.
