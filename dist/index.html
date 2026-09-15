@@ -2141,12 +2141,15 @@ const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.14.1';
 const FB_OVERRIDE_KEY = 'leoos.firebase';
 
 const FIREBASE_CONFIG = {
-  apiKey: '',
+  apiKey: 'AIzaSyBCxZAHctxyYQXufn25MDPSfJ034YtF9Us',
   authDomain: 'arcane-ai-os.firebaseapp.com',
   projectId: 'arcane-ai-os',
   storageBucket: 'arcane-ai-os.firebasestorage.app',
-  messagingSenderId: '',
-  appId: '',
+  messagingSenderId: '590368346743',
+  appId: '1:590368346743:web:409c3dddea989d98baec72',
+  // The console also hands out `measurementId`. That is Google Analytics,
+  // which this deck does not use and which would pull a fourth SDK bundle
+  // for nothing, so it is deliberately not here.
 };
 
 /** The fields that have to be present before a connection is worth trying. */
@@ -2196,6 +2199,12 @@ function setFirebaseConfig(text) {
   for (const k of Object.keys(FIREBASE_CONFIG)) {
     if (typeof parsed[k] === 'string' && parsed[k].trim()) next[k] = parsed[k].trim();
   }
+  // Once a config is committed it backfills every required field, which
+  // would let any text at all through as "saved". A paste has to carry at
+  // least one field this app recognises before it counts as a config.
+  if (!Object.keys(next).length) return { ok: false, error: 'That is not a Firebase config.' };
+  // A partial paste is still fine — the committed values fill the rest —
+  // but between them the required fields have to be there.
   const missing = REQUIRED.filter((k) => !next[k] && !FIREBASE_CONFIG[k]);
   if (missing.length) return { ok: false, error: `Missing ${missing.join(', ')}.` };
   try {

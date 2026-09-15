@@ -5,9 +5,33 @@ const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
 const ctx = await b.newContext({ viewport: { width: 1700, height: 1000 } });
 const p = await ctx.newPage();
 
+/**
+ * Outbound requests, and which of them may fail.
+ *
+ * The page reaches out for exactly two things: the Firebase SDK and the
+ * webfonts. CI has no route to either, and a suite whose result depends
+ * on that is not a test.
+ *
+ * The SDK is blocked outright, deterministically, because that is also a
+ * real production path — the published artifact runs under a CSP that
+ * does exactly this, and the deck has to survive it. The fonts are left
+ * alone so a machine with network renders as production does; their
+ * failure here is simply tolerated.
+ *
+ * Anything else that fails to load is a real fault and is reported with
+ * its URL, which the bare console line never carried. That is what hid a
+ * broken font URL in this suite for as long as it has existed.
+ */
+const BLOCKED = /gstatic\.com\/firebasejs/;
+// Port 4599 is nothing, on purpose: the bridge tests point the feed at an
+// unreachable host to prove the panel reports it rather than hanging.
+const EXTERNAL = /gstatic\.com\/firebasejs|fonts\.googleapis\.com|fonts\.gstatic\.com|localhost:4599/;
+const failedUrls = [];
 const errs = [];
 const results = [];
 p.on('pageerror', e => errs.push(`PAGEERROR ${e.message}`));
+p.on('requestfailed', r => failedUrls.push(r.url()));
+await p.route(BLOCKED, (route) => route.abort());
 p.on('console', m => {
   // the bridge tests deliberately hit a 401 and an unreachable host
   if (m.type() === 'error' && !/fonts|ERR_CONNECTION|favicon|404|401 \(Unauthorized\)/.test(m.text())) errs.push(`CONSOLE ${m.text()}`);
@@ -499,9 +523,32 @@ check('the console snippet parses', await p.evaluate(
   () => JSON.parse(localStorage.getItem('leoos.firebase') || '{}').appId === '1:2:web:3'));
 check('a blocked SDK does not take the store down',
   (await p.$eval('#syncMode', e => e.textContent)) === 'LOCAL');
+
+// A committed config backfills every required field, so validation cannot
+// lean on the merged result — a paste has to carry something itself.
+await p.evaluate(() => localStorage.removeItem('leoos.firebase'));
+// A successful save closes the box, so it has to be reopened to paste again.
+if (!(await p.$eval('[data-cloudbox]', (e) => e.open))) {
+  await p.click('.cloud-paste summary'); await p.waitForTimeout(200);
+}
+await p.fill('[data-cloudsave] [name="config"]', '{ "apiKey": "AIzaOverride" }');
+await p.click('[data-cloudsave] button[type="submit"]'); await p.waitForTimeout(700);
+check('a partial paste is accepted and backfilled', await p.evaluate(() => {
+  const saved = JSON.parse(localStorage.getItem('leoos.firebase') || '{}');
+  return saved.apiKey === 'AIzaOverride' && !saved.appId;
+}));
 const ordersAfter = await p.$eval('#roOrders', e => e.textContent.trim());
 check('orders survive a failed cloud connect', Number(ordersAfter) > 0, `${ordersAfter} open`);
 await p.evaluate(() => localStorage.removeItem('leoos.firebase'));
+
+/**
+ * A generic "Failed to load resource" line carries no URL, so it is only
+ * safe to drop when every request that actually failed was external. One
+ * that was not means they all stand, with the real URLs named.
+ */
+const unexpected = [...new Set(failedUrls.filter((u) => !EXTERNAL.test(u)))];
+if (unexpected.length) for (const u of unexpected) errs.push(`REQUEST FAILED ${u}`);
+else for (let i = errs.length - 1; i >= 0; i--) if (/Failed to load resource/.test(errs[i])) errs.splice(i, 1);
 
 console.log('\n' + '-'.repeat(70));
 console.log(errs.length ? `CONSOLE/PAGE ERRORS (${errs.length}):\n  ` + [...new Set(errs)].join('\n  ') : 'No console or page errors.');

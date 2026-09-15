@@ -13,6 +13,26 @@ const URL = 'http://localhost:4401/index.html';
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 const p = await (await b.newContext({ viewport: { width: 1700, height: 1000 } })).newPage();
 
+/**
+ * Outbound requests, and which of them may fail.
+ *
+ * The page reaches out for exactly two things: the Firebase SDK and the
+ * webfonts. CI has no route to either, and a suite whose result depends
+ * on that is not a test.
+ *
+ * The SDK is blocked outright, deterministically, because that is also a
+ * real production path — the published artifact runs under a CSP that
+ * does exactly this, and the deck has to survive it. The fonts are left
+ * alone so a machine with network renders as production does; their
+ * failure here is simply tolerated.
+ *
+ * Anything else that fails to load is a real fault and is reported with
+ * its URL, which the bare console line never carried. That is what hid a
+ * broken font URL in this suite for as long as it has existed.
+ */
+const BLOCKED = /gstatic\.com\/firebasejs/;
+const EXTERNAL = /gstatic\.com\/firebasejs|fonts\.googleapis\.com|fonts\.gstatic\.com/;
+const failedUrls = [];
 const errs = [];
 p.on('pageerror', (e) => errs.push(`PAGEERROR ${e.message}`));
 p.on('console', (m) => {
@@ -21,6 +41,9 @@ p.on('console', (m) => {
     errs.push(`CONSOLE ${m.text()}`);
   }
 });
+
+p.on('requestfailed', (r) => failedUrls.push(r.url()));
+await p.route(BLOCKED, (route) => route.abort());
 
 await p.goto(URL);
 await p.waitForTimeout(2500);
@@ -47,6 +70,15 @@ await b.close();
 
 console.log('');
 console.log('-'.repeat(70));
+/**
+ * A generic "Failed to load resource" line carries no URL, so it is only
+ * safe to drop when every request that actually failed was external. One
+ * that was not means they all stand, with the real URLs named.
+ */
+const unexpected = [...new Set(failedUrls.filter((u) => !EXTERNAL.test(u)))];
+if (unexpected.length) for (const u of unexpected) errs.push(`REQUEST FAILED ${u}`);
+else for (let i = errs.length - 1; i >= 0; i--) if (/Failed to load resource/.test(errs[i])) errs.splice(i, 1);
+
 if (errs.length) {
   console.log(`${errs.length} failure${errs.length === 1 ? '' : 's'} on the dev module graph:`);
   for (const e of errs) console.log(`  ${e}`);
