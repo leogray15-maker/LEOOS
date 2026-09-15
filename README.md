@@ -81,7 +81,7 @@ room's work needs a full screen, the room opens the door to it rather than
 rendering a second copy into the side panel — so THE COUNCIL, THE AGENT
 GARAGE and THE CONTROL ROOM each lead to one Council, one roster, one matrix.
 
-The rail is eleven rows in four groups:
+The rail is twelve rows in five groups:
 
 | | | |
 | --- | --- | --- |
@@ -89,6 +89,7 @@ The rail is eleven rows in four groups:
 | **Work** | `02` ORDERS · `03` AGENTS | `04` SIGNALS |
 | **Money** | `05` VENTURES · `06` LEDGER | `07` GOALS |
 | **Governance** | `08` THE COUNCIL · `09` CONTROL | `10` SYSTEM |
+| **Network** | `11` THE BRAIN | |
 
 **The number on a row is the key that opens it.** Digits accumulate for
 700ms, so `10` is typed as 1 then 0; a lone digit reads as its leading-zero
@@ -455,6 +456,7 @@ src/render/widgets.js   per-room panels, and the bridge that feeds two
 src/render/ui.js        shell, navigation, dashboard, telemetry, events
 src/render/factory.js   field, buffer, blit, atmosphere, hit testing
 src/render/tiles.js     seven 8x8 tilesets with wear variants
+src/render/brain.js     the network as four orbits, drawn live
 src/render/props.js     90 prop painters
 src/render/sprites.js   character matrices, baked once and blitted
 
@@ -510,6 +512,50 @@ It writes drafts only. There is no auto-posting step anywhere in the system.
 Peptide content is fenced: no claim that a compound treats, cures, prevents or
 diagnoses anything, no dosing, and no named compound paired with a health
 outcome. A module that cannot clear that bar is skipped.
+
+## The Brain
+
+`11 THE BRAIN` draws the network as a graph. The facility shows where the
+crew *are*; this shows how they are **wired** — who answers to the
+commander, who sits on the Council, and which tools each agent can
+actually reach. Every node and edge is read from `src/config/agents.js`
+and from the live simulation, so the picture cannot describe a network
+the system does not have.
+
+### Why it is not a force simulation
+
+The obvious build is springs and repulsion. It looks like a thrown
+handful of gravel: the commander buried in a lopsided blob, and a tool
+nobody points at flung into the far corner, stretching the frame around
+empty space. Force layout is for graphs whose shape you do not know.
+
+This shape is known, and it is hierarchical — a commander, nine seats,
+the rest of the crew, the tools at the rim — so it is drawn as the four
+orbits it actually is. Deterministic, legible, and **stable between
+frames**, which is the point: the sizes move, so the layout must not.
+Tools sit at the mean heading of the agents that use them, which keeps
+their links short and mostly off the rings.
+
+Two details earn their keep. The council ring is turned half a step so
+top-dead-centre is a gap rather than a seat, because that is where the
+ring's own label goes. And `memory` is on every agent's list — drawing
+all nineteen of those edges says only "everyone has memory", at the cost
+of nineteen lines straight through the middle, so a tool the whole
+network reaches gets one edge to the commander and says so in its
+caption instead.
+
+### What is live
+
+- a node **swells** with the open orders standing in that agent's room
+- an agent the simulation has walking **pulses**, and its edges brighten
+- a tool's colour is its real wiring state, and an edge to a tool that is
+  **not wired is dashed** — that link carries nothing yet
+- hovering names the agent, its room, its Council seat and its open count;
+  clicking opens its profile
+
+The view fits itself to the frame, so the same picture works on a laptop
+and on a phone without touching the orbits. `prefers-reduced-motion`
+stills the pulse.
 
 ## The Obsidian brain
 

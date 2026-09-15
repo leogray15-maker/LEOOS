@@ -119,6 +119,8 @@ export const SCREENS = [
   { id: 'council',  no: '08', name: 'THE COUNCIL', sub: 'Put a decision to them',  group: 'Governance' },
   { id: 'control',  no: '09', name: 'CONTROL',     sub: 'Permission grades',       group: 'Governance' },
   { id: 'system',   no: '10', name: 'SYSTEM',      sub: 'Status & sync',           group: 'Governance' },
+
+  { id: 'brain',    no: '11', name: 'THE BRAIN',   sub: 'The network, wired',      group: 'Network' },
 ];
 
 /** The rail groups, in order. Derived so the two can never drift apart. */

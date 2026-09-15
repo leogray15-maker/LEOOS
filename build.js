@@ -29,6 +29,7 @@ const ORDER = [
   // The panels are one class built in three links: UIScreens -> UIWidgets ->
   // UI. `extends` runs at class-definition time, so the chain has to be
   // flattened in this order or the bundle throws before it boots.
+  'src/render/brain.js',
   'src/render/format.js',
   'src/render/screens.js',
   'src/render/widgets.js',

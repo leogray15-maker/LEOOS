@@ -61,15 +61,16 @@ for (const s of screens) {
     const shown = canvas.hidden ? screen : canvas;
     return { pane: shown.id, bytes: shown.innerHTML.length };
   });
-  // "factory" is the canvas, so size it by the drawn buffer rather than by
-  // markup; every other screen is markup and the thinnest real one is ~3.6KB.
+  // Two screens are drawings rather than documents, so measuring their
+  // markup measures the wrapper. Size those by the canvas backing store —
+  // which also proves the thing was fitted and drawn, not just mounted.
+  // Every other screen is markup, and the thinnest real one is ~3.6KB.
+  const drawn = { factory: '#hull', brain: '#brainCanvas' }[s];
   const want = s === 'factory' ? 'stageCanvas' : 'stageScreen';
-  const body = s === 'factory'
-    ? await p.$eval('#hull', c => c.width * c.height)
-    : bytes;
-  const floor = s === 'factory' ? 10000 : 1500;
+  const body = drawn ? await p.$eval(drawn, c => c.width * c.height) : bytes;
+  const floor = drawn ? 10000 : 1500;
   check(`screen "${s}" renders`, errs.length === before && pane === want && body > floor,
-    s === 'factory' ? `canvas ${body}px` : `${pane} ${bytes} bytes`);
+    drawn ? `canvas ${body}px` : `${pane} ${bytes} bytes`);
 }
 
 // ---- 2. every room opens ------------------------------------------------
@@ -495,6 +496,34 @@ check('peptides connection SURVIVES reload', /connected/.test(sysReload) && sysR
 
 const sync = await p.$eval('#syncMode', e => e.textContent);
 check('storage mode reported correctly', sync === 'LOCAL', `"${sync}"`);
+
+// ---- 5b. the brain ------------------------------------------------------
+await p.click('[data-screen="brain"]'); await p.waitForTimeout(1200);
+const brainBox = await p.$eval('#brainCanvas', (c) => {
+  const b = c.getBoundingClientRect();
+  return { x: b.x, y: b.y, w: b.width, h: b.height };
+});
+check('the graph gets a real backing store',
+  await p.$eval('#brainCanvas', (c) => c.width > 200 && c.height > 200));
+
+// Sweep the frame until nodes answer — the layout decides where they land,
+// so the test must not assume a coordinate.
+const seen = new Set();
+for (let gx = 0; gx <= 30 && seen.size < 3; gx++) {
+  for (let gy = 0; gy <= 18 && seen.size < 3; gy++) {
+    await p.mouse.move(brainBox.x + (brainBox.w * gx) / 30, brainBox.y + (brainBox.h * gy) / 18);
+    const cap = await p.$eval('#brainCaption', (e) => e.textContent);
+    if (cap && cap !== 'Hover a node.') seen.add(cap);
+  }
+}
+check('nodes answer the pointer', seen.size >= 3, `${seen.size} found`);
+check('a caption names the room and the open orders',
+  [...seen].some((c) => /open order/.test(c)), [...seen][0]?.slice(0, 44));
+check('the graph survives leaving and coming back', await (async () => {
+  await p.click('[data-screen="empire"]'); await p.waitForTimeout(250);
+  await p.click('[data-screen="brain"]'); await p.waitForTimeout(900);
+  return p.$eval('#brainCanvas', (c) => c.width > 200);
+})());
 
 // ---- 6. the Firebase link ---------------------------------------------
 // No web app config ships in the repo, and this host has no route to

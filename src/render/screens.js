@@ -223,6 +223,7 @@ export class UIScreens {
       case 'goals': return this.screenGoals();
       case 'signals': return this.screenSignals();
       case 'system': return this.screenSystem();
+      case 'brain': return this.screenBrain();
       default: return '';
     }
   }
@@ -517,6 +518,34 @@ export class UIScreens {
           </form>
         </details>
       </section>`;
+  }
+
+  /**
+   * THE BRAIN.
+   *
+   * Every byte of this markup is constant. `setHTML` skips a write when
+   * the string has not changed, so the canvas underneath survives the
+   * per-second re-render and the graph is never torn down mid-settle.
+   * Everything live is written straight to the canvas or to the caption.
+   */
+  screenBrain() {
+    return `
+      ${this.head('The Brain', `${AGENTS.length} agents · ${TOOLS.length} tools`)}
+      <p class="muted-note">Who answers to whom, who sits on the Council, and what each
+        agent can actually reach. A node swells with the open orders standing in its room
+        and pulses while that agent is walking. Click one to open it.</p>
+      <div class="brain-wrap">
+        <canvas id="brainCanvas" class="brain-canvas"></canvas>
+      </div>
+      <p class="muted-note brain-caption" id="brainCaption">Hover a node.</p>
+      <div class="crew-chips">
+        <span class="chip is-vital">tool · live</span>
+        <span class="chip is-cyan">tool · read-only</span>
+        <span class="chip">tool · not wired</span>
+        <span class="chip is-arcane">council seat</span>
+      </div>
+      <p class="muted-note">A dashed edge is a tool an agent is <em>for</em> but cannot
+        reach yet — the link is an intention, not a wire.</p>`;
   }
 
   screenSystem() {

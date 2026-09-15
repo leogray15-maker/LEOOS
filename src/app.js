@@ -19,6 +19,7 @@ const canvas = document.getElementById('hull');
 const factory = new Factory(canvas, sim, store);
 const ui = new UI(store, sim, factory);
 ui.cloud = cloud;
+ui.reduceMotion = reduceMotion;
 const tooltip = document.getElementById('tooltip');
 
 store.onChange(() => {
@@ -40,6 +41,8 @@ function frame(now) {
 
   if (!reduceMotion && sim.speed > 0) sim.tick(dt);
   factory.draw(reduceMotion ? 0 : dt);
+
+  ui.syncBrain(reduceMotion ? Math.min(dt, 0.02) : dt);
 
   sinceUi += dt;
   if (sinceUi > 1) {

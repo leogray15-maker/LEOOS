@@ -806,3 +806,16 @@ button.chip:hover { border-color: var(--seam-lit); color: var(--ink); }
   image-rendering: crisp-edges;
   touch-action: none;
 }
+
+/* ---- THE BRAIN ------------------------------------------------------ */
+
+.brain-wrap {
+  position: relative; width: 100%;
+  height: min(68vh, 620px); min-height: 320px;
+  margin: 12px 0 8px;
+  border: 1px solid var(--seam); border-radius: var(--r-sm);
+  background: var(--plate); overflow: hidden;
+}
+.brain-canvas { display: block; width: 100%; height: 100%; }
+/* Reserve the line so the layout does not jump as the caption changes. */
+.brain-caption { min-height: 2.6em; }

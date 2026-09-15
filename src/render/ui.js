@@ -11,6 +11,7 @@
 import { UIWidgets } from './widgets.js';
 import { ARCANE, COUNCIL, DECKS, GOALS, OPERATOR, SCREENS, SCREEN_GROUPS, VENTURES } from '../config/empire.js';
 import { ROOM_BY_ID } from '../config/facility.js';
+import { Brain } from './brain.js';
 import { setFirebaseConfig } from '../config/firebase.js';
 import { $, SYNC_WORD, clockTime, esc, meter, money, num, stamp } from './format.js';
 
@@ -29,6 +30,8 @@ export class UI extends UIWidgets {
     // Set by the boot once the Firebase link exists; the panel copes
     // either way, so a page built without one simply has no Cloud block.
     this.cloud = null;
+    this.brain = null;
+    this.reduceMotion = false;
     this.cloudOpen = false;
     this.cloudDraft = '';
     this.mount();
@@ -177,11 +180,53 @@ export class UI extends UIWidgets {
     this.renderTop();
     this.renderTelemetry();
 
+    // The graph owns a canvas, so it must not be left pointing at one that
+    // has been replaced — drop it the moment the screen is anything else.
+    if (this.screen !== 'brain') this.brain = null;
+
     if (this.screen === 'factory') {
       this.renderOverlay();
     } else {
-      this.setHTML(this.stageEl, this.screenBody());
+      const fresh = this.setHTML(this.stageEl, this.screenBody());
+      if (this.screen === 'brain' && (fresh || !this.brain)) this.mountBrain();
     }
+  }
+
+  /* ================= the brain ================= */
+
+  mountBrain() {
+    const canvas = $('#brainCanvas');
+    if (!canvas) return;
+    this.brain = new Brain(canvas, this.sim, this.store, (node) => {
+      if (node.kind === 'agent') this.selectAgent(node.id);
+    });
+    this.brain.still = this.reduceMotion;
+    this.brain.resize();
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!this.brain) return;
+      this.brain.hover = this.brain.at(e.clientX, e.clientY);
+      canvas.style.cursor = this.brain.hover ? 'pointer' : 'default';
+    });
+    canvas.addEventListener('pointerleave', () => { if (this.brain) this.brain.hover = null; });
+    canvas.addEventListener('click', (e) => {
+      const node = this.brain?.at(e.clientX, e.clientY);
+      if (node) this.brain.onPick(node);
+    });
+  }
+
+  /**
+   * One frame of the graph. Driven from the app loop rather than from
+   * `render()`, because the layout has to settle continuously while the
+   * screen markup stays exactly as it was.
+   */
+  syncBrain(dt) {
+    if (!this.brain) return;
+    this.brain.tick(dt);
+    this.brain.draw();
+    const el = $('#brainCaption');
+    const text = this.brain.caption(this.brain.hover) || 'Hover a node.';
+    if (el && el.textContent !== text) el.textContent = text;
   }
 
   renderRail() {
