@@ -17,7 +17,7 @@ const errs = [];
 p.on('pageerror', (e) => errs.push(`PAGEERROR ${e.message}`));
 p.on('console', (m) => {
   // the webfont host is unreachable in the container; that is not our bug
-  if (m.type() === 'error' && !/fonts|ERR_CONNECTION|ERR_NAME|favicon|404|401/.test(m.text())) {
+  if (m.type() === 'error' && !/fonts|ERR_CONNECTION|ERR_CERT|ERR_NAME|favicon|404|401/.test(m.text())) {
     errs.push(`CONSOLE ${m.text()}`);
   }
 });

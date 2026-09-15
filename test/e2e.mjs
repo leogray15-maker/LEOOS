@@ -10,7 +10,12 @@ const results = [];
 p.on('pageerror', e => errs.push(`PAGEERROR ${e.message}`));
 p.on('console', m => {
   // the bridge tests deliberately hit a 401 and an unreachable host
-  if (m.type() === 'error' && !/fonts|ERR_CONNECTION|favicon|404|401 \(Unauthorized\)/.test(m.text())) errs.push(`CONSOLE ${m.text()}`);
+  // ERR_CERT_AUTHORITY_INVALID joins ERR_CONNECTION here: both mean the
+  // container could not reach an external host (the webfont CDN, through a
+  // proxy whose CA Chromium does not trust). Neither is ever this app's bug,
+  // and the console text carries the error code without the URL, so it has
+  // to be matched on the code.
+  if (m.type() === 'error' && !/fonts|ERR_CONNECTION|ERR_CERT|ERR_NAME|favicon|404|401 \(Unauthorized\)/.test(m.text())) errs.push(`CONSOLE ${m.text()}`);
 });
 
 const check = (name, pass, detail = '') => {
