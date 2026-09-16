@@ -90,7 +90,7 @@ export class UIScreens {
     }
     const drafts = this.store.postCount();
     if (drafts) out.push({ level: 'vital', room: 'beacon', src: 'HERALD · Signalman', text: `${drafts} post${drafts === 1 ? '' : 's'} drafted from the Archives and waiting on you.` });
-    const unwired = TOOLS.filter((t) => t.state === 'not wired').length;
+    const unwired = TOOLS.filter((t) => this.toolState(t) === 'not wired').length;
     if (unwired) out.push({ level: 'flare', src: 'FOUNDRY · Agent-wright', text: `${unwired} tools are not connected yet. Agents that need them can only reason, not act.` });
     const order = { breach: 0, flare: 1, vital: 2 };
     return out.sort((a, b) => order[a.level] - order[b.level]);
@@ -227,6 +227,18 @@ export class UIScreens {
     }
   }
 
+  /**
+   * A tool's state as it actually is, not as the config last described it.
+   * `commerce` is the one the interface can prove: connect the Arcane
+   * Peptides feed and THE LAB fills with real vials, so a Store row still
+   * reading "not wired" — and a signal still counting it — is a lie the
+   * system tells about itself.
+   */
+  toolState(t) {
+    if (t.id === 'commerce' && this.store.feed()) return 'live';
+    return t.state;
+  }
+
   head(title, note) {
     return `<div class="screen-head"><h2 class="screen-title">${esc(title)}</h2>
       ${note ? `<span class="chip">${esc(note)}</span>` : ''}</div>`;
@@ -289,13 +301,16 @@ export class UIScreens {
 
       <section class="block" style="margin-top:14px">
         <div class="block-head"><h3 class="sub-title" style="margin:0">Tools</h3>
-          <span class="chip">${TOOLS.filter((t) => t.state !== 'not wired').length} / ${TOOLS.length} wired</span></div>
-        ${TOOLS.map((t) => `
+          <span class="chip">${TOOLS.filter((t) => this.toolState(t) !== 'not wired').length} / ${TOOLS.length} wired</span></div>
+        ${TOOLS.map((t) => {
+          const state = this.toolState(t);
+          return `
           <div class="tbl-row is-2" style="border-top:1px solid var(--seam)">
             <span>${esc(t.name)}</span>
             <span class="muted-note">${esc(t.note)}</span>
-            <span class="chip ${t.state === 'live' ? 'is-vital' : t.state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(t.state)}</span>
-          </div>`).join('')}
+            <span class="chip ${state === 'live' ? 'is-vital' : state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(state)}</span>
+          </div>`;
+        }).join('')}
       </section>`;
   }
 

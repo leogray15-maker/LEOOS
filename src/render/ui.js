@@ -371,7 +371,7 @@ export class UI extends UIWidgets {
   }
 
   renderTicker() {
-    const e = this.store.state.log[0];
+    const e = this.store.lastLine();
     this.tickerEl.textContent = e ? e.text : 'All systems nominal. Crew at station.';
     this.tickerTime.textContent = e ? clockTime(e.ts) : '';
   }
@@ -574,7 +574,10 @@ export class UI extends UIWidgets {
         because: data.because || '',
         conditions: Array.isArray(data.conditions) ? data.conditions : [],
       };
-      this.store.trace(`COUNCIL — ${this.councilState.verdict || 'no verdict'}: ${q.slice(0, 60)}`);
+      // A verdict is the one thing THE RECORDS exists to hold, so it goes to
+      // the persisted record with the reasoning attached — not to the trace.
+      const why = this.councilState.because ? ` · ${this.councilState.because}` : '';
+      this.store.record(`COUNCIL ${this.councilState.verdict || 'NO VERDICT'} — ${q.slice(0, 80)}${why}`, 'verdict');
     } catch (err) {
       this.councilState = {
         question: q,

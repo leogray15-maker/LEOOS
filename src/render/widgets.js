@@ -27,6 +27,7 @@ export class UIWidgets extends UIScreens {
       case 'signals': return this.wSignals();
       case 'treasury': return this.wTreasury();
       case 'doctrine': return this.wDoctrine();
+      case 'records': return this.wRecords();
       default: return '';
     }
   }
@@ -275,6 +276,40 @@ export class UIWidgets extends UIScreens {
           </div>
         </article>`).join('')
         : '<p class="muted-note">No drafts standing. The Signal Forge writes three every morning.</p>'}`;
+  }
+
+  /**
+   * THE RECORDS. The institutional memory, and the only room that reads the
+   * persisted record rather than a dataset: every verdict the Council
+   * returned, every order logged, every COA change and every feed sync, in
+   * the order they happened. No placeholder chip — none of it is invented.
+   */
+  wRecords() {
+    const rows = this.store.records(40);
+    const verdicts = rows.filter((r) => r.kind === 'verdict').length;
+    if (!rows.length) {
+      return `
+        <h3 class="sub-title">Decision record</h3>
+        <p class="muted-note">Nothing recorded yet. Every Council verdict, order, stock move
+          and COA change is written here as it happens, and survives a reload.</p>
+        <button class="back-btn" type="button" data-goscreen="council" style="margin-top:12px">Put a decision to the Council →</button>`;
+    }
+    return `
+      <h3 class="sub-title">Decision record</h3>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${rows.length}</span><span class="stat-l">Entries held</span></div>
+        <div class="stat"><span class="stat-n mono is-gold">${verdicts}</span><span class="stat-l">Council verdicts</span></div>
+      </div>
+      <div class="tbl" style="margin-top:10px">
+        ${rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span class="mono dim">${esc(clockTime(r.ts))}</span>
+            <span>${esc(r.text)}</span>
+            ${r.kind === 'verdict' ? '<span class="chip is-gold">verdict</span>' : ''}
+          </div>`).join('')}
+      </div>
+      <p class="muted-note" style="margin-top:10px">Crew movement is not kept here — footsteps go to the
+        ticker and are never written, so the record stays a record.</p>`;
   }
 
   wTreasury() {
