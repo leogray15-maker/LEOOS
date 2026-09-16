@@ -2815,6 +2815,137 @@ class Cloud {
   }
 }
 
+/* ==== src/core/library.js ==== */
+/**
+ * THE ARCHIVES, live.
+ *
+ * `src/config/archives.js` is a copy taken by hand. This is the other
+ * path: the deployment's own `/api/archives` route, which holds the
+ * read-only Notion token server-side and hands back one page at a time.
+ *
+ * **Why it walks instead of crawling.** There are roughly 3,300 modules.
+ * Indexing them all would be thousands of Notion requests, against an
+ * API that rate-limits at about three a second, to pick one module to
+ * write about. So the Forge descends instead: the Archives list courses,
+ * a course lists sections, a section lists modules, and a module is
+ * whatever has prose in it rather than more links. A run costs four or
+ * five requests and lands somewhere it has not been.
+ *
+ * Nothing here can write. The route only answers GET, the token it holds
+ * only has "Read content", and this file never sends a body.
+ */
+
+
+/** Courses whose whole subject is compounds, by title, from the index. */
+const FENCED = new Set(COURSES.filter((c) => c.fenced).map((c) => c.title.toLowerCase()));
+
+/** A page with fewer words than this is a menu, not a module. */
+const MIN_WORDS = 90;
+
+/** Requests one run may spend finding something to write about. */
+const MAX_HOPS = 6;
+
+/** Titles that are navigation rather than content. */
+const SKIP = /^(start here|welcome|\+ courses|courses|index|contents|t)\b/i;
+
+/** Ask the feed for one page. Returns its prose and the pages beneath it. */
+async function fetchPage(url, key, id = '') {
+  const base = String(url || '').trim().replace(/\?.*$/, '');
+  if (!base) throw Object.assign(new Error('No Archives feed URL set.'), { code: 'no_url' });
+  const target = id ? `${base}?id=${encodeURIComponent(id)}` : base;
+
+  let res;
+  try {
+    res = await fetch(target, { headers: { 'x-arcane-key': String(key || '') } });
+  } catch {
+    throw Object.assign(new Error('Could not reach the Archives feed.'), { code: 'unreachable' });
+  }
+  if (res.status === 401) throw Object.assign(new Error('The Archives feed refused the key.'), { code: 'bad_key' });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw Object.assign(new Error(body.error || `Feed returned ${res.status}.`), { code: 'feed_error' });
+  }
+
+  const data = await res.json().catch(() => null);
+  if (!data || typeof data !== 'object') {
+    throw Object.assign(new Error('The feed did not return JSON.'), { code: 'bad_shape' });
+  }
+  return {
+    id: String(data.id || ''),
+    title: String(data.title || 'Untitled'),
+    url: String(data.url || ''),
+    text: String(data.text || ''),
+    words: Number(data.words) || 0,
+    children: Array.isArray(data.children)
+      ? data.children
+        .filter((c) => c && c.id)
+        .map((c) => ({ id: String(c.id), title: String(c.title || 'Untitled') }))
+      : [],
+  };
+}
+
+/** Is this page worth drafting from, or is it a list of other pages? */
+function isModule(page) {
+  return page.words >= MIN_WORDS;
+}
+
+/** Pick a child at random, skipping fenced courses, covered ids and menus. */
+function pickChild(children, covered, rng = Math.random) {
+  const open = children.filter((c) => !covered.includes(c.id)
+    && !FENCED.has(c.title.trim().toLowerCase())
+    && !SKIP.test(c.title.trim()));
+  if (!open.length) return null;
+  return open[Math.floor(rng() * open.length)];
+}
+
+/**
+ * Walk down from the root until something has prose in it.
+ *
+ * Returns a module shaped exactly like the hand-copied ones in
+ * `src/config/archives.js`, so the Forge cannot tell which path it came
+ * from. `trail` is the breadcrumb, which becomes the course name.
+ */
+async function findModule(url, key, covered = [], { rng = Math.random, root = '' } = {}) {
+  let page = await fetchPage(url, key, root);
+  const trail = [];
+  let hops = 1;
+
+  while (hops < MAX_HOPS) {
+    // A page can hold prose AND child pages. Prose wins — that is a
+    // module with sub-modules, and the module itself is the thing to use.
+    if (isModule(page) && trail.length) break;
+
+    const next = pickChild(page.children, covered, rng);
+    if (!next) {
+      // Nothing left down this branch. If the page itself reads, take it.
+      if (isModule(page) && trail.length) break;
+      throw Object.assign(
+        new Error('Every page down that branch is already covered, fenced, or empty. Try again.'),
+        { code: 'exhausted' },
+      );
+    }
+    trail.push(page.title);
+    page = await fetchPage(url, key, next.id);
+    hops++;
+  }
+
+  if (!isModule(page)) {
+    throw Object.assign(new Error('Walked as deep as allowed without finding a module with prose in it.'), { code: 'no_prose' });
+  }
+
+  return {
+    id: page.id,
+    title: page.title,
+    // The first step below the Archives is the course; deeper is the section.
+    course: trail[1] || trail[0] || 'The Arcane Archives',
+    section: trail.length > 2 ? trail[trail.length - 1] : '',
+    url: page.url,
+    text: page.text,
+    words: page.words,
+    trail,
+  };
+}
+
 /* ==== src/core/forge.js ==== */
 /**
  * THE SIGNAL FORGE — the content creator, and the only chain in this
@@ -3061,10 +3192,12 @@ function seedState() {
   // refusals are kept deliberately: a fence nobody can see is one nobody
   // can trust.
   const forge = { covered: [], blocked: [], last: 0 };
+  // The live Archives feed — the deployment's own read-only Notion route.
+  const archives = { url: '', key: '', last: 0, error: '' };
   const stock = INVENTORY.rows.map((r) => ({
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
   }));
-  return { decks, ledger, goals, budget, stock, bridge, forge, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, forge, archives, log: [], posts: SEED_POSTS.slice() };
 }
 
 class Store {
@@ -3235,6 +3368,15 @@ class Store {
         last: Number(f.last) || 0,
       };
     }
+    if (body.archives && typeof body.archives === 'object') {
+      const a = body.archives;
+      this.state.archives = {
+        url: String(a.url || '').slice(0, 300),
+        key: String(a.key || '').slice(0, 200),
+        last: Number(a.last) || 0,
+        error: String(a.error || '').slice(0, 200),
+      };
+    }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
@@ -3271,6 +3413,7 @@ class Store {
       stock: this.state.stock,
       bridge: this.state.bridge,
       forge: this.forge(),
+      archives: this.archives(),
     };
   }
 
@@ -3602,6 +3745,26 @@ class Store {
 
   forge() {
     return this.state.forge || (this.state.forge = { covered: [], blocked: [], last: 0 });
+  }
+
+  /** Where the live Archives feed lives, and the key it wants. */
+  archives() {
+    return this.state.archives || (this.state.archives = { url: '', key: '', last: 0, error: '' });
+  }
+
+  /** True once there is enough to try a live pull. */
+  archivesLinked() {
+    const a = this.archives();
+    return Boolean(a.url && a.key);
+  }
+
+  setArchives(field, value) {
+    const a = this.archives();
+    if (field === 'url') a.url = String(value).trim().slice(0, 300);
+    else if (field === 'key') a.key = String(value).trim().slice(0, 200);
+    else if (field === 'error') a.error = String(value || '').slice(0, 200);
+    else return;
+    this.save();
   }
 
   /** Module ids the Forge has already drawn on. */
@@ -6892,6 +7055,8 @@ class UIScreens {
     const cover = coverage(this.store.covered());
     const blocked = this.store.blockedDrafts();
     const busy = this.forgeBusy;
+    const live = this.store.archivesLinked();
+    const a = this.store.archives();
     return `
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">The Signal Forge</h3>
@@ -6905,14 +7070,20 @@ class UIScreens {
           taken out of the workspace, or from text you paste below. Nothing in this path holds a handle
           that could write to Notion.</p>
         <div class="stat-row" style="margin-top:12px">
+          <div class="stat"><span class="stat-n mono">${live ? '3,300' : cover.usable}</span>
+            <span class="stat-l">${live ? 'Modules reachable' : 'Modules copied'}</span></div>
           <div class="stat"><span class="stat-n mono">${cover.courses}</span><span class="stat-l">Courses indexed</span></div>
-          <div class="stat"><span class="stat-n mono">${cover.usable}</span><span class="stat-l">Modules copied</span></div>
-          <div class="stat"><span class="stat-n mono ${cover.used ? 'is-arcane' : 'dim'}">${cover.used}</span><span class="stat-l">Drawn on</span></div>
+          <div class="stat"><span class="stat-n mono ${this.store.covered().length ? 'is-arcane' : 'dim'}">${this.store.covered().length}</span><span class="stat-l">Drawn on</span></div>
           <div class="stat"><span class="stat-n mono ${cover.fenced ? 'is-breach' : 'dim'}">${cover.fenced}</span><span class="stat-l">Courses fenced</span></div>
         </div>
+        <p class="src-note"><span class="chip ${live ? 'is-vital' : ''}">${live ? 'live' : 'copy'}</span>
+          ${live
+            ? `Walking the real Archives through this deployment&rsquo;s read-only Notion route${a.last ? ` · last pull ${esc(clockTime(a.last))}` : ''}.`
+            : `Drafting from the ${cover.usable} modules copied into the repo. Connect the feed below to reach all 3,300.`}</p>
+        ${a.error ? `<p class="warn-note">${esc(a.error)}</p>` : ''}
         <div class="bridge-btns" style="margin-top:12px">
           <button type="button" data-forgerun="1" ${busy || !this.sampler ? 'disabled' : ''}>
-            ${busy ? 'Drafting…' : 'Draft from the Archives'}</button>
+            ${busy ? esc(this.forgeStep || 'Drafting…') : live ? 'Draft from the Archives' : 'Draft from the copy'}</button>
         </div>
         ${this.forgeError ? `<p class="warn-note">${esc(this.forgeError)}</p>` : ''}
         ${blocked.length ? `
@@ -6925,6 +7096,23 @@ class UIScreens {
                 ? ` (${esc(b.compounds.join(', '))})` : ''}
               <br><span class="dim">${esc(b.hook)}</span>
             </div>`).join('')}` : ''}
+        <details class="cloud-paste" data-archlink="1" ${this.archOpen ? 'open' : ''}>
+          <summary>${live ? 'Archives feed — connected' : 'Connect the Archives'}</summary>
+          <p class="muted-note">Notion&rsquo;s API sends no CORS headers, and an integration token has no
+            business in a page anyone can view-source — so the token lives on the deployment, not here.
+            Deploy <code>api/archives.js</code> with <code>NOTION_TOKEN</code> (Read content only) and
+            <code>ARCHIVES_KEY</code> set, then point this at it.</p>
+          <form data-archsave="1">
+            <label class="field-l" for="archUrl">Feed URL</label>
+            <input id="archUrl" class="field-i" type="url" name="url" autocomplete="off" spellcheck="false"
+                   placeholder="/api/archives" value="${esc(a.url)}">
+            <label class="field-l" for="archKey">Read key</label>
+            <input id="archKey" class="field-i" type="password" name="key" autocomplete="off"
+                   placeholder="the ARCHIVES_KEY you set on the deployment" value="${esc(a.key)}">
+            <button type="submit">Save</button>
+            ${live ? '<button type="button" class="is-quiet" data-archclear="1">Disconnect</button>' : ''}
+          </form>
+        </details>
         <details class="cloud-paste" data-pastemod="1" ${this.modOpen ? 'open' : ''}>
           <summary>Paste a module instead</summary>
           <p class="muted-note">Only two modules are copied in so far. Open any Archives page, copy
@@ -7548,6 +7736,7 @@ class UIWidgets extends UIScreens {
 
 
 
+
 class UI extends UIWidgets {
   constructor(store, sim, factory) {
     super();
@@ -7565,7 +7754,9 @@ class UI extends UIWidgets {
     this.cloud = null;
     this.forgeBusy = false;
     this.forgeError = '';
+    this.forgeStep = '';
     this.modOpen = false;
+    this.archOpen = false;
     this.brain = null;
     this.reduceMotion = false;
     this.cloudOpen = false;
@@ -7996,6 +8187,13 @@ class UI extends UIWidgets {
     if (t('[data-cloudout]')) { this.signOutCloud(); return; }
     if (t('[data-cloudretry]')) { this.retryCloud(); return; }
     if (t('[data-forgerun]')) { this.runForge(); return; }
+    if (t('[data-archclear]')) {
+      this.store.setArchives('url', '');
+      this.store.setArchives('key', '');
+      this.store.setArchives('error', '');
+      this.render();
+      return;
+    }
     if (t('[data-bridgepull]')) { this.pullBridge(); return; }
     if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
@@ -8026,6 +8224,16 @@ class UI extends UIWidgets {
       this.store.setBridge('key', bsave.querySelector('[name="key"]').value);
       this.store.bridgeError('');
       this.pullBridge();
+      return;
+    }
+    const archSave = e.target.closest('[data-archsave]');
+    if (archSave) {
+      e.preventDefault();
+      this.store.setArchives('url', archSave.querySelector('[name="url"]').value);
+      this.store.setArchives('key', archSave.querySelector('[name="key"]').value);
+      this.store.setArchives('error', '');
+      this.archOpen = false;
+      this.render();
       return;
     }
     const modPaste = e.target.closest('[data-forgepaste]');
@@ -8089,7 +8297,9 @@ class UI extends UIWidgets {
     const cloudBox = e.target.closest('[data-cloudbox]');
     if (cloudBox) { this.cloudOpen = cloudBox.open; return; }
     const modBox = e.target.closest('[data-pastemod]');
-    if (modBox) this.modOpen = modBox.open;
+    if (modBox) { this.modOpen = modBox.open; return; }
+    const archBox = e.target.closest('[data-archlink]');
+    if (archBox) this.archOpen = archBox.open;
   }
 
   /* ================= the signal forge ================= */
@@ -8101,12 +8311,6 @@ class UI extends UIWidgets {
    */
   async runForge(module = null) {
     if (this.forgeBusy) return;
-    const target = module || nextModule(this.store.covered());
-    if (!target) {
-      this.forgeError = 'Every module copied in has been drawn on. Paste one below, or copy more out of the Archives.';
-      this.render();
-      return;
-    }
     if (!this.sampler) {
       this.forgeError = 'Drafting needs Claude, which means the published page on claude.ai.';
       this.render();
@@ -8115,6 +8319,35 @@ class UI extends UIWidgets {
 
     this.forgeBusy = true;
     this.forgeError = '';
+    let target = module;
+
+    // The live feed first, where it is connected. It walks the real
+    // Archives — courses, sections, modules — rather than crawling 3,300
+    // pages to pick one, so a run costs four or five requests.
+    if (!target && this.store.archivesLinked()) {
+      this.forgeStep = 'Walking the Archives…';
+      this.render();
+      const a = this.store.archives();
+      try {
+        target = await findModule(a.url, a.key, this.store.covered());
+        this.store.setArchives('error', '');
+      } catch (err) {
+        // A feed that is down is not a reason to have nothing to write.
+        this.store.setArchives('error', `${err.message} Falling back to the copy in the repo.`);
+        target = null;
+      }
+    }
+
+    if (!target) target = nextModule(this.store.covered());
+    if (!target) {
+      this.forgeBusy = false;
+      this.forgeStep = '';
+      this.forgeError = 'Nothing left to draw on. Connect the Archives feed, or paste a module below.';
+      this.render();
+      return;
+    }
+
+    this.forgeStep = `Drafting from ${target.title}…`;
     this.render();
     try {
       const run = await forge(target, this.sampler);
@@ -8130,6 +8363,7 @@ class UI extends UIWidgets {
           : `The Forge could not run (${err?.code || err?.message || 'unknown'}).`;
     }
     this.forgeBusy = false;
+    this.forgeStep = '';
     this.render();
   }
 

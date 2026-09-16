@@ -336,9 +336,10 @@ Worth being straight about, because AGENTS lists tools for every agent:
   synced across devices. Real storage; still not an agent acting on its own.
 - **simulation** — the floor. Crew route, walk and drift toward attention. They
   do not perform the work their labels describe.
-- **live** — the Signal Forge. Three seats chain on one piece of work, and
-  WARDEN's fence runs in code rather than in a prompt. Needs `sample`, so
-  the published page; the copy of the Archives it draws on is already here.
+- **live** — the Signal Forge. Three seats chain on one piece of work,
+  WARDEN's fence runs in code rather than in a prompt, and with the feed
+  deployed it walks the real Archives — all ~3,300 modules. Drafting needs
+  `sample`, so the published page.
 - **not wired** — the `tools` array on each agent describes what that agent is
   *for*. No agent calls a tool on its own. Control → *What actually runs today*
   says the same thing inside the interface.
@@ -351,6 +352,7 @@ npm run build    # flatten to two self-contained targets
 npm test               # the store suite, then the end-to-end suite
 npm run test:store     # the persistence rungs, no browser, no server
 npm run test:forge     # the content fence, and what it refuses to let through
+npm run test:library   # the Notion route: that it cannot write, and leaks no token
 npm run test:vault     # the vault generator, including what it refuses to touch
 npm run test:dev       # the same screens and rooms on the real ES modules
 npm run test:contrast  # every text element on every screen, measured against AA
@@ -451,6 +453,8 @@ src/config/roomdata.js  per-room dashboard rows, and which room has a widget
 src/core/store.js       persistence: artifact db → Firestore → localStorage → memory
 src/core/cloud.js       the Firebase link: lazy SDK, Google sign-in, one document
 src/core/forge.js       the Signal Forge: ORACLE picks, HERALD drafts, WARDEN screens
+src/core/library.js     walking the live Archives, four requests at a time
+api/archives.js         the read-only Notion route; the token lives here, not in the page
 src/config/archives.js  a read-only copy of the Archives, and the compound list
 src/core/sim.js         crew routing and behaviour
 src/core/bridge.js      the Arcane Peptides feed, pulled or pasted
@@ -467,7 +471,7 @@ src/render/sprites.js   character matrices, baked once and blitted
 bridge/                 the feed route to drop into the shop, and a sample
 firebase.json           hosting and firestore deploy
 firestore.rules         one operator, enforced
-test/                   store, forge, vault, e2e, dev-graph, contrast and clipping suites
+test/                   store, forge, library, vault, e2e, dev-graph, contrast, clipping
 tools/vault.js          generate the Obsidian brain from the config
 trading/                the backtester — separate from the OS, see below
 ```
@@ -508,16 +512,71 @@ line in a prompt asking the model nicely**. It is `screen()` in
 `src/core/forge.js`, running in code, after the model has spoken. A
 prompt can be talked out of a rule. A regex cannot.
 
-### Notion is never written to, and cannot be
+### Two ways in, both read-only
 
-`src/config/archives.js` is a **copy** taken out of the workspace with
-read-only tools. The Forge drafts from that copy, or from text pasted
-into BEACON at runtime. Nothing in the drafting path holds a handle that
-could write to Notion — which is a stronger guarantee than a promise not
-to use one, and `test/forge.mjs` asserts it against the source.
+**The copy.** `src/config/archives.js` holds 45 courses indexed and two
+modules copied out by hand. It needs nothing deployed and works offline.
 
-Refreshing the copy means copying the pages out again and replacing what
-is in that file. The workspace is never the thing being edited.
+**The feed.** `api/archives.js` is a Vercel function on this same project
+that holds a read-only Notion token server-side and hands back one page
+at a time. That is what reaches all ~3,300 modules.
+
+It has to be a server, for two reasons worth stating plainly. `api.notion.com`
+sends **no CORS headers**, so a browser cannot call it at all — that is
+Notion saying the API is for servers, not a thing to work around. And an
+integration token is a credential; a page anyone can view-source is not
+where a credential lives, even a read-only one.
+
+Because the function runs on the same Vercel project as the deck, it is
+same-origin, so there is no CORS to configure on our side either.
+
+### It cannot write, three times over
+
+1. The Notion integration is created with **only "Read content" ticked**,
+   so Notion itself refuses a write with this token.
+2. `notion()` in the route sends `GET` and nothing else. There is no
+   branch that takes a method.
+3. The route answers `GET` and `OPTIONS`; everything else gets a 405.
+
+Any one would do. All three means a mistake in one place is still caught
+by the other two, and `test/library.mjs` asserts each of them against the
+source — including that the token never appears in a response body, and
+that a Notion error is never echoed back wholesale.
+
+### Why it walks instead of crawling
+
+Indexing 3,300 modules would be thousands of requests against an API that
+rate-limits around three a second, to pick one module to write about. So
+the Forge descends instead: the Archives list courses, a course lists
+sections, a section lists modules, and a module is whatever has prose in
+it rather than more links. A run costs four or five requests.
+
+Pages titled `START HERE`, `+ COURSES` and the like are skipped as
+navigation, courses marked `fenced` are never entered, and a module
+already drawn on is never offered twice.
+
+If the feed is down the Forge says so and falls back to the copy in the
+repo, because a feed being unreachable is not a reason to have nothing to
+write.
+
+### Standing the feed up
+
+1. **Connect the integration to the page.** In Notion, open **The Arcane
+   Archives → ⋯ → Connections → ArcaneAIOS**. This is the step everyone
+   misses: a token with no page connected returns 404 for everything.
+2. **Set two environment variables** on the Vercel project:
+
+   | | |
+   | --- | --- |
+   | `NOTION_TOKEN` | the integration token, Read content only |
+   | `ARCHIVES_KEY` | any long random string |
+
+3. **Redeploy**, so the function picks them up.
+4. In the deck: **SIGNALS → Connect the Archives** → `/api/archives` and
+   the same key.
+
+Neither secret is ever returned in a response, and neither is in this
+repo.
 
 ### What the fence actually blocks
 

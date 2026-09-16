@@ -53,10 +53,12 @@ function seedState() {
   // refusals are kept deliberately: a fence nobody can see is one nobody
   // can trust.
   const forge = { covered: [], blocked: [], last: 0 };
+  // The live Archives feed — the deployment's own read-only Notion route.
+  const archives = { url: '', key: '', last: 0, error: '' };
   const stock = INVENTORY.rows.map((r) => ({
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
   }));
-  return { decks, ledger, goals, budget, stock, bridge, forge, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, forge, archives, log: [], posts: SEED_POSTS.slice() };
 }
 
 export class Store {
@@ -227,6 +229,15 @@ export class Store {
         last: Number(f.last) || 0,
       };
     }
+    if (body.archives && typeof body.archives === 'object') {
+      const a = body.archives;
+      this.state.archives = {
+        url: String(a.url || '').slice(0, 300),
+        key: String(a.key || '').slice(0, 200),
+        last: Number(a.last) || 0,
+        error: String(a.error || '').slice(0, 200),
+      };
+    }
     if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
@@ -263,6 +274,7 @@ export class Store {
       stock: this.state.stock,
       bridge: this.state.bridge,
       forge: this.forge(),
+      archives: this.archives(),
     };
   }
 
@@ -594,6 +606,26 @@ export class Store {
 
   forge() {
     return this.state.forge || (this.state.forge = { covered: [], blocked: [], last: 0 });
+  }
+
+  /** Where the live Archives feed lives, and the key it wants. */
+  archives() {
+    return this.state.archives || (this.state.archives = { url: '', key: '', last: 0, error: '' });
+  }
+
+  /** True once there is enough to try a live pull. */
+  archivesLinked() {
+    const a = this.archives();
+    return Boolean(a.url && a.key);
+  }
+
+  setArchives(field, value) {
+    const a = this.archives();
+    if (field === 'url') a.url = String(value).trim().slice(0, 300);
+    else if (field === 'key') a.key = String(value).trim().slice(0, 200);
+    else if (field === 'error') a.error = String(value || '').slice(0, 200);
+    else return;
+    this.save();
   }
 
   /** Module ids the Forge has already drawn on. */

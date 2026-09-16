@@ -10,7 +10,7 @@
 
 import { AGENTS, ARCANE, BUDGET, CAPS, CATALOGUE, COUNCIL, CREW, DECKS, GOALS, GRADE_TONE, OPERATOR, TOOLS, VENTURES } from '../config/empire.js';
 import { ROOM_BY_ID, WINGS } from '../config/facility.js';
-import { $, PLATFORM_CLASS, SYNC_COPY, SYNC_WORD, esc, meter, money, stamp } from './format.js';
+import { $, PLATFORM_CLASS, SYNC_COPY, SYNC_WORD, clockTime, esc, meter, money, stamp } from './format.js';
 import { coverage } from '../core/forge.js';
 
 /** The three seats in the Forge chain, named from the roster itself. */
@@ -461,6 +461,8 @@ export class UIScreens {
     const cover = coverage(this.store.covered());
     const blocked = this.store.blockedDrafts();
     const busy = this.forgeBusy;
+    const live = this.store.archivesLinked();
+    const a = this.store.archives();
     return `
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">The Signal Forge</h3>
@@ -474,14 +476,20 @@ export class UIScreens {
           taken out of the workspace, or from text you paste below. Nothing in this path holds a handle
           that could write to Notion.</p>
         <div class="stat-row" style="margin-top:12px">
+          <div class="stat"><span class="stat-n mono">${live ? '3,300' : cover.usable}</span>
+            <span class="stat-l">${live ? 'Modules reachable' : 'Modules copied'}</span></div>
           <div class="stat"><span class="stat-n mono">${cover.courses}</span><span class="stat-l">Courses indexed</span></div>
-          <div class="stat"><span class="stat-n mono">${cover.usable}</span><span class="stat-l">Modules copied</span></div>
-          <div class="stat"><span class="stat-n mono ${cover.used ? 'is-arcane' : 'dim'}">${cover.used}</span><span class="stat-l">Drawn on</span></div>
+          <div class="stat"><span class="stat-n mono ${this.store.covered().length ? 'is-arcane' : 'dim'}">${this.store.covered().length}</span><span class="stat-l">Drawn on</span></div>
           <div class="stat"><span class="stat-n mono ${cover.fenced ? 'is-breach' : 'dim'}">${cover.fenced}</span><span class="stat-l">Courses fenced</span></div>
         </div>
+        <p class="src-note"><span class="chip ${live ? 'is-vital' : ''}">${live ? 'live' : 'copy'}</span>
+          ${live
+            ? `Walking the real Archives through this deployment&rsquo;s read-only Notion route${a.last ? ` · last pull ${esc(clockTime(a.last))}` : ''}.`
+            : `Drafting from the ${cover.usable} modules copied into the repo. Connect the feed below to reach all 3,300.`}</p>
+        ${a.error ? `<p class="warn-note">${esc(a.error)}</p>` : ''}
         <div class="bridge-btns" style="margin-top:12px">
           <button type="button" data-forgerun="1" ${busy || !this.sampler ? 'disabled' : ''}>
-            ${busy ? 'Drafting…' : 'Draft from the Archives'}</button>
+            ${busy ? esc(this.forgeStep || 'Drafting…') : live ? 'Draft from the Archives' : 'Draft from the copy'}</button>
         </div>
         ${this.forgeError ? `<p class="warn-note">${esc(this.forgeError)}</p>` : ''}
         ${blocked.length ? `
@@ -494,6 +502,23 @@ export class UIScreens {
                 ? ` (${esc(b.compounds.join(', '))})` : ''}
               <br><span class="dim">${esc(b.hook)}</span>
             </div>`).join('')}` : ''}
+        <details class="cloud-paste" data-archlink="1" ${this.archOpen ? 'open' : ''}>
+          <summary>${live ? 'Archives feed — connected' : 'Connect the Archives'}</summary>
+          <p class="muted-note">Notion&rsquo;s API sends no CORS headers, and an integration token has no
+            business in a page anyone can view-source — so the token lives on the deployment, not here.
+            Deploy <code>api/archives.js</code> with <code>NOTION_TOKEN</code> (Read content only) and
+            <code>ARCHIVES_KEY</code> set, then point this at it.</p>
+          <form data-archsave="1">
+            <label class="field-l" for="archUrl">Feed URL</label>
+            <input id="archUrl" class="field-i" type="url" name="url" autocomplete="off" spellcheck="false"
+                   placeholder="/api/archives" value="${esc(a.url)}">
+            <label class="field-l" for="archKey">Read key</label>
+            <input id="archKey" class="field-i" type="password" name="key" autocomplete="off"
+                   placeholder="the ARCHIVES_KEY you set on the deployment" value="${esc(a.key)}">
+            <button type="submit">Save</button>
+            ${live ? '<button type="button" class="is-quiet" data-archclear="1">Disconnect</button>' : ''}
+          </form>
+        </details>
         <details class="cloud-paste" data-pastemod="1" ${this.modOpen ? 'open' : ''}>
           <summary>Paste a module instead</summary>
           <p class="muted-note">Only two modules are copied in so far. Open any Archives page, copy

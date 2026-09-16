@@ -13,6 +13,7 @@ import { ARCANE, COUNCIL, DECKS, GOALS, OPERATOR, SCREENS, SCREEN_GROUPS, VENTUR
 import { ROOM_BY_ID } from '../config/facility.js';
 import { Brain } from './brain.js';
 import { forge, nextModule } from '../core/forge.js';
+import { findModule } from '../core/library.js';
 import { setFirebaseConfig } from '../config/firebase.js';
 import { $, SYNC_WORD, clockTime, esc, meter, money, num, stamp } from './format.js';
 
@@ -33,7 +34,9 @@ export class UI extends UIWidgets {
     this.cloud = null;
     this.forgeBusy = false;
     this.forgeError = '';
+    this.forgeStep = '';
     this.modOpen = false;
+    this.archOpen = false;
     this.brain = null;
     this.reduceMotion = false;
     this.cloudOpen = false;
@@ -464,6 +467,13 @@ export class UI extends UIWidgets {
     if (t('[data-cloudout]')) { this.signOutCloud(); return; }
     if (t('[data-cloudretry]')) { this.retryCloud(); return; }
     if (t('[data-forgerun]')) { this.runForge(); return; }
+    if (t('[data-archclear]')) {
+      this.store.setArchives('url', '');
+      this.store.setArchives('key', '');
+      this.store.setArchives('error', '');
+      this.render();
+      return;
+    }
     if (t('[data-bridgepull]')) { this.pullBridge(); return; }
     if (t('[data-bridgeclear]')) { this.store.clearFeed(); this.render(); return; }
     const step = t('[data-stockstep]');
@@ -494,6 +504,16 @@ export class UI extends UIWidgets {
       this.store.setBridge('key', bsave.querySelector('[name="key"]').value);
       this.store.bridgeError('');
       this.pullBridge();
+      return;
+    }
+    const archSave = e.target.closest('[data-archsave]');
+    if (archSave) {
+      e.preventDefault();
+      this.store.setArchives('url', archSave.querySelector('[name="url"]').value);
+      this.store.setArchives('key', archSave.querySelector('[name="key"]').value);
+      this.store.setArchives('error', '');
+      this.archOpen = false;
+      this.render();
       return;
     }
     const modPaste = e.target.closest('[data-forgepaste]');
@@ -557,7 +577,9 @@ export class UI extends UIWidgets {
     const cloudBox = e.target.closest('[data-cloudbox]');
     if (cloudBox) { this.cloudOpen = cloudBox.open; return; }
     const modBox = e.target.closest('[data-pastemod]');
-    if (modBox) this.modOpen = modBox.open;
+    if (modBox) { this.modOpen = modBox.open; return; }
+    const archBox = e.target.closest('[data-archlink]');
+    if (archBox) this.archOpen = archBox.open;
   }
 
   /* ================= the signal forge ================= */
@@ -569,12 +591,6 @@ export class UI extends UIWidgets {
    */
   async runForge(module = null) {
     if (this.forgeBusy) return;
-    const target = module || nextModule(this.store.covered());
-    if (!target) {
-      this.forgeError = 'Every module copied in has been drawn on. Paste one below, or copy more out of the Archives.';
-      this.render();
-      return;
-    }
     if (!this.sampler) {
       this.forgeError = 'Drafting needs Claude, which means the published page on claude.ai.';
       this.render();
@@ -583,6 +599,35 @@ export class UI extends UIWidgets {
 
     this.forgeBusy = true;
     this.forgeError = '';
+    let target = module;
+
+    // The live feed first, where it is connected. It walks the real
+    // Archives — courses, sections, modules — rather than crawling 3,300
+    // pages to pick one, so a run costs four or five requests.
+    if (!target && this.store.archivesLinked()) {
+      this.forgeStep = 'Walking the Archives…';
+      this.render();
+      const a = this.store.archives();
+      try {
+        target = await findModule(a.url, a.key, this.store.covered());
+        this.store.setArchives('error', '');
+      } catch (err) {
+        // A feed that is down is not a reason to have nothing to write.
+        this.store.setArchives('error', `${err.message} Falling back to the copy in the repo.`);
+        target = null;
+      }
+    }
+
+    if (!target) target = nextModule(this.store.covered());
+    if (!target) {
+      this.forgeBusy = false;
+      this.forgeStep = '';
+      this.forgeError = 'Nothing left to draw on. Connect the Archives feed, or paste a module below.';
+      this.render();
+      return;
+    }
+
+    this.forgeStep = `Drafting from ${target.title}…`;
     this.render();
     try {
       const run = await forge(target, this.sampler);
@@ -598,6 +643,7 @@ export class UI extends UIWidgets {
           : `The Forge could not run (${err?.code || err?.message || 'unknown'}).`;
     }
     this.forgeBusy = false;
+    this.forgeStep = '';
     this.render();
   }
 
