@@ -11,9 +11,13 @@
 import { UIWidgets } from './widgets.js';
 import { ARCANE, COUNCIL, DECKS, GOALS, OPERATOR, SCREENS, SCREEN_GROUPS, VENTURES } from '../config/empire.js';
 import { ROOM_BY_ID } from '../config/facility.js';
+
+/** The deployment's own drafting route, same origin. */
+const DRAFT_ROUTE = '/api/draft';
 import { Brain } from './brain.js';
 import { forge, nextModule } from '../core/forge.js';
 import { findModule } from '../core/library.js';
+import { apiDrafter, draftReady } from '../core/writer.js';
 import { setFirebaseConfig } from '../config/firebase.js';
 import { $, SYNC_WORD, clockTime, esc, meter, money, num, stamp } from './format.js';
 
@@ -29,6 +33,15 @@ export class UI extends UIWidgets {
     this.counsel = [];
     this.counselBusy = false;
     this.sampler = null;
+    /**
+     * Who the Forge asks to write. The artifact sampler where there is
+     * one, the deployment's own route otherwise — kept apart from
+     * `sampler` because the Council calls that as a function and this
+     * only ever offers `.json`.
+     */
+    this.drafter = null;
+    this.drafterVia = '';
+    this.drafterNeeds = [];
     // Set by the boot once the Firebase link exists; the panel copes
     // either way, so a page built without one simply has no Cloud block.
     this.cloud = null;
@@ -591,11 +604,15 @@ export class UI extends UIWidgets {
    */
   async runForge(module = null) {
     if (this.forgeBusy) return;
-    if (!this.sampler) {
-      this.forgeError = 'Drafting needs Claude, which means the published page on claude.ai.';
+    if (!this.drafter) {
+      this.forgeError = this.drafterNeeds.length
+        ? `The drafting route is deployed but not configured — set ${this.drafterNeeds.join(' and ')} on this project, then redeploy.`
+        : 'Nothing here can draft. Deploy api/draft.js with ANTHROPIC_API_KEY set, or open the published page on claude.ai.';
       this.render();
       return;
     }
+    // The key is entered after boot, so pick it up now rather than at probe time.
+    if (this.drafterVia === 'api') this.drafter = apiDrafter(DRAFT_ROUTE, this.store.archives().key);
 
     this.forgeBusy = true;
     this.forgeError = '';
@@ -630,7 +647,7 @@ export class UI extends UIWidgets {
     this.forgeStep = `Drafting from ${target.title}…`;
     this.render();
     try {
-      const run = await forge(target, this.sampler);
+      const run = await forge(target, this.drafter);
       const { added, refused } = this.store.addDrafts(run);
       if (!added) {
         this.forgeError = refused
@@ -822,7 +839,26 @@ export class UI extends UIWidgets {
 
   attachSampler(fn) {
     this.sampler = fn;
+    // In the artifact this is the cheapest drafter available, and it is
+    // already authenticated. Nothing beats it, so it takes the slot.
+    if (!this.drafter) { this.drafter = fn; this.drafterVia = 'artifact'; }
     this.render();
+  }
+
+  /**
+   * Find something that can draft, where the artifact sampler is absent.
+   * Probes the deployment's own route rather than offering a button that
+   * fails when pressed.
+   */
+  async findDrafter() {
+    if (this.drafter) return this.drafter;
+    const probe = await draftReady(DRAFT_ROUTE);
+    this.drafterNeeds = probe.needs;
+    if (!probe.ready) { this.render(); return null; }
+    this.drafter = apiDrafter(DRAFT_ROUTE, this.store.archives().key);
+    this.drafterVia = 'api';
+    this.render();
+    return this.drafter;
   }
 
   brief() {

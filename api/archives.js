@@ -177,9 +177,12 @@ export default async function handler(req, res) {
   }
 
   const token = process.env.NOTION_TOKEN;
-  const expected = process.env.ARCHIVES_KEY;
+  // One key guards the deck's private routes. ARCHIVES_KEY is the name in
+  // the docs, but a project that already has ARCANE_FEED_KEY for the shop
+  // feed should not need a second secret that holds the same string.
+  const expected = process.env.ARCHIVES_KEY || process.env.ARCANE_FEED_KEY || process.env.x_arcane_key;
   if (!token) return res.status(500).json({ error: 'NOTION_TOKEN is not set on this deployment.' });
-  if (!expected) return res.status(500).json({ error: 'ARCHIVES_KEY is not set on this deployment.' });
+  if (!expected) return res.status(500).json({ error: 'No key set. Add ARCHIVES_KEY (or reuse ARCANE_FEED_KEY) on this deployment.' });
 
   const given = req.headers['x-arcane-key'];
   if (given !== expected) {

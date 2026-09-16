@@ -466,7 +466,9 @@ export class UIScreens {
     return `
       <section class="block">
         <div class="block-head"><h3 class="sub-title" style="margin:0">The Signal Forge</h3>
-          <span class="chip ${this.sampler ? 'is-vital' : 'is-flare'}">${this.sampler ? 'ready' : 'needs Claude'}</span></div>
+          <span class="chip ${this.drafter ? 'is-vital' : 'is-flare'}">${this.drafter
+            ? (this.drafterVia === 'api' ? 'ready · this deployment' : 'ready · artifact')
+            : 'no drafter'}</span></div>
         <p class="muted-note">${esc(ARCHIVIST)} picks a module the queue has not used.
           ${esc(SIGNALMAN)} drafts one post per platform from it. ${esc(RISK)} reads every draft
           before it is queued and refuses anything that names a compound beside an outcome, a dose,
@@ -488,7 +490,7 @@ export class UIScreens {
             : `Drafting from the ${cover.usable} modules copied into the repo. Connect the feed below to reach all 3,300.`}</p>
         ${a.error ? `<p class="warn-note">${esc(a.error)}</p>` : ''}
         <div class="bridge-btns" style="margin-top:12px">
-          <button type="button" data-forgerun="1" ${busy || !this.sampler ? 'disabled' : ''}>
+          <button type="button" data-forgerun="1" ${busy || !this.drafter ? 'disabled' : ''}>
             ${busy ? esc(this.forgeStep || 'Drafting…') : live ? 'Draft from the Archives' : 'Draft from the copy'}</button>
         </div>
         ${this.forgeError ? `<p class="warn-note">${esc(this.forgeError)}</p>` : ''}
@@ -506,8 +508,11 @@ export class UIScreens {
           <summary>${live ? 'Archives feed — connected' : 'Connect the Archives'}</summary>
           <p class="muted-note">Notion&rsquo;s API sends no CORS headers, and an integration token has no
             business in a page anyone can view-source — so the token lives on the deployment, not here.
-            Deploy <code>api/archives.js</code> with <code>NOTION_TOKEN</code> (Read content only) and
-            <code>ARCHIVES_KEY</code> set, then point this at it.</p>
+            The URL below is this deployment&rsquo;s own route and should not need changing; the key is
+            whatever you set as <code>ARCHIVES_KEY</code> (or the existing <code>ARCANE_FEED_KEY</code>).
+            The same key opens the drafting route.</p>
+          <p class="muted-note"><strong>Not</strong> the Arcane Peptides feed — that is a different shop
+            on a different project, wired in System.</p>
           <form data-archsave="1">
             <label class="field-l" for="archUrl">Feed URL</label>
             <input id="archUrl" class="field-i" type="url" name="url" autocomplete="off" spellcheck="false"
@@ -528,7 +533,7 @@ export class UIScreens {
             <input class="field-i" type="text" name="title" placeholder="Module title" autocomplete="off">
             <input class="field-i" type="text" name="course" placeholder="Course it came from" autocomplete="off">
             <textarea name="text" rows="5" placeholder="Paste the module text here"></textarea>
-            <button type="submit" ${busy || !this.sampler ? 'disabled' : ''}>Draft from this</button>
+            <button type="submit" ${busy || !this.drafter ? 'disabled' : ''}>Draft from this</button>
           </form>
         </details>
       </section>`;

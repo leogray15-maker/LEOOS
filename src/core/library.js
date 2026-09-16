@@ -53,6 +53,20 @@ export async function fetchPage(url, key, id = '') {
   if (!data || typeof data !== 'object') {
     throw Object.assign(new Error('The feed did not return JSON.'), { code: 'bad_shape' });
   }
+  // The two feeds look alike from the outside and are easy to swap. Say
+  // which one answered rather than walking a tree that is not there.
+  if (!('children' in data) && ('orders' in data || 'revenue' in data || 'stock' in data)) {
+    throw Object.assign(
+      new Error('That URL is the Arcane Peptides shop feed, not the Archives route. Point it at /api/archives on this deployment.'),
+      { code: 'wrong_feed' },
+    );
+  }
+  if (!Array.isArray(data.children) && typeof data.text !== 'string') {
+    throw Object.assign(
+      new Error('That URL did not answer like the Archives route. It should be /api/archives on this deployment.'),
+      { code: 'wrong_feed' },
+    );
+  }
   return {
     id: String(data.id || ''),
     title: String(data.title || 'Untitled'),

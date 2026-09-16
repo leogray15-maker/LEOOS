@@ -42,6 +42,21 @@ export const CLOUD_COPY = {
 export function cloudReason(e) {
   const code = e?.code || '';
   const text = String(e?.message || e);
+  // Identity Toolkit's CONFIGURATION_NOT_FOUND means the project has no
+  // Authentication at all — not a bad key, not a bad domain. It is one
+  // click in the console, so say which click.
+  if (code === 'auth/configuration-not-found' || /CONFIGURATION_NOT_FOUND/.test(text)) {
+    return 'Authentication has never been switched on in this Firebase project. Console → Build → Authentication → Get started, then enable Google under Sign-in method.';
+  }
+  if (code === 'auth/operation-not-allowed') {
+    return 'Google sign-in is not enabled. Firebase console → Authentication → Sign-in method → Google → enable.';
+  }
+  if (code === 'auth/unauthorized-domain') {
+    return `${typeof location !== 'undefined' ? location.hostname : 'This domain'} is not authorised. Firebase → Authentication → Settings → Authorised domains.`;
+  }
+  if (code === 'auth/invalid-api-key' || code === 'auth/api-key-not-valid') {
+    return 'That apiKey is not valid for this project. Re-copy the web app config from Project settings.';
+  }
   if (code === 'permission-denied' || /insufficient permissions/i.test(text)) {
     return 'The database refused this account. firestore.rules has not been deployed — the console is still on its default deny.';
   }
@@ -128,7 +143,7 @@ export class Cloud {
       this.fs = sdk.fs.getFirestore(app);
     } catch (e) {
       this.state = 'error';
-      this.error = String(e?.message || e).slice(0, 200);
+      this.error = cloudReason(e);
       return null;
     }
 
@@ -152,7 +167,7 @@ export class Cloud {
       }, (e) => {
         clearTimeout(bell);
         this.state = 'error';
-        this.error = String(e?.message || e).slice(0, 200);
+        this.error = cloudReason(e);
         settle(null);
       });
     });
@@ -220,9 +235,7 @@ export class Cloud {
         return null;
       }
       this.state = 'error';
-      this.error = code === 'auth/unauthorized-domain'
-        ? `${location.hostname} is not an authorised domain. Add it in Firebase → Authentication → Settings → Authorised domains.`
-        : String(e?.message || e).slice(0, 200);
+      this.error = cloudReason(e);
       return null;
     }
     return this.adapter;

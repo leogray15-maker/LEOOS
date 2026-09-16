@@ -54,7 +54,9 @@ function seedState() {
   // can trust.
   const forge = { covered: [], blocked: [], last: 0 };
   // The live Archives feed — the deployment's own read-only Notion route.
-  const archives = { url: '', key: '', last: 0, error: '' };
+  // Same origin by default — the route ships in this repo, so there is no
+  // URL to look up and no other feed to confuse it with.
+  const archives = { url: '/api/archives', key: '', last: 0, error: '' };
   const stock = INVENTORY.rows.map((r) => ({
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
   }));

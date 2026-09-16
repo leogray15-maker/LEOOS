@@ -155,6 +155,82 @@ check('an unreachable feed fails with a reason', down);
 globalThis.fetch = realFetch;
 process.env = env;
 
+/* ---------- the drafting route ---------- */
+
+const { default: draftHandler, parseJson } = await import('../api/draft.js');
+
+check('fenced json is unwrapped', parseJson('```json\n{"a":1}\n```')?.a === 1);
+check('json behind a sentence is still found', parseJson('Sure: {"a":2}')?.a === 2);
+check('prose with no json returns null', parseJson('no json at all') === null);
+
+process.env.ANTHROPIC_API_KEY = 'sk-ant-secret-never-leak';
+delete process.env.ARCHIVES_KEY;
+delete process.env.DRAFT_KEY;
+process.env.ARCANE_FEED_KEY = 'shared-key';
+
+res = fakeRes();
+await draftHandler({ method: 'GET', headers: {}, query: {} }, res);
+check('the readiness probe answers without a key', res.code === 200 && res.body.ready === true);
+check('the probe never returns the API key',
+  !JSON.stringify(res.body).includes('sk-ant-secret-never-leak'));
+check('the probe reuses ARCANE_FEED_KEY when ARCHIVES_KEY is unset', res.body.needs.length === 0);
+
+process.env.ANTHROPIC_API_KEY = '';
+res = fakeRes();
+await draftHandler({ method: 'GET', headers: {}, query: {} }, res);
+check('an unconfigured deployment says what it needs',
+  res.body.ready === false && res.body.needs.includes('ANTHROPIC_API_KEY'));
+process.env.ANTHROPIC_API_KEY = 'sk-ant-secret-never-leak';
+
+res = fakeRes();
+await draftHandler({ method: 'POST', headers: { 'x-arcane-key': 'wrong' }, body: { prompt: 'x' } }, res);
+check('drafting refuses a wrong key', res.code === 401);
+check('that refusal leaks nothing',
+  !JSON.stringify(res.body).includes('sk-ant-secret-never-leak')
+  && !JSON.stringify(res.body).includes('shared-key'));
+
+res = fakeRes();
+await draftHandler({ method: 'POST', headers: { 'x-arcane-key': 'shared-key' }, body: {} }, res);
+check('an empty prompt is rejected', res.code === 400);
+
+res = fakeRes();
+await draftHandler({ method: 'DELETE', headers: {}, body: {} }, res);
+check('drafting refuses anything but GET/POST', res.code === 405);
+
+/* ---------- the drafter client ---------- */
+
+const { apiDrafter, draftReady } = await import('../src/core/writer.js');
+
+globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ ready: true, model: 'claude-opus-5' }) });
+check('a ready route reports ready', (await draftReady('/api/draft')).ready === true);
+
+globalThis.fetch = async () => { throw new Error('no route'); };
+check('a missing route is not an error, just not ready', (await draftReady('/api/draft')).ready === false);
+
+globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ json: { drafts: [{ platform: 'X' }] } }) });
+check('the drafter returns the parsed object',
+  (await apiDrafter('/api/draft', 'k').json('p')).drafts.length === 1);
+
+globalThis.fetch = async () => ({ ok: false, status: 401, json: async () => ({ error: 'Bad or missing key.' }) });
+let refusedKey = false;
+try { await apiDrafter('/api/draft', 'bad').json('p'); } catch (e) { refusedKey = e.code === 'bad_key'; }
+check('a refused key is named as such', refusedKey);
+
+globalThis.fetch = async () => ({ ok: false, status: 429, json: async () => ({ error: 'Rate limited.' }) });
+let limited = false;
+try { await apiDrafter('/api/draft', 'k').json('p'); } catch (e) { limited = e.code === 'rate_limited'; }
+check('a rate limit is named as such', limited);
+
+/* ---------- the wrong feed ---------- */
+
+globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ revenue: 1805.42, orders: [], stock: [] }) });
+let wrong = false;
+let wrongMsg = '';
+try { await fetchPage('http://x/api/leoos-feed', 'k'); } catch (e) { wrong = e.code === 'wrong_feed'; wrongMsg = e.message; }
+check('the peptides feed is recognised and named', wrong, wrongMsg.slice(0, 48));
+
+globalThis.fetch = realFetch;
+
 console.log('\n' + '-'.repeat(70));
 console.log(`${results.filter(Boolean).length}/${results.length} checks passed`);
 process.exit(results.every(Boolean) ? 0 : 1);

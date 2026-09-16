@@ -22,6 +22,7 @@ const ORDER = [
   'src/core/bridge.js',
   'src/core/cloud.js',
   'src/core/library.js',
+  'src/core/writer.js',
   'src/core/forge.js',
   'src/core/store.js',
   'src/core/sim.js',

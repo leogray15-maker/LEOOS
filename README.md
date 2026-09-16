@@ -455,6 +455,8 @@ src/core/cloud.js       the Firebase link: lazy SDK, Google sign-in, one documen
 src/core/forge.js       the Signal Forge: ORACLE picks, HERALD drafts, WARDEN screens
 src/core/library.js     walking the live Archives, four requests at a time
 api/archives.js         the read-only Notion route; the token lives here, not in the page
+api/draft.js            the drafting route, so the Forge runs off claude.ai too
+src/core/writer.js      which drafter the page can reach, and how it asks
 src/config/archives.js  a read-only copy of the Archives, and the compound list
 src/core/sim.js         crew routing and behaviour
 src/core/bridge.js      the Arcane Peptides feed, pulled or pasted
@@ -559,24 +561,55 @@ If the feed is down the Forge says so and falls back to the copy in the
 repo, because a feed being unreachable is not a reason to have nothing to
 write.
 
-### Standing the feed up
+### Drafting needs a model, and where it comes from depends
+
+|  | Drafter |
+| --- | --- |
+| published artifact on claude.ai | `window.claude.sample` — free, already there |
+| any deployment | `api/draft.js` — the Anthropic API, server-side |
+
+The artifact path wins where it exists. Everywhere else the deck asks its
+own deployment, which holds `ANTHROPIC_API_KEY` where a page cannot read
+it. Both are handed to the Forge as an object with one `.json(prompt)`,
+so `forge.js` has no idea which it is talking to — and neither does the
+fence.
+
+`api/draft.js` uses `claude-opus-5` with adaptive thinking, streamed so a
+long reply cannot trip an HTTP timeout. Effort is `medium` by default:
+the module text is supplied, so the work is judgement rather than
+reasoning, and Vercel kills a function at its duration cap. `DRAFT_EFFORT`
+moves it.
+
+Drafting spends money, so the route is closed behind the same key as the
+Archives feed. An open endpoint that spends someone else's account is
+worse than a broken one.
+
+### Standing it up
 
 1. **Connect the integration to the page.** In Notion, open **The Arcane
    Archives → ⋯ → Connections → ArcaneAIOS**. This is the step everyone
    misses: a token with no page connected returns 404 for everything.
-2. **Set two environment variables** on the Vercel project:
+2. **Set the environment variables** on the LEOOS Vercel project:
 
    | | |
    | --- | --- |
    | `NOTION_TOKEN` | the integration token, Read content only |
-   | `ARCHIVES_KEY` | any long random string |
+   | `ANTHROPIC_API_KEY` | from console.anthropic.com |
+   | `ARCHIVES_KEY` | any long random string — **or reuse the existing `ARCANE_FEED_KEY`** |
 
-3. **Redeploy**, so the function picks them up.
-4. In the deck: **SIGNALS → Connect the Archives** → `/api/archives` and
-   the same key.
+   Both routes accept `ARCHIVES_KEY`, `ARCANE_FEED_KEY` or `x_arcane_key`,
+   so a project that already has one of those needs no new secret.
+3. **Redeploy**, so the functions pick them up.
+4. In the deck: **SIGNALS → Connect the Archives** → leave the URL at
+   `/api/archives` and paste the key.
 
-Neither secret is ever returned in a response, and neither is in this
-repo.
+Neither secret is ever returned in a response, and neither is in this repo.
+
+**The Archives route is not the shop feed.** `/api/archives` on this
+deployment reads Notion; `arcanepeptides.vercel.app/api/leoos-feed` reads
+the shop and is wired in System. They are easy to swap and look alike from
+the outside, so the URL defaults to the right one and the walker names the
+mistake if the wrong feed answers.
 
 ### What the fence actually blocks
 

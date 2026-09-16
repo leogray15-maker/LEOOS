@@ -208,4 +208,9 @@ window.claude?.use?.('sample').then((s) => {
   if (s) ui.attachSampler(s);
 }).catch(() => { /* counsel stays on standby */ });
 
+// The Council and Counsel need the artifact sampler and only work there.
+// Drafting does not: where the page is a deployment with /api/draft wired,
+// the Forge uses that instead, so the content machine runs off claude.ai.
+ui.findDrafter().catch(() => { /* the panel reports it */ });
+
 document.fonts?.ready?.then(() => factory.resize());
