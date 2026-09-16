@@ -12,6 +12,10 @@ import { INVENTORY } from '../config/roomdata.js';
 
 const LS_KEY = 'leoos.v1';
 
+/** The record is persisted and must survive; footsteps are not and must not. */
+const RECORD_MAX = 60;
+const TRACE_MAX = 30;
+
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 /** COA states cycle in this order when the chip is clicked. */
@@ -43,7 +47,7 @@ function seedState() {
   const stock = INVENTORY.rows.map((r) => ({
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
   }));
-  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, log: [], trace: [], posts: SEED_POSTS.slice() };
 }
 
 export class Store {
@@ -143,7 +147,12 @@ export class Store {
         feed: b.feed && typeof b.feed === 'object' ? b.feed : null,
       };
     }
-    if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
+    if (Array.isArray(body.log)) {
+      // Footsteps used to share this array and evicted the record inside a
+      // minute, so a saved log could come back as nothing but crew arrivals.
+      // Drop anything a previous version wrote there.
+      this.state.log = body.log.filter((e) => e && !e.trace).slice(0, RECORD_MAX);
+    }
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
       for (const g of GOALS) if (body.goals[g.id]) this.state.goals[g.id] = body.goals[g.id];
@@ -171,7 +180,7 @@ export class Store {
     const body = {
       decks: this.state.decks,
       ledger: this.state.ledger,
-      log: this.state.log.slice(0, 50),
+      log: this.state.log.slice(0, RECORD_MAX),
       posts: this.state.posts.slice(0, 60),
       goals: this.state.goals,
       budget: this.state.budget,
@@ -498,14 +507,44 @@ export class Store {
 
   /* ---------- log ---------- */
 
-  log(text) {
-    this.state.log = [{ ts: Date.now(), text }, ...this.state.log].slice(0, 50);
+  /**
+   * The record: decisions, orders, stock, money. Persisted, and read by
+   * THE RECORDS. Callers that change state save immediately after.
+   */
+  log(text, kind = 'event') {
+    this.state.log = [{ ts: Date.now(), text, kind }, ...this.state.log].slice(0, RECORD_MAX);
   }
 
-  /** A log line from the simulation — kept in memory, never written. */
+  /** Write to the record and persist it, for writers outside the store. */
+  record(text, kind = 'event') {
+    this.log(text, kind);
+    this.save();
+  }
+
+  /**
+   * A line from the simulation — crew arriving, the commander walking.
+   * Its own ring, in memory only. Eighteen crew walking a twenty-room floor
+   * produce a line every few seconds; sharing the record's array meant every
+   * verdict, order and COA change was evicted within the minute, and that
+   * flushed array was what got written to system/ship.
+   */
   trace(text) {
-    this.state.log = [{ ts: Date.now(), text, trace: true }, ...this.state.log].slice(0, 50);
+    this.state.trace = [{ ts: Date.now(), text, trace: true }, ...this.state.trace].slice(0, TRACE_MAX);
     this.emit();
+  }
+
+  /** The newest line from either stream, for the ticker. */
+  lastLine() {
+    const rec = this.state.log[0];
+    const step = this.state.trace[0];
+    if (!rec) return step || null;
+    if (!step) return rec;
+    return step.ts >= rec.ts ? step : rec;
+  }
+
+  /** The decision record, newest first. */
+  records(limit = 40) {
+    return this.state.log.slice(0, limit);
   }
 }
 

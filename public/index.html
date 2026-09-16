@@ -1567,6 +1567,7 @@ const DOCTRINE = [
 /** Which dataset a room shows. */
 const ROOM_WIDGET = {
   apothecary: 'lab',
+  records: 'records',
   // These three rooms carry a tool that is too big for a side panel, so the
   // room opens the door to it rather than showing a look-alike dashboard.
   // Before this, clicking THE COUNCIL on the floor gave you orders and crew
@@ -2333,6 +2334,10 @@ function parseFeed(raw) {
 
 const LS_KEY = 'leoos.v1';
 
+/** The record is persisted and must survive; footsteps are not and must not. */
+const RECORD_MAX = 60;
+const TRACE_MAX = 30;
+
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 /** COA states cycle in this order when the chip is clicked. */
@@ -2364,7 +2369,7 @@ function seedState() {
   const stock = INVENTORY.rows.map((r) => ({
     id: uid(), code: r.code, size: r.size, vials: r.vials, batch: r.batch, coa: r.coa, tint: r.tint,
   }));
-  return { decks, ledger, goals, budget, stock, bridge, log: [], posts: SEED_POSTS.slice() };
+  return { decks, ledger, goals, budget, stock, bridge, log: [], trace: [], posts: SEED_POSTS.slice() };
 }
 
 class Store {
@@ -2464,7 +2469,12 @@ class Store {
         feed: b.feed && typeof b.feed === 'object' ? b.feed : null,
       };
     }
-    if (Array.isArray(body.log)) this.state.log = body.log.slice(0, 50);
+    if (Array.isArray(body.log)) {
+      // Footsteps used to share this array and evicted the record inside a
+      // minute, so a saved log could come back as nothing but crew arrivals.
+      // Drop anything a previous version wrote there.
+      this.state.log = body.log.filter((e) => e && !e.trace).slice(0, RECORD_MAX);
+    }
     if (Array.isArray(body.posts)) this.state.posts = body.posts.slice(0, 60);
     if (body.goals && typeof body.goals === 'object') {
       for (const g of GOALS) if (body.goals[g.id]) this.state.goals[g.id] = body.goals[g.id];
@@ -2492,7 +2502,7 @@ class Store {
     const body = {
       decks: this.state.decks,
       ledger: this.state.ledger,
-      log: this.state.log.slice(0, 50),
+      log: this.state.log.slice(0, RECORD_MAX),
       posts: this.state.posts.slice(0, 60),
       goals: this.state.goals,
       budget: this.state.budget,
@@ -2819,14 +2829,44 @@ class Store {
 
   /* ---------- log ---------- */
 
-  log(text) {
-    this.state.log = [{ ts: Date.now(), text }, ...this.state.log].slice(0, 50);
+  /**
+   * The record: decisions, orders, stock, money. Persisted, and read by
+   * THE RECORDS. Callers that change state save immediately after.
+   */
+  log(text, kind = 'event') {
+    this.state.log = [{ ts: Date.now(), text, kind }, ...this.state.log].slice(0, RECORD_MAX);
   }
 
-  /** A log line from the simulation — kept in memory, never written. */
+  /** Write to the record and persist it, for writers outside the store. */
+  record(text, kind = 'event') {
+    this.log(text, kind);
+    this.save();
+  }
+
+  /**
+   * A line from the simulation — crew arriving, the commander walking.
+   * Its own ring, in memory only. Eighteen crew walking a twenty-room floor
+   * produce a line every few seconds; sharing the record's array meant every
+   * verdict, order and COA change was evicted within the minute, and that
+   * flushed array was what got written to system/ship.
+   */
   trace(text) {
-    this.state.log = [{ ts: Date.now(), text, trace: true }, ...this.state.log].slice(0, 50);
+    this.state.trace = [{ ts: Date.now(), text, trace: true }, ...this.state.trace].slice(0, TRACE_MAX);
     this.emit();
+  }
+
+  /** The newest line from either stream, for the ticker. */
+  lastLine() {
+    const rec = this.state.log[0];
+    const step = this.state.trace[0];
+    if (!rec) return step || null;
+    if (!step) return rec;
+    return step.ts >= rec.ts ? step : rec;
+  }
+
+  /** The decision record, newest first. */
+  records(limit = 40) {
+    return this.state.log.slice(0, limit);
   }
 }
 
@@ -5305,7 +5345,7 @@ class UIScreens {
     }
     const drafts = this.store.postCount();
     if (drafts) out.push({ level: 'vital', room: 'beacon', src: 'HERALD · Signalman', text: `${drafts} post${drafts === 1 ? '' : 's'} drafted from the Archives and waiting on you.` });
-    const unwired = TOOLS.filter((t) => t.state === 'not wired').length;
+    const unwired = TOOLS.filter((t) => this.toolState(t) === 'not wired').length;
     if (unwired) out.push({ level: 'flare', src: 'FOUNDRY · Agent-wright', text: `${unwired} tools are not connected yet. Agents that need them can only reason, not act.` });
     const order = { breach: 0, flare: 1, vital: 2 };
     return out.sort((a, b) => order[a.level] - order[b.level]);
@@ -5442,6 +5482,18 @@ class UIScreens {
     }
   }
 
+  /**
+   * A tool's state as it actually is, not as the config last described it.
+   * `commerce` is the one the interface can prove: connect the Arcane
+   * Peptides feed and THE LAB fills with real vials, so a Store row still
+   * reading "not wired" — and a signal still counting it — is a lie the
+   * system tells about itself.
+   */
+  toolState(t) {
+    if (t.id === 'commerce' && this.store.feed()) return 'live';
+    return t.state;
+  }
+
   head(title, note) {
     return `<div class="screen-head"><h2 class="screen-title">${esc(title)}</h2>
       ${note ? `<span class="chip">${esc(note)}</span>` : ''}</div>`;
@@ -5504,13 +5556,16 @@ class UIScreens {
 
       <section class="block" style="margin-top:14px">
         <div class="block-head"><h3 class="sub-title" style="margin:0">Tools</h3>
-          <span class="chip">${TOOLS.filter((t) => t.state !== 'not wired').length} / ${TOOLS.length} wired</span></div>
-        ${TOOLS.map((t) => `
+          <span class="chip">${TOOLS.filter((t) => this.toolState(t) !== 'not wired').length} / ${TOOLS.length} wired</span></div>
+        ${TOOLS.map((t) => {
+          const state = this.toolState(t);
+          return `
           <div class="tbl-row is-2" style="border-top:1px solid var(--seam)">
             <span>${esc(t.name)}</span>
             <span class="muted-note">${esc(t.note)}</span>
-            <span class="chip ${t.state === 'live' ? 'is-vital' : t.state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(t.state)}</span>
-          </div>`).join('')}
+            <span class="chip ${state === 'live' ? 'is-vital' : state === 'read-only' ? 'is-cyan' : 'is-breach'}">${esc(state)}</span>
+          </div>`;
+        }).join('')}
       </section>`;
   }
 
@@ -5743,6 +5798,7 @@ class UIWidgets extends UIScreens {
       case 'signals': return this.wSignals();
       case 'treasury': return this.wTreasury();
       case 'doctrine': return this.wDoctrine();
+      case 'records': return this.wRecords();
       default: return '';
     }
   }
@@ -5991,6 +6047,40 @@ class UIWidgets extends UIScreens {
           </div>
         </article>`).join('')
         : '<p class="muted-note">No drafts standing. The Signal Forge writes three every morning.</p>'}`;
+  }
+
+  /**
+   * THE RECORDS. The institutional memory, and the only room that reads the
+   * persisted record rather than a dataset: every verdict the Council
+   * returned, every order logged, every COA change and every feed sync, in
+   * the order they happened. No placeholder chip — none of it is invented.
+   */
+  wRecords() {
+    const rows = this.store.records(40);
+    const verdicts = rows.filter((r) => r.kind === 'verdict').length;
+    if (!rows.length) {
+      return `
+        <h3 class="sub-title">Decision record</h3>
+        <p class="muted-note">Nothing recorded yet. Every Council verdict, order, stock move
+          and COA change is written here as it happens, and survives a reload.</p>
+        <button class="back-btn" type="button" data-goscreen="council" style="margin-top:12px">Put a decision to the Council →</button>`;
+    }
+    return `
+      <h3 class="sub-title">Decision record</h3>
+      <div class="stat-row">
+        <div class="stat"><span class="stat-n mono is-arcane">${rows.length}</span><span class="stat-l">Entries held</span></div>
+        <div class="stat"><span class="stat-n mono is-gold">${verdicts}</span><span class="stat-l">Council verdicts</span></div>
+      </div>
+      <div class="tbl" style="margin-top:10px">
+        ${rows.map((r) => `
+          <div class="tbl-row is-2">
+            <span class="mono dim">${esc(clockTime(r.ts))}</span>
+            <span>${esc(r.text)}</span>
+            ${r.kind === 'verdict' ? '<span class="chip is-gold">verdict</span>' : ''}
+          </div>`).join('')}
+      </div>
+      <p class="muted-note" style="margin-top:10px">Crew movement is not kept here — footsteps go to the
+        ticker and are never written, so the record stays a record.</p>`;
   }
 
   wTreasury() {
@@ -6543,7 +6633,7 @@ class UI extends UIWidgets {
   }
 
   renderTicker() {
-    const e = this.store.state.log[0];
+    const e = this.store.lastLine();
     this.tickerEl.textContent = e ? e.text : 'All systems nominal. Crew at station.';
     this.tickerTime.textContent = e ? clockTime(e.ts) : '';
   }
@@ -6746,7 +6836,10 @@ class UI extends UIWidgets {
         because: data.because || '',
         conditions: Array.isArray(data.conditions) ? data.conditions : [],
       };
-      this.store.trace(`COUNCIL — ${this.councilState.verdict || 'no verdict'}: ${q.slice(0, 60)}`);
+      // A verdict is the one thing THE RECORDS exists to hold, so it goes to
+      // the persisted record with the reasoning attached — not to the trace.
+      const why = this.councilState.because ? ` · ${this.councilState.because}` : '';
+      this.store.record(`COUNCIL ${this.councilState.verdict || 'NO VERDICT'} — ${q.slice(0, 80)}${why}`, 'verdict');
     } catch (err) {
       this.councilState = {
         question: q,

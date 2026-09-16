@@ -117,6 +117,7 @@ export const DOCTRINE = [
 /** Which dataset a room shows. */
 export const ROOM_WIDGET = {
   apothecary: 'lab',
+  records: 'records',
   // These three rooms carry a tool that is too big for a side panel, so the
   // room opens the door to it rather than showing a look-alike dashboard.
   // Before this, clicking THE COUNCIL on the floor gave you orders and crew
